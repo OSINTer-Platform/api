@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
+from typing import List
 from OSINTmodules.OSINTelastic import searchQuery
 from .. import config_options
 
@@ -14,3 +15,7 @@ async def get_newest_articles():
 @router.get("/overview/search")
 async def search_articles(query: searchQuery = Depends(searchQuery)):
     return config_options.esArticleClient.queryDocuments(query, return_object = False)["documents"]
+
+@router.get("/content")
+async def get_article_content(IDs: List[str] = Query(..., length=21)):
+    return config_options.esArticleClient.queryDocuments(searchQuery(IDs = IDs, complete = True))
