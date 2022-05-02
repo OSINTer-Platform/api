@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 from typing import List
+from pydantic import conlist, constr
 from OSINTmodules.OSINTelastic import searchQuery
 from .. import config_options
 
@@ -17,5 +18,5 @@ async def search_articles(query: searchQuery = Depends(searchQuery)):
     return config_options.esArticleClient.queryDocuments(query, return_object = False)["documents"]
 
 @router.get("/content")
-async def get_article_content(IDs: List[str] = Query(..., length=21)):
+async def get_article_content(IDs: conlist(constr(strip_whitespace = True, min_length = 20, max_length = 20)) = Query(...)):
     return config_options.esArticleClient.queryDocuments(searchQuery(IDs = IDs, complete = True))
