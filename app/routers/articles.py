@@ -20,3 +20,7 @@ async def search_articles(query: searchQuery = Depends(searchQuery)):
 @router.get("/content")
 async def get_article_content(IDs: conlist(constr(strip_whitespace = True, min_length = 20, max_length = 20)) = Query(...)):
     return config_options.esArticleClient.queryDocuments(searchQuery(IDs = IDs, complete = True))
+
+@router.get("/categories")
+async def get_list_of_categories():
+    return config_options.esArticleClient.requestSourceCategoryListFromDB()
