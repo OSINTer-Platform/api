@@ -53,3 +53,19 @@ class BaseUser(BaseModel):
 
 class User(BaseUser):
     read_article_ids: List[str] = []
+
+def create_user(current_user : BaseUser, password : str):
+
+    if current_user.user_exist():
+        return False
+    else:
+        current_user : Dict[ Union[str, List] ] = current_user.dict()
+
+        es_conn = current_user.pop("es_conn")
+        index_name = current_user.pop("index_name")
+
+        current_user["password_hash"] = ph.hash(password)
+
+        es_conn.index(index = index_name, document = current_user)
+
+        return True
