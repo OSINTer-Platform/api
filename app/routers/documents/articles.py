@@ -1,14 +1,25 @@
 from fastapi import APIRouter, Depends, Query
+from fastapi.responses import StreamingResponse
+
 from ... import config_options
 
 from OSINTmodules.OSINTelastic import searchQuery
+from OSINTmodules.OSINTfiles import convertArticleToMD
 from OSINTmodules.OSINTobjects import FullArticle, BaseArticle
+
 from ...dependencies import fastapiSearchQuery
 
 from pydantic import conlist, constr
 from typing import List
 
 router = APIRouter()
+
+def send_file(file_name, file_content, file_type):
+    response = StreamingResponse(iter([file_content.getvalue()]), media_type = file_type)
+
+    response.headers["Content-Disposition"] = f"attachment; filename={file_name}"
+
+    return response
 
 @router.get("/overview/newest", response_model=List[BaseArticle])
 async def get_newest_articles():
@@ -25,3 +36,17 @@ async def get_article_content(IDs: conlist(constr(strip_whitespace = True, min_l
 @router.get("/categories", response_model=List[str])
 async def get_list_of_categories():
     return config_options.esArticleClient.requestSourceCategoryListFromDB()
+
+@router.get("/MD/single", tags=["download"])
+def download_single_markdown_file(ID: constr(strip_whitespace = True, min_length = 20, max_length = 20) = Query(...)):
+    article = config_options.esArticleClient.queryDocuments(searchQuery(limit = 1, IDs = [ID], complete = True))["documents"][0]
+
+    if article != []:
+        articleFile = convertArticleToMD(article)
+
+        return send_file(file_name=f"{article.title.replace(' ', '-')}.md", file_content = articleFile, file_type="text/markdown")
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Article not found"
+        )
