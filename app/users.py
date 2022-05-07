@@ -85,6 +85,16 @@ class User(BaseUser):
 
         return self.feeds
 
+    def create_feed(self, feed):
+        if feed.feed_name in self.get_feeds():
+            return False
+        else:
+            self.feeds[feed.feed_name] = feed
+
+            self._update_current_user("feeds", [ self.feeds[feed_name].dict() for feed_name in self.feeds if self.feeds[feed_name]])
+
+            return True
+
 def create_user(current_user : BaseUser, password : str):
 
     if current_user.user_exist():
