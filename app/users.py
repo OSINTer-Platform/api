@@ -73,6 +73,18 @@ class User(BaseUser):
     read_article_ids: List[str] = []
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
 
+    def get_feeds(self):
+        self.feeds = {}
+
+        user_data = self._get_current_user_object()["_source"]
+
+        if "feeds" in user_data:
+            for feed in user_data["feeds"]:
+                feed_name = feed["feed_name"]
+                self.feeds[feed_name] = Feed(**feed)
+
+        return self.feeds
+
 def create_user(current_user : BaseUser, password : str):
 
     if current_user.user_exist():
