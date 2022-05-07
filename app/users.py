@@ -73,6 +73,9 @@ class User(BaseUser):
     read_article_ids: List[str] = []
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
 
+    def _get_feed_list(self):
+        return [ self.feeds[feed_name].dict() for feed_name in self.feeds ]
+
     def get_feeds(self):
         self.feeds = {}
 
@@ -83,7 +86,7 @@ class User(BaseUser):
                 feed_name = feed["feed_name"]
                 self.feeds[feed_name] = Feed(**feed)
 
-        return self.feeds
+        return self._get_feed_list()
 
     def create_feed(self, feed):
         if feed.feed_name in self.get_feeds():
@@ -91,7 +94,7 @@ class User(BaseUser):
         else:
             self.feeds[feed.feed_name] = feed
 
-            self._update_current_user("feeds", [ self.feeds[feed_name].dict() for feed_name in self.feeds if self.feeds[feed_name]])
+            self._update_current_user("feeds", [ self.feeds[feed_name].dict() for feed_name in self.feeds ])
 
             return True
 

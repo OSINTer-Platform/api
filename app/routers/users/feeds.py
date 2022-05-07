@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
+from typing import List
+
 from ..auth import get_user_from_token
 
 from ...users import User, Feed
@@ -9,7 +11,7 @@ router = APIRouter(
             dependencies=[Depends(get_user_from_token)]
         )
 
-@router.get("/list")
+@router.get("/list", response_model = List[Feed])
 def get_my_feeds(current_user: User = Depends(get_user_from_token)):
     return current_user.get_feeds()
 
