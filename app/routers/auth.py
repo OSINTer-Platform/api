@@ -6,7 +6,7 @@ from typing import Optional
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
-from ..users import create_user, User, BaseUser
+from ..users import create_user, User
 
 from .. import config_options
 
@@ -24,7 +24,7 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     return encoded_jwt
 
 def get_user_from_username(username : str):
-    return BaseUser(
+    return User(
                 username = username,
                 index_name = config_options.ELASTICSEARCH_USER_INDEX,
                 es_conn = config_options.es_conn 
@@ -47,7 +47,7 @@ async def get_user_from_token(token : str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
 
-    user : BaseUser = get_user_from_username(username = username)
+    user : User = get_user_from_username(username = username)
 
     if not user.user_exist():
         raise credentials_exception
