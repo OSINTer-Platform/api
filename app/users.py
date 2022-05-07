@@ -25,30 +25,33 @@ class BaseUser(BaseModel):
     username: str
     index_name: str
     es_conn: Elasticsearch
+    user_details: Dict = {}
 
     class Config:
         arbitrary_types_allowed = True
 
     def user_exist(self):
-        return int(self.es_conn.search(index=self.index_name, body={'query': { "term" : {"username": {"value" : self.username}}}})["hits"]["total"]["value"]) != 0
+        queryResponse = self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})
+        self.user_details = queryResponse["hits"]["hits"][0]
 
-    def _get_current_user_object(self):
-        return self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})["hits"]["hits"][0]
+        return int(queryResponse["hits"]["total"]["value"]) != 0
+
+    def _cache_current_user_object(self):
+        self.user_details = self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})["hits"]["hits"][0]
+
+        return self.user_details
 
     def _update_current_user(self, field_name, field_value):
-        print("\n\n", field_name, field_value, "\n\n")
-        if self.user_exist():
-            return self.es_conn.update(index=self.index_name, id=self._get_current_user_object()["_id"], doc={field_name : field_value})
+        return self.es_conn.update(index=self.index_name, id=self.user_details["_id"], doc={field_name : field_value})
 
     def _get_password_hash(self):
-        if self.user_exist():
-            return self._get_current_user_object()["_source"]["password_hash"]
+        return self.user_details["_source"]["password_hash"]
 
     def _set_password_hash(self, passwordHash):
         self._update_current_user(self, "password_hash", passwordHash)
 
     def change_password(self, password):
-        if self.checkIfUserExists():
+        if self.user_exists():
             self.setPasswordHash(ph.hash(password))
 
     # Will verify that clear text [password] matches the one for the current user
@@ -77,9 +80,12 @@ class User(BaseUser):
         return [ self.feeds[feed_name].dict() for feed_name in self.feeds ]
 
     def get_feeds(self):
+        if not self.user_exist():
+            return []
+
         self.feeds = {}
 
-        user_data = self._get_current_user_object()["_source"]
+        user_data = self.user_details["_source"]
 
         if "feeds" in user_data:
             for feed in user_data["feeds"]:
@@ -89,7 +95,9 @@ class User(BaseUser):
         return self._get_feed_list()
 
     def create_feed(self, feed):
-        if feed.feed_name in self.get_feeds():
+        self.get_feeds()
+
+        if not self.user_exist() or feed.feed_name in self.feeds:
             return False
         else:
             self.feeds[feed.feed_name] = feed
@@ -105,6 +113,7 @@ def create_user(current_user : BaseUser, password : str):
     else:
         current_user : Dict[ Union[str, List] ] = current_user.dict()
 
+        current_user.pop("user_details")
         es_conn = current_user.pop("es_conn")
         index_name = current_user.pop("index_name")
 
