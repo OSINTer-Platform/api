@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends, Request
 from .routers.documents import articles, tweets
+from .routers.users import feeds
 from .routers import auth
 
 from . import config_options
@@ -25,6 +26,13 @@ app.include_router(
         prefix = "/auth",
         tags=["authorization"]
     )
+
+app.include_router(
+        feeds.router,
+        prefix = "/users/feeds",
+        tags=["users", "feed"]
+    )
+
 
 @app.get("/")
 async def root():
