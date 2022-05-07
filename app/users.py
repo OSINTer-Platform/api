@@ -3,9 +3,23 @@ import secrets
 
 from elasticsearch import Elasticsearch
 from pydantic import BaseModel
-from typing import List, Dict, Union
+from typing import List, Dict, Union, Optional
+
+from datetime import datetime
 
 ph = argon2.PasswordHasher()
+
+# This is a datamodel used for storing information about a users feed. A feed for a user, is simply a set of query paramaters, used for search for articles relevant to a user, when that feed is selected.
+class Feed(BaseModel):
+    feed_name: str
+    limit: Optional[int] = None
+    sortBy: Optional[str] = None
+    sortOrder: Optional[str] = None
+    searchTerm: Optional[str] = None
+    firstDate: Optional[datetime] = None
+    lastDate: Optional[datetime] = None
+    sourceCategory: Optional[List[str]] = None
+    highlight: Optional[bool] = None
 
 class BaseUser(BaseModel):
     username: str
@@ -57,6 +71,7 @@ class BaseUser(BaseModel):
 
 class User(BaseUser):
     read_article_ids: List[str] = []
+    feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
 
 def create_user(current_user : BaseUser, password : str):
 
