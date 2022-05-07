@@ -16,7 +16,7 @@ def get_my_feeds(current_user: User = Depends(get_user_from_token)):
 @router.post("/create", status_code=status.HTTP_201_CREATED, response_model = DefaultResponse)
 def create_new_feed(feed: Feed, current_user: User = Depends(get_user_from_token)):
     if current_user.create_feed(feed):
-        return DefaultResponse(DefaultResponseStatus.SUCCESS, "Field created")
+        return DefaultResponse(status = DefaultResponseStatus.SUCCESS, msg = "Field created")
     else:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
