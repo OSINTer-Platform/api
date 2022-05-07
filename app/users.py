@@ -21,13 +21,17 @@ class BaseUser(BaseModel):
     def _get_current_user_object(self):
         return self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})["hits"]["hits"][0]
 
+    def _update_current_user(self, field_name, field_value):
+        print("\n\n", field_name, field_value, "\n\n")
+        if self.user_exist():
+            return self.es_conn.update(index=self.index_name, id=self._get_current_user_object()["_id"], doc={field_name : field_value})
+
     def _get_password_hash(self):
         if self.user_exist():
             return self._get_current_user_object()["_source"]["password_hash"]
 
     def _set_password_hash(self, passwordHash):
-        if self.user_exist():
-            return self.es_conn.update(index=self.index_name, id=self._get_current_user_object()["_id"], doc={"password_hash" : passwordHash})
+        self._update_current_user(self, "password_hash", passwordHash)
 
     def change_password(self, password):
         if self.checkIfUserExists():
