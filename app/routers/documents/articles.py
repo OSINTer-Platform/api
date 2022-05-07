@@ -35,6 +35,9 @@ async def search_articles(query: fastapiSearchQuery = Depends(fastapiSearchQuery
 
 @router.get("/content", response_model=List[FullArticle])
 async def get_article_content(IDs: conlist(constr(strip_whitespace = True, min_length = 20, max_length = 20)) = Query(...)):
+    for ID in IDs:
+        config_options.esArticleClient.incrementReadCounter(ID)
+
     return config_options.esArticleClient.queryDocuments(searchQuery(IDs = IDs, complete = True))["documents"]
 
 @router.get("/categories", response_model=List[str])
