@@ -7,6 +7,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
 from ..users import create_user, User
+from ..common import DefaultResponse, DefaultResponseStatus
 
 from .. import config_options
 
@@ -76,11 +77,11 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/signup", status_code=status.HTTP_201_CREATED)
+@router.post("/signup", status_code=status.HTTP_201_CREATED, response_model = DefaultResponse)
 async def signup(form_data: OAuth2PasswordRequestForm = Depends()):
     current_user = get_user_from_username(form_data.username)
     if create_user(current_user, form_data.password):
-        return {"status" : "success", "msg" : "User created"}
+        return DefaultResponse(status = DefaultResponseStatus.SUCCESS, msg = "User created")
     else:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
