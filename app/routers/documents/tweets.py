@@ -12,11 +12,11 @@ router = APIRouter()
 
 @router.get("/overview/newest", response_model=List[BaseTweet])
 async def get_newest_articles():
-    return config_options.esTweetClient.queryDocuments(searchQuery(limit = 50, complete = False), return_object = False)["documents"]
+    return config_options.esTweetClient.queryDocuments(searchQuery(limit = 50, complete = False))["documents"]
 
 @router.get("/overview/search", response_model=List[BaseTweet])
 async def search_articles(query: fastapiSearchQuery = Depends(fastapiSearchQuery)):
-    return config_options.esTweetClient.queryDocuments(query, return_object = False)["documents"]
+    return config_options.esTweetClient.queryDocuments(query)["documents"]
 
 @router.get("/content", response_model=List[FullTweet])
 async def get_article_content(IDs: conlist(constr(strip_whitespace = True, min_length = 20, max_length = 20)) = Query(...)):
