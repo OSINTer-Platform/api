@@ -32,9 +32,12 @@ class BaseUser(BaseModel):
 
     def user_exist(self):
         queryResponse = self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})
-        self.user_details = queryResponse["hits"]["hits"][0]
 
-        return int(queryResponse["hits"]["total"]["value"]) != 0
+        if int(queryResponse["hits"]["total"]["value"]) != 0:
+            self.user_details = queryResponse["hits"]["hits"][0]
+            return True
+        else:
+            return False
 
     def _cache_current_user_object(self):
         self.user_details = self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})["hits"]["hits"][0]
