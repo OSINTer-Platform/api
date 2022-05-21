@@ -13,10 +13,14 @@ router = APIRouter()
 def get_my_feeds(current_user: User = Depends(get_user_from_token)):
     return current_user.get_feeds()
 
-@router.post("/create", status_code=status.HTTP_201_CREATED, response_model = DefaultResponse)
+@router.post("/create", status_code=status.HTTP_201_CREATED, response_model = List[Feed])
 def create_new_feed(feed: Feed, current_user: User = Depends(get_user_from_token)):
     if current_user.create_feed(feed):
-        return DefaultResponse(status = DefaultResponseStatus.SUCCESS, msg = "Field created")
+
+        current_user_feeds = current_user.get_feeds()
+        current_user_feeds.append(feed)
+
+        return current_user_feeds
     else:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
