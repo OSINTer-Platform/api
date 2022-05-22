@@ -21,6 +21,7 @@ class Feed(BaseModel):
     sourceCategory: Optional[List[str]] = None
     highlight: Optional[bool] = None
 
+
 class BaseUser(BaseModel):
     username: str
     index_name: str
@@ -31,7 +32,10 @@ class BaseUser(BaseModel):
         arbitrary_types_allowed = True
 
     def user_exist(self):
-        queryResponse = self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})
+        queryResponse = self.es_conn.search(
+            index=self.index_name,
+            body={"query": {"term": {"username": {"value": self.username}}}},
+        )
 
         if int(queryResponse["hits"]["total"]["value"]) != 0:
             self.user_details = queryResponse["hits"]["hits"][0]
@@ -40,12 +44,19 @@ class BaseUser(BaseModel):
             return False
 
     def _cache_current_user_object(self):
-        self.user_details = self.es_conn.search(index=self.index_name, body={"query" : { "term" : { "username" : { "value" : self.username}}}})["hits"]["hits"][0]
+        self.user_details = self.es_conn.search(
+            index=self.index_name,
+            body={"query": {"term": {"username": {"value": self.username}}}},
+        )["hits"]["hits"][0]
 
         return self.user_details
 
     def _update_current_user(self, field_name, field_value):
-        return self.es_conn.update(index=self.index_name, id=self.user_details["_id"], doc={field_name : field_value})
+        return self.es_conn.update(
+            index=self.index_name,
+            id=self.user_details["_id"],
+            doc={field_name: field_value},
+        )
 
     def _get_password_hash(self):
         return self.user_details["_source"]["password_hash"]
@@ -75,12 +86,13 @@ class BaseUser(BaseModel):
             except argon2.exceptions.VerifyMismatchError:
                 return False
 
+
 class User(BaseUser):
     read_article_ids: List[str] = []
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
 
     def _get_feed_list(self):
-        return [ self.feeds[feed_name].dict() for feed_name in self.feeds ]
+        return [self.feeds[feed_name].dict() for feed_name in self.feeds]
 
     def get_feeds(self):
         if not self.user_exist():
@@ -105,16 +117,19 @@ class User(BaseUser):
         else:
             self.feeds[feed.feed_name] = feed
 
-            self._update_current_user("feeds", [ self.feeds[feed_name].dict() for feed_name in self.feeds ])
+            self._update_current_user(
+                "feeds", [self.feeds[feed_name].dict() for feed_name in self.feeds]
+            )
 
             return True
 
-def create_user(current_user : BaseUser, password : str):
+
+def create_user(current_user: BaseUser, password: str):
 
     if current_user.user_exist():
         return False
     else:
-        current_user : Dict[ Union[str, List] ] = current_user.dict()
+        current_user: Dict[Union[str, List]] = current_user.dict()
 
         current_user.pop("user_details")
         es_conn = current_user.pop("es_conn")
@@ -122,6 +137,6 @@ def create_user(current_user : BaseUser, password : str):
 
         current_user["password_hash"] = ph.hash(password)
 
-        es_conn.index(index = index_name, document = current_user)
+        es_conn.index(index=index_name, document=current_user)
 
         return True

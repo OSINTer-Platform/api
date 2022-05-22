@@ -15,8 +15,11 @@ class fastapiSearchQuery(searchQuery):
     searchTerm: Optional[str] = Query(None)
     firstDate: Optional[datetime] = Query(None)
     lastDate: Optional[datetime] = Query(None)
-    sourceCategory: Optional[conlist(constr(strip_whitespace = True))] = Query(None)
-    IDs: Optional[conlist(constr(strip_whitespace = True, min_length = 20, max_length = 20))] = Query(None)
+    sourceCategory: Optional[conlist(constr(strip_whitespace=True))] = Query(None)
+    IDs: Optional[
+        conlist(constr(strip_whitespace=True, min_length=20, max_length=20))
+    ] = Query(None)
     highlight: bool = Query(False)
-    complete: bool = Query(False) # For whether the query should only return the necessary information for creating an article object, or all data stored about the article
-
+    complete: bool = Query(
+        False
+    )  # For whether the query should only return the necessary information for creating an article object, or all data stored about the article

@@ -11,11 +11,7 @@ from OSINTmodules.OSINTelastic import elasticDB
 
 app = FastAPI()
 
-origins = [
-    "http://localhost",
-    "http://localhost:8080",
-    "http://localhost:8000"
-]
+origins = ["http://localhost", "http://localhost:8080", "http://localhost:8000"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -25,29 +21,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(
-        articles.router,
-        prefix = "/articles",
-        tags=["articles", "documents"]
-    )
+app.include_router(articles.router, prefix="/articles", tags=["articles", "documents"])
 
-app.include_router(
-        tweets.router,
-        prefix = "/tweets",
-        tags=["tweets", "documents"]
-    )
+app.include_router(tweets.router, prefix="/tweets", tags=["tweets", "documents"])
 
-app.include_router(
-        auth.router,
-        prefix = "/auth",
-        tags=["authorization"]
-    )
+app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
-app.include_router(
-        feeds.router,
-        prefix = "/users/feeds",
-        tags=["users", "feed"]
-    )
+app.include_router(feeds.router, prefix="/users/feeds", tags=["users", "feed"])
 
 
 @app.get("/")
