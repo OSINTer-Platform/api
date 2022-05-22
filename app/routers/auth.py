@@ -15,7 +15,7 @@ from .. import config_options
 
 router = APIRouter()
 
-oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/token")
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -58,7 +58,12 @@ async def get_user_from_token(token : str = Depends(oauth2_scheme)):
 
     return user
 
-@router.post("/token")
+@router.post("/logout")
+async def logout(response: Response, current_user: User = Depends(get_user_from_token)):
+    response.delete_cookie(key="access_token")
+    return
+
+@router.post("/login")
 async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     current_user = get_user_from_username(form_data.username)
     if not current_user.user_exist():
