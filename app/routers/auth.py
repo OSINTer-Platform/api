@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi.security import OAuth2, OAuth2PasswordRequestForm
 
 from typing import Optional
 
@@ -9,10 +9,13 @@ from datetime import datetime, timedelta
 from ..users import create_user, User
 from ..common import DefaultResponse, DefaultResponseStatus
 
+from ..utils.auth import OAuth2PasswordBearerWithCookie
+
 from .. import config_options
 
 router = APIRouter()
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/token")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()
@@ -56,7 +59,7 @@ async def get_user_from_token(token : str = Depends(oauth2_scheme)):
     return user
 
 @router.post("/token")
-async def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     current_user = get_user_from_username(form_data.username)
     if not current_user.user_exist():
         raise HTTPException(
@@ -75,7 +78,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     access_token = create_access_token(
         data={"sub": current_user.username}, expires_delta=access_token_expires
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+
+    response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True, samesite="strict")
+
+    return #{"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/signup", status_code=status.HTTP_201_CREATED, response_model = DefaultResponse)
 async def signup(form_data: OAuth2PasswordRequestForm = Depends()):
