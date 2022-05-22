@@ -6,11 +6,12 @@ from ... import config_options
 from OSINTmodules.OSINTelastic import searchQuery
 from OSINTmodules.OSINTfiles import convertArticleToMD
 from OSINTmodules.OSINTobjects import FullArticle, BaseArticle
+from OSINTmodules.OSINTprofiles import collectWebsiteDetails
 
 from ...dependencies import fastapiSearchQuery
 
 from pydantic import conlist, constr
-from typing import List
+from typing import List, Dict
 
 from zipfile import ZipFile
 from io import BytesIO
@@ -53,9 +54,9 @@ async def get_article_content(
     )["documents"]
 
 
-@router.get("/categories", response_model=List[str])
+@router.get("/categories", response_model=Dict[str, Dict[str, str]])
 async def get_list_of_categories():
-    return config_options.esArticleClient.requestSourceCategoryListFromDB()
+    return collectWebsiteDetails(config_options.esArticleClient)
 
 
 @router.get("/MD/single", tags=["download"])
