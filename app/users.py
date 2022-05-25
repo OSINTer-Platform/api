@@ -110,7 +110,7 @@ class User(BaseUser):
         return self._get_feed_list()
 
     # Will ad feed if given feed object or remove feed if only given name
-    def update_feed_list(self, feed = None):
+    def update_feed_list(self, feed=None, feed_name=None):
         self.get_feeds()
 
         if not self.user_exist():
@@ -122,12 +122,16 @@ class User(BaseUser):
 
                 self.feeds[feed.feed_name] = feed
 
+            elif feed_name:
+                try:
+                    self.feeds.pop(feed_name)
+                except KeyError:
+                    return False
+
             else:
                 return False
 
-            self._update_current_user(
-                "feeds", self._get_feed_list()
-            )
+            self._update_current_user("feeds", self._get_feed_list())
 
             return True
 
