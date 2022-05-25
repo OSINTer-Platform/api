@@ -15,3 +15,13 @@ class DefaultResponse(BaseModel):
 
     class Config:
         use_enum_values = True
+
+
+class HTTPError(BaseModel):
+    detail: str
+    headers: Dict[str, str]
+
+    class Config:
+        schema_extra = {
+            "example": {"detail": "HTTPException raised."},
+        }

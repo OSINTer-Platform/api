@@ -7,7 +7,7 @@ from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
 from ..users import create_user, User
-from ..common import DefaultResponse, DefaultResponseStatus
+from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
 
 from ..utils.auth import OAuth2PasswordBearerWithCookie
 
@@ -72,7 +72,20 @@ async def logout(response: Response, current_user: User = Depends(get_user_from_
     return
 
 
-@router.post("/login")
+@router.post(
+    "/login",
+    responses={
+        200: {},
+        401: {
+            "model": HTTPError,
+            "description": "Returned when the username exist in DB but doesn't match the password",
+        },
+        404: {
+            "model": HTTPError,
+            "description": "Returned when the username doesn't exist in DB",
+        },
+    },
+)
 async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
     current_user = get_user_from_username(form_data.username)
     if not current_user.user_exist():
@@ -104,7 +117,16 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
 
 
 @router.post(
-    "/signup", status_code=status.HTTP_201_CREATED, response_model=DefaultResponse
+    "/signup",
+    status_code=status.HTTP_201_CREATED,
+    response_model=DefaultResponse,
+    responses={
+        201: {"msg": "User created"},
+        409: {
+            "model": HTTPError,
+            "description": "Returned when the username already exist in DB",
+        },
+    },
 )
 async def signup(form_data: OAuth2PasswordRequestForm = Depends()):
     current_user = get_user_from_username(form_data.username)

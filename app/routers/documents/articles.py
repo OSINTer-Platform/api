@@ -9,6 +9,7 @@ from OSINTmodules.OSINTobjects import FullArticle, BaseArticle
 from OSINTmodules.OSINTprofiles import collectWebsiteDetails
 
 from ...dependencies import fastapiSearchQuery
+from ...common import HTTPError
 
 from pydantic import conlist, constr
 from typing import List, Dict
@@ -37,7 +38,9 @@ async def get_newest_articles():
 
 @router.get("/overview/search", response_model=List[BaseArticle])
 async def search_articles(query: fastapiSearchQuery = Depends(fastapiSearchQuery)):
-    return config_options.esArticleClient.queryDocuments(query)["documents"]
+    articles = config_options.esArticleClient.queryDocuments(query)["documents"]
+    print(articles)
+    return articles
 
 
 @router.get("/content", response_model=List[FullArticle])
@@ -59,7 +62,16 @@ async def get_list_of_categories():
     return collectWebsiteDetails(config_options.esArticleClient)
 
 
-@router.get("/MD/single", tags=["download"])
+@router.get(
+    "/MD/single",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned requested article doesn't exist",
+        }
+    },
+)
 def download_single_markdown_file(
     ID: constr(strip_whitespace=True, min_length=20, max_length=20) = Query(...)
 ):
@@ -81,7 +93,16 @@ def download_single_markdown_file(
         )
 
 
-@router.get("/MD/multiple", tags=["download"])
+@router.get(
+    "/MD/multiple",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when no of the requested article exist",
+        }
+    },
+)
 def download_multiple_markdown_files(
     IDs: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
         ...
