@@ -27,11 +27,8 @@ def get_my_feeds(current_user: User = Depends(get_user_from_token)):
     },
 )
 def create_new_feed(feed: Feed, current_user: User = Depends(get_user_from_token)):
-    if current_user.create_feed(feed):
-
-        current_user_feeds = current_user.get_feeds()
+    if current_user.update_feed_list(feed = feed):
         current_user_feeds.append(feed)
-
         return current_user_feeds
     else:
         raise HTTPException(
