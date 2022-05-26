@@ -107,9 +107,51 @@ class BaseUser(BaseModel):
 class User(BaseUser):
     read_article_ids: List[str] = []
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
+    collections: Dict[str, List[str]] = {}
 
     def _get_feed_list(self):
         return [self.feeds[feed_name].dict() for feed_name in self.feeds]
+
+    def get_collections(self):
+        if not self.user_exist():
+            return {}
+
+        self.collections = self.user_details["_source"]["collections"]
+
+        return self.collections
+
+    def modify_collections(self, action, collection_name, IDs=None):
+        if not self.get_collections():
+            return False
+
+        if action == "add":
+            if collection_name in self.collections:
+                return False
+            else:
+                self.collections[collection_name] = []
+
+        else:
+            if not collection_name in self.collections:
+                return False
+
+            if action == "remove":
+                self.collections.pop(collection_name)
+
+            elif action == "extend":
+                for ID in IDs:
+                    if not ID in self.collections[collection_name]:
+                        self.collections[collection_name].append(ID)
+
+            elif action == "subtract":
+                for ID in IDs:
+                    try:
+                        self.collections[collection_name].remove(ID)
+                    except ValueError:
+                        pass
+
+        self._update_current_user("collections", self.collections, overwrite = True)
+
+        return True
 
     def get_feeds(self):
         if not self.user_exist():
