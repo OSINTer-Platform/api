@@ -51,12 +51,29 @@ class BaseUser(BaseModel):
 
         return self.user_details
 
-    def _update_current_user(self, field_name, field_value):
-        return self.es_conn.update(
-            index=self.index_name,
-            id=self.user_details["_id"],
-            doc={field_name: field_value},
-        )
+    def _update_current_user(self, field_name, field_value, overwrite = False):
+
+        if overwrite:
+            return self.es_conn.update(
+                    index=self.index_name,
+                    id=self.user_details["_id"],
+                    script = {
+                        "source" : f"""
+                            ctx._source["{field_name}"].clear();
+                            ctx._source["{field_name}"] = params.new_object;
+                        """,
+                        "params" : {
+                            "new_object" : field_value
+                        }
+                    }
+                )
+
+        else:
+            return self.es_conn.update(
+                index=self.index_name,
+                id=self.user_details["_id"],
+                doc={field_name: field_value},
+            )
 
     def _get_password_hash(self):
         return self.user_details["_source"]["password_hash"]
