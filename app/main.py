@@ -2,7 +2,7 @@ from fastapi import FastAPI, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from .routers.documents import articles, tweets
-from .routers.users import feeds
+from .routers.users import feeds, collections
 from .routers import auth
 
 from . import config_options
@@ -28,6 +28,8 @@ app.include_router(tweets.router, prefix="/tweets", tags=["tweets", "documents"]
 app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
 app.include_router(feeds.router, prefix="/users/feeds", tags=["users", "feed"])
+
+app.include_router(collections.router, prefix="/users/collections", tags=["users", "collections"])
 
 
 @app.get("/")
