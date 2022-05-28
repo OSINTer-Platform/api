@@ -149,6 +149,9 @@ class User(BaseUser):
                     except ValueError:
                         pass
 
+            elif action == "clear":
+                self.collections[collection_name] = []
+
         self._update_current_user("collections", self.collections, overwrite = True)
 
         return True

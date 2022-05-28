@@ -104,3 +104,27 @@ def modify_collection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No collection with that name found",
         )
+
+
+@router.post(
+    "/clear/{collection_name}",
+    status_code=status.HTTP_200_OK,
+    response_model=Dict[str, List[str]],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when supplied name for collection doesn't match any feed for that user",
+        }
+    },
+)
+def clear_collection(
+    collection_name: str,
+    current_user: User = Depends(get_user_from_token),
+):
+    if current_user.modify_collections("clear", collection_name):
+        return current_user.collections
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No collection with that name found",
+        )
