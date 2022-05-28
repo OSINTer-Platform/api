@@ -57,6 +57,7 @@ class BaseUser(BaseModel):
             return self.es_conn.update(
                     index=self.index_name,
                     id=self.user_details["_id"],
+                    refresh=True,
                     script = {
                         "source" : f"""
                             ctx._source["{field_name}"].clear();
@@ -72,6 +73,7 @@ class BaseUser(BaseModel):
             return self.es_conn.update(
                 index=self.index_name,
                 id=self.user_details["_id"],
+                refresh=True,
                 doc={field_name: field_value},
             )
 
