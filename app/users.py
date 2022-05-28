@@ -107,14 +107,14 @@ class BaseUser(BaseModel):
 class User(BaseUser):
     read_article_ids: List[str] = []
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
-    collections: Dict[str, List[str]] = {}
+    collections: Dict[str, List[str]] = {"Read Later" : []}
 
     def _get_feed_list(self):
         return [self.feeds[feed_name].dict() for feed_name in self.feeds]
 
     def get_collections(self):
         if not self.user_exist():
-            return {}
+            return {"Read Later" : []}
 
         self.collections = self.user_details["_source"]["collections"]
 
