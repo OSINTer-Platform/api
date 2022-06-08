@@ -29,7 +29,9 @@ app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
 app.include_router(feeds.router, prefix="/users/feeds", tags=["users", "feed"])
 
-app.include_router(collections.router, prefix="/users/collections", tags=["users", "collections"])
+app.include_router(
+    collections.router, prefix="/users/collections", tags=["users", "collections"]
+)
 
 
 @app.get("/")

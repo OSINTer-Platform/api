@@ -49,10 +49,10 @@ def create_new_collection(
             "model": HTTPError,
             "description": "Returned when supplied name for collection doesn't match any feed for that user",
         },
-        422 : {
-            "model" : HTTPError,
-            "description" : "Returned when user tries to delete Read Later collection (not removable)"
-        }
+        422: {
+            "model": HTTPError,
+            "description": "Returned when user tries to delete Read Later collection (not removable)",
+        },
     },
 )
 def remove_existing_collection(
@@ -97,7 +97,7 @@ def modify_collection(
     ),
     current_user: User = Depends(get_user_from_token),
 ):
-    if current_user.modify_collections(mod_action.value, collection_name, IDs = IDs):
+    if current_user.modify_collections(mod_action.value, collection_name, IDs=IDs):
         return current_user.collections
     else:
         raise HTTPException(
