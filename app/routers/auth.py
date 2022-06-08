@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response
+from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
 from fastapi.security import OAuth2, OAuth2PasswordRequestForm
 
 from typing import Optional
@@ -23,7 +23,9 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(hours=1)
+        expire = datetime.utcnow() + timedelta(
+            hours=config_options.ACCESS_TOKEN_EXPIRE_HOURS
+        )
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(
         to_encode, config_options.SECRET_KEY, algorithm=config_options.JWT_ALGORITHMS[0]
@@ -86,7 +88,11 @@ async def logout(response: Response, current_user: User = Depends(get_user_from_
         },
     },
 )
-async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    remember_me: bool = Query(False),
+):
     current_user = get_user_from_username(form_data.username)
     if not current_user.user_exist():
         raise HTTPException(
@@ -101,19 +107,27 @@ async def login(response: Response, form_data: OAuth2PasswordRequestForm = Depen
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token_expires = timedelta(minutes=config_options.ACCESS_TOKEN_EXPIRE_HOURS)
     access_token = create_access_token(
-        data={"sub": current_user.username}, expires_delta=access_token_expires
+        data={"sub": current_user.username},
+        expires_delta=timedelta(days=30) if remember_me else None,
     )
 
-    response.set_cookie(
-        key="access_token",
-        value=f"Bearer {access_token}",
-        httponly=True,
-        samesite="strict",
-    )
+    cookie_options = {
+        "key": "access_token",
+        "value": f"Bearer {access_token}",
+        "httponly": True,
+        "samesite": "strict",
+        "path": "/",
+    }
 
-    return  # {"access_token": access_token, "token_type": "bearer"}
+    if remember_me:
+        cookie_options["max_age"] = timedelta(
+            hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
+        ).total_seconds()
+
+    response.set_cookie(**cookie_options)
+
+    return {}
 
 
 @router.post(
