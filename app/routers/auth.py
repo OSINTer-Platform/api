@@ -118,6 +118,7 @@ async def login(
         "httponly": True,
         "samesite": "strict",
         "path": "/",
+        "secure": config_options.HTTPS,
     }
 
     if remember_me:
