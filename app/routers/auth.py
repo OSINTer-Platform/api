@@ -83,6 +83,52 @@ async def check_password_recovery_availability(
     return {"available": mail_available}
 
 
+@router.post(
+    "/forgotten-password/send-mail/",
+    response_model=DefaultResponse,
+    responses={
+        200: {"model": DefaultResponse},
+        404: {
+            "model": HTTPError,
+            "description": "Returned when the username doesn't exist in DB",
+        },
+        405: {
+            "model": HTTPError,
+            "description": "Returned if password recovery by email isn't available",
+        },
+    },
+)
+async def send_password_recovery_mail(
+    username: str, email: str, mail_available: bool = Depends(check_mail_available)
+):
+
+    if mail_available:
+        current_user = get_user_from_username(username)
+
+        if not current_user.user_exist():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User with that username wasn't found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        if current_user.verify_email(email):
+            # This needs to send the recovery email, once implemented
+            pass
+
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
+            detail="Password recovery by email currently isn't supported",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return DefaultResponse(
+        status=DefaultResponseStatus.SUCCESS,
+        msg="Email sent, if address matches the one given on signup.",
+    )
+
+
 @router.post("/logout")
 async def logout(response: Response, current_user: User = Depends(get_user_from_token)):
     response.delete_cookie(key="access_token")
