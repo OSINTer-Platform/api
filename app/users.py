@@ -75,11 +75,23 @@ class BaseUser(BaseModel):
                 doc={field_name: field_value},
             )
 
-    def _get_password_hash(self):
-        return self.user_details["_source"]["password_hash"]
-
     def _set_password_hash(self, passwordHash):
         self._update_current_user(self, "password_hash", passwordHash)
+
+    def _set_email_hash(self, email_hash):
+        self._update_current_user(self, "email_hash", email_hash)
+
+    def _verify_hashed_value(self, value, hash_value, updateMethod):
+        try:
+            ph.verify(hash_value, value)
+
+            if ph.check_needs_rehash(hash_value):
+                updateMethod(ph.hash(password))
+
+            return True
+
+        except argon2.exceptions.VerifyMismatchError:
+            return False
 
     def change_password(self, password):
         if self.user_exists():
@@ -87,21 +99,24 @@ class BaseUser(BaseModel):
 
     # Will verify that clear text [password] matches the one for the current user
     def verify_password(self, password):
-        if not self.user_exist():
-            return False
+        if self.user_exist():
+            return self._verify_hashed_value(
+                password,
+                self.user_details["_source"]["password_hash"],
+                self._set_password_hash,
+            )
         else:
-            user_hash = self._get_password_hash()
+            return False
 
-            try:
-                ph.verify(user_hash, password)
-
-                if ph.check_needs_rehash(user_hash):
-                    self._set_password_hash(ph.hash(password))
-
-                return True
-
-            except argon2.exceptions.VerifyMismatchError:
-                return False
+    def verify_email(self, email):
+        if self.user_exist():
+            return self._verify_hashed_value(
+                email,
+                self.user_details["_source"]["email_hash"],
+                self._set_email_hash,
+            )
+        else:
+            return False
 
 
 class User(BaseUser):
@@ -198,7 +213,7 @@ class User(BaseUser):
             return True
 
 
-def create_user(current_user: BaseUser, password: str):
+def create_user(current_user: BaseUser, password: str, email: str = ""):
 
     if current_user.user_exist():
         return False
@@ -210,6 +225,11 @@ def create_user(current_user: BaseUser, password: str):
         index_name = current_user.pop("index_name")
 
         current_user["password_hash"] = ph.hash(password)
+
+        if email:
+            current_user["email_hash"] = ph.hash(email)
+        else:
+            current_user["email_hash"] = ""
 
         es_conn.index(index=index_name, document=current_user)
 
