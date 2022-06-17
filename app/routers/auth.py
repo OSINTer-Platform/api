@@ -71,6 +71,18 @@ async def get_user_from_token(token: str = Depends(oauth2_scheme)):
     return user
 
 
+# Should also check whether mail server is active and available, once implemented
+async def check_mail_available():
+    return config_options.EMAIL_SERVER_AVAILABLE
+
+
+@router.get("/forgotten-password")
+async def check_password_recovery_availability(
+    mail_available: bool = Depends(check_mail_available),
+):
+    return {"available": mail_available}
+
+
 @router.post("/logout")
 async def logout(response: Response, current_user: User = Depends(get_user_from_token)):
     response.delete_cookie(key="access_token")
