@@ -9,7 +9,10 @@ from datetime import datetime, timedelta
 from ..users import create_user, User
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
 
-from ..utils.auth import OAuth2PasswordBearerWithCookie
+from ..utils.auth import (
+    OAuth2PasswordBearerWithCookie,
+    OAuth2PasswordRequestFormWithEmail,
+)
 
 from .. import config_options
 
@@ -143,9 +146,9 @@ async def login(
         },
     },
 )
-async def signup(form_data: OAuth2PasswordRequestForm = Depends()):
+async def signup(form_data: OAuth2PasswordRequestFormWithEmail = Depends()):
     current_user = get_user_from_username(form_data.username)
-    if create_user(current_user, form_data.password):
+    if create_user(current_user, form_data.password, form_data.email):
         return DefaultResponse(status=DefaultResponseStatus.SUCCESS, msg="User created")
     else:
         raise HTTPException(

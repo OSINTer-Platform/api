@@ -4,6 +4,7 @@ from fastapi import Request, HTTPException, status
 from fastapi.security import OAuth2
 from fastapi.security.utils import get_authorization_scheme_param
 from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
+from fastapi.param_functions import Form
 
 
 class OAuth2PasswordBearerWithCookie(OAuth2):
@@ -23,7 +24,6 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         authorization: str = request.cookies.get(
             "access_token"
         )  # changed to accept access token from httpOnly Cookie
-        print("access_token is", authorization)
 
         scheme, param = get_authorization_scheme_param(authorization)
         if not authorization or scheme.lower() != "bearer":
@@ -36,3 +36,23 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
             else:
                 return None
         return param
+
+
+class OAuth2PasswordRequestFormWithEmail:
+    def __init__(
+        self,
+        grant_type: str = Form(default=None, regex="password"),
+        username: str = Form(default=...),
+        password: str = Form(default=...),
+        email: str = Form(default=""),
+        scope: str = Form(default=""),
+        client_id: Optional[str] = Form(default=None),
+        client_secret: Optional[str] = Form(default=None),
+    ):
+        self.grant_type = grant_type
+        self.username = username
+        self.password = password
+        self.email = email
+        self.scopes = scope.split()
+        self.client_id = client_id
+        self.client_secret = client_secret
