@@ -51,17 +51,17 @@ def create_new_collection(
         },
         422: {
             "model": HTTPError,
-            "description": "Returned when user tries to delete Read Later collection (not removable)",
+            "description": "Returned when user tries to delete either the Read Later or Already Read collection (not removable)",
         },
     },
 )
 def remove_existing_collection(
     collection_name: str, current_user: User = Depends(get_user_from_token)
 ):
-    if collection_name == "Read Later":
+    if collection_name == "Read Later" or collection_name == "Already Read":
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail='The "Read Later" collection cannot be remove',
+            detail=f'The "{collection_name}" collection cannot be remove',
         )
 
     if current_user.modify_collections("remove", collection_name):
