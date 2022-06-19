@@ -3,4 +3,7 @@ python-jose[cryptography]
 fastapi
 pydantic
 uvicorn[standard]
-fastapi
+gunicorn # Used as process manager for uvicorn processes
+
+elasticsearch
+argon2-cffi
