@@ -1,4 +1,4 @@
-from OSINTmodules.OSINTelastic import searchQuery
+from modules.elastic import searchQuery
 
 from fastapi import Query
 from datetime import datetime

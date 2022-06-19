@@ -7,7 +7,7 @@ from .routers import auth
 
 from . import config_options
 
-from OSINTmodules.OSINTelastic import elasticDB
+from modules.elastic import elasticDB
 
 app = FastAPI()
 

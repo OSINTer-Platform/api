@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 from ... import config_options
 
-from OSINTmodules.OSINTelastic import searchQuery
-from OSINTmodules.OSINTobjects import FullTweet, BaseTweet
+from modules.elastic import searchQuery
+from modules.objects import FullTweet, BaseTweet
 from ...dependencies import fastapiSearchQuery
 
 from pydantic import conlist, constr

@@ -1,3 +1,3 @@
-from OSINTmodules.OSINTconfig import frontendConfig
+from modules.config import frontendConfig
 
 config_options = frontendConfig()

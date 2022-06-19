@@ -3,10 +3,10 @@ from fastapi.responses import StreamingResponse
 
 from ... import config_options
 
-from OSINTmodules.OSINTelastic import searchQuery
-from OSINTmodules.OSINTfiles import convertArticleToMD
-from OSINTmodules.OSINTobjects import FullArticle, BaseArticle
-from OSINTmodules.OSINTprofiles import collectWebsiteDetails
+from modules.elastic import searchQuery
+from modules.files import convertArticleToMD
+from modules.objects import FullArticle, BaseArticle
+from modules.profiles import collectWebsiteDetails
 
 from ...dependencies import fastapiSearchQuery
 from ...common import HTTPError
