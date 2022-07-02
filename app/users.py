@@ -120,7 +120,6 @@ class BaseUser(BaseModel):
 
 
 class User(BaseUser):
-    read_article_ids: List[str] = []
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
     collections: Dict[str, List[str]] = {"Read Later": [], "Already Read": []}
 
