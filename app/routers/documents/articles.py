@@ -24,7 +24,7 @@ router = APIRouter()
 def send_file(file_name, file_content, file_type):
     response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
 
-    response.headers["Content-Disposition"] = f"attachment; filename={file_name}"
+    response.headers["Content-Disposition"] = f"attachment; filename={file_name.encode('ascii',errors='ignore').decode()}"
 
     return response
 
