@@ -9,7 +9,7 @@ from . import config_options
 
 from modules.elastic import elasticDB
 
-app = FastAPI()
+app = FastAPI(root_path="/api")
 
 app.include_router(articles.router, prefix="/articles", tags=["articles", "documents"])
 
