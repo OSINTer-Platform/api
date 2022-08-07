@@ -22,5 +22,3 @@ app.include_router(feeds.router, prefix="/users/feeds", tags=["users", "feed"])
 app.include_router(
     collections.router, prefix="/users/collections", tags=["users", "collections"]
 )
-
-app.mount("/", StaticFiles(directory=config_options.FRONTEND_PATH, html=True), name="static")
