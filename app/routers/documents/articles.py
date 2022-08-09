@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from fastapi.responses import StreamingResponse
 
 from ... import config_options
 
@@ -8,7 +7,7 @@ from modules.files import convertArticleToMD
 from modules.objects import FullArticle, BaseArticle
 from modules.profiles import collectWebsiteDetails
 
-from ...utils.documents import convert_ids_to_zip
+from ...utils.documents import convert_ids_to_zip, send_file
 from ...dependencies import fastapiSearchQuery
 from ...common import HTTPError
 
@@ -19,14 +18,6 @@ from io import BytesIO
 from datetime import date
 
 router = APIRouter()
-
-
-def send_file(file_name, file_content, file_type):
-    response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
-
-    response.headers["Content-Disposition"] = f"attachment; filename={file_name.encode('ascii',errors='ignore').decode()}"
-
-    return response
 
 
 @router.get("/overview/newest", response_model=List[BaseArticle])

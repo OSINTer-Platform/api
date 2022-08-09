@@ -1,4 +1,5 @@
 from fastapi import Query, HTTPException, status
+from fastapi.responses import StreamingResponse
 
 from .. import config_options
 
@@ -9,6 +10,16 @@ from pydantic import conlist, constr
 
 from zipfile import ZipFile
 from io import BytesIO
+
+
+def send_file(file_name: str, file_content: BytesIO, file_type: str):
+    response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
+
+    response.headers[
+        "Content-Disposition"
+    ] = f"attachment; filename={file_name.encode('ascii',errors='ignore').decode()}"
+
+    return response
 
 
 async def convert_ids_to_zip(
