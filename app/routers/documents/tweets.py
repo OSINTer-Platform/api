@@ -18,7 +18,11 @@ async def get_newest_articles():
     )["documents"]
 
 
-@router.get("/overview/search", response_model=List[FullTweet], response_model_exclude_unset=True)
+@router.get(
+    "/overview/search",
+    response_model=List[FullTweet],
+    response_model_exclude_unset=True,
+)
 async def search_articles(query: fastapiSearchQuery = Depends(fastapiSearchQuery)):
     return config_options.esTweetClient.queryDocuments(query)["documents"]
 

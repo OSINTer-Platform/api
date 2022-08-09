@@ -11,7 +11,10 @@ from modules.elastic import elasticDB
 
 app = FastAPI(
     servers=[
-        {"url": "https://dev.osinter.dk/api", "description": "Development and Testing env"},
+        {
+            "url": "https://dev.osinter.dk/api",
+            "description": "Development and Testing env",
+        },
         {"url": "https://osinter.dk/api", "description": "Production env"},
     ],
     root_path="/api",

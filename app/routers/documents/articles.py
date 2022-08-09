@@ -27,7 +27,11 @@ async def get_newest_articles():
     )["documents"]
 
 
-@router.get("/overview/search", response_model=List[FullArticle], response_model_exclude_unset=True)
+@router.get(
+    "/overview/search",
+    response_model=List[FullArticle],
+    response_model_exclude_unset=True,
+)
 async def search_articles(query: fastapiSearchQuery = Depends(fastapiSearchQuery)):
     articles = config_options.esArticleClient.queryDocuments(query)["documents"]
     return articles

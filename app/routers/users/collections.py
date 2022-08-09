@@ -77,7 +77,7 @@ def remove_existing_collection(
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No collection with that name found",
+            detail="Found no collection with given name",
         )
 
 
@@ -110,7 +110,7 @@ def modify_collection(
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No collection with that name found",
+            detail="Found no collection with given name",
         )
 
 
@@ -134,7 +134,7 @@ def clear_collection(
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No collection with that name found",
+            detail="Found no collection with given name",
         )
 
 
