@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
 
 from typing import Dict, List
 from pydantic import conlist, constr
@@ -9,6 +9,14 @@ from ..auth import get_user_from_token
 
 from ...users import User
 from ...common import HTTPError
+from ...dependencies import get_collection_IDs
+from ...utils.documents import send_file, convert_ids_to_zip
+
+from modules.objects import BaseArticle
+from modules.elastic import searchQuery
+from ... import config_options
+
+from datetime import date
 
 router = APIRouter()
 
@@ -128,3 +136,48 @@ def clear_collection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="No collection with that name found",
         )
+
+
+@router.get(
+    "/get-contents/{collection_name}",
+    response_model=List[BaseArticle],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when supplied name for collection doesn't match any feed for that user",
+        },
+    },
+)
+def get_collection_contents(
+    collection_IDs: conlist(
+        constr(strip_whitespace=True, min_length=20, max_length=20),
+        unique_items=True,
+    ) = Depends(get_collection_IDs),
+):
+
+    return config_options.esArticleClient.queryDocuments(
+        searchQuery(limit=10_000, IDs=collection_IDs, complete=False)
+    )["documents"]
+
+
+@router.get(
+    "/download/{collection_name}",
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned either if supplied name doesn't match any collection for current user, or if no articles from the collection was found",
+        },
+    },
+)
+async def download_collection_contents(
+    collection_name: str = Path(...),
+    collection_IDs: conlist(
+        constr(strip_whitespace=True, min_length=20, max_length=20),
+        unique_items=True,
+    ) = Depends(get_collection_IDs),
+):
+    return send_file(
+        file_name=f"OSINTer-{collection_name.replace(' ', '-').replace('/', '-')}-articles-{date.today()}.zip",
+        file_content=await convert_ids_to_zip(collection_IDs),
+        file_type="application/zip",
+    )
