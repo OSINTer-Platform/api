@@ -1,5 +1,5 @@
-OSINTmodules
-OSINTprofiles
+modules
+profiles
 __pycache__
 info.log
 error.log
