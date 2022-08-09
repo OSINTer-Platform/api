@@ -8,13 +8,13 @@ from modules.files import convertArticleToMD
 from modules.objects import FullArticle, BaseArticle
 from modules.profiles import collectWebsiteDetails
 
+from ...utils.documents import convert_ids_to_zip
 from ...dependencies import fastapiSearchQuery
 from ...common import HTTPError
 
 from pydantic import conlist, constr
 from typing import List, Dict
 
-from zipfile import ZipFile
 from io import BytesIO
 from datetime import date
 
@@ -102,32 +102,9 @@ def download_single_markdown_file(
         }
     },
 )
-def download_multiple_markdown_files(
-    IDs: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
-        ...
+def download_multiple_markdown_files(zip_file: BytesIO = Depends(convert_ids_to_zip)):
+    return send_file(
+        file_name=f"OSINTer-MD-articles-{date.today()}.zip",
+        file_content=zip_file,
+        file_type="application/zip",
     )
-):
-    articles = config_options.esArticleClient.queryDocuments(
-        searchQuery(limit=10_000, IDs=IDs, complete=True)
-    )["documents"]
-
-    if articles:
-        zip_file = BytesIO()
-
-        with ZipFile(zip_file, "w") as zip_archive:
-            for article in articles:
-                zip_archive.writestr(
-                    f"OSINTer-MD-articles/{article.source.replace(' ', '-')}/{article.title.replace(' ', '-')}.md",
-                    convertArticleToMD(article).getvalue(),
-                )
-
-        return send_file(
-            file_name=f"OSINTer-MD-articles-{date.today()}.zip",
-            file_content=zip_file,
-            file_type="application/zip",
-        )
-
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Articles not found"
-        )
