@@ -1,10 +1,12 @@
-from fastapi import Query, HTTPException, status
+from fastapi import Query, HTTPException, status, Depends
 from fastapi.responses import StreamingResponse
 
 from .. import config_options
 
 from modules.elastic import searchQuery
 from modules.files import convertArticleToMD
+
+from ..dependencies import fastapiSearchQuery
 
 from pydantic import conlist, constr
 
@@ -27,9 +29,14 @@ async def convert_ids_to_zip(
         constr(strip_whitespace=True, min_length=20, max_length=20), unique_items=True
     ) = Query(...)
 ):
+    return await convert_query_to_zip(searchQuery(IDs=IDs))
+
+async def convert_query_to_zip(searchQ: fastapiSearchQuery = Depends(fastapiSearchQuery)):
+
+    searchQ.complete = True
 
     articles = config_options.esArticleClient.queryDocuments(
-        searchQuery(limit=10_000, IDs=IDs, complete=True)
+        searchQ
     )["documents"]
 
     if articles:
