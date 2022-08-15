@@ -57,7 +57,7 @@ async def get_list_of_categories():
 
 
 @router.get(
-    "/MD/single",
+    "/download/MD/single",
     tags=["download"],
     responses={
         404: {
@@ -88,7 +88,7 @@ def download_single_markdown_file(
 
 
 @router.get(
-    "/MD/multiple",
+    "/download/MD/multiple/ID",
     tags=["download"],
     responses={
         404: {
