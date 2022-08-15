@@ -155,9 +155,13 @@ def get_collection_contents(
     ) = Depends(get_collection_IDs),
 ):
 
-    return config_options.esArticleClient.queryDocuments(
-        searchQuery(limit=10_000, IDs=collection_IDs, complete=False)
-    )["documents"]
+    return (
+        config_options.esArticleClient.queryDocuments(
+            searchQuery(limit=10_000, IDs=collection_IDs, complete=False)
+        )["documents"]
+        if collection_IDs
+        else []
+    )
 
 
 @router.get(
