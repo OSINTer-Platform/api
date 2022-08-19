@@ -123,7 +123,7 @@ class User(BaseUser):
     feeds: Dict[str, Dict[str, Union[str, int, bool, datetime]]] = {}
     collections: Dict[str, List[str]] = {"Read Later": [], "Already Read": []}
 
-    def _get_feed_list(self):
+    def _serialize_feeds(self):
         return [self.feeds[feed_name].dict() for feed_name in self.feeds]
 
     def get_collections(self):
@@ -183,7 +183,7 @@ class User(BaseUser):
                 feed_name = feed["feed_name"]
                 self.feeds[feed_name] = Feed(**feed)
 
-        return self._get_feed_list()
+        return self._serialize_feeds()
 
     # Will ad feed if given feed object or remove feed if only given name
     def update_feed_list(self, feed=None, feed_name=None):
@@ -193,9 +193,6 @@ class User(BaseUser):
             return False
         else:
             if feed:
-                if feed.feed_name in self.feeds:
-                    return False
-
                 self.feeds[feed.feed_name] = feed
 
             elif feed_name:
@@ -207,9 +204,10 @@ class User(BaseUser):
             else:
                 return False
 
-            self._update_current_user("feeds", self._get_feed_list())
+            current_feeds = self._serialize_feeds()
+            self._update_current_user("feeds", current_feeds)
 
-            return True
+            return current_feeds
 
 
 def create_user(current_user: BaseUser, password: str, email: str = ""):
