@@ -97,12 +97,15 @@ def download_single_markdown_file(
         }
     },
 )
-def download_multiple_markdown_files_using_ids(zip_file: BytesIO = Depends(convert_ids_to_zip)):
+def download_multiple_markdown_files_using_ids(
+    zip_file: BytesIO = Depends(convert_ids_to_zip),
+):
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-ID-Download.zip",
         file_content=zip_file,
         file_type="application/zip",
     )
+
 
 @router.get(
     "/download/MD/multiple/search",
@@ -114,7 +117,9 @@ def download_multiple_markdown_files_using_ids(zip_file: BytesIO = Depends(conve
         }
     },
 )
-def download_multiple_markdown_files_using_search(zip_file: BytesIO = Depends(convert_query_to_zip)):
+def download_multiple_markdown_files_using_search(
+    zip_file: BytesIO = Depends(convert_query_to_zip),
+):
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-Search-Download.zip",
         file_content=zip_file,

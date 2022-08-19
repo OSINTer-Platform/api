@@ -31,13 +31,14 @@ async def convert_ids_to_zip(
 ):
     return await convert_query_to_zip(searchQuery(IDs=IDs))
 
-async def convert_query_to_zip(searchQ: fastapiSearchQuery = Depends(fastapiSearchQuery)):
+
+async def convert_query_to_zip(
+    searchQ: fastapiSearchQuery = Depends(fastapiSearchQuery),
+):
 
     searchQ.complete = True
 
-    articles = config_options.esArticleClient.queryDocuments(
-        searchQ
-    )["documents"]
+    articles = config_options.esArticleClient.queryDocuments(searchQ)["documents"]
 
     if articles:
         zip_file = BytesIO()
