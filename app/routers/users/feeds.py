@@ -39,7 +39,7 @@ def remove_existing_feed(
     feed_name: str, current_user: User = Depends(get_user_from_token)
 ):
     if current_user.update_feed_list(feed_name=feed_name):
-        return current_user._get_feed_list()
+        return current_user._serialize_feeds()
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
