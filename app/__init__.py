@@ -1,5 +1,5 @@
-from modules.config import frontendConfig
-from modules.misc import createFolder
+from modules.config import FrontendConfig
+from modules.misc import create_folder
 
-createFolder("logs")
-config_options = frontendConfig()
+create_folder("logs")
+config_options = FrontendConfig()

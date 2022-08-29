@@ -3,10 +3,10 @@ from fastapi.responses import StreamingResponse
 
 from .. import config_options
 
-from modules.elastic import searchQuery
-from modules.files import convertArticleToMD
+from modules.elastic import SearchQuery
+from modules.files import convert_article_to_md
 
-from ..dependencies import fastapiSearchQuery
+from ..dependencies import FastapiSearchQuery
 
 from pydantic import conlist, constr
 
@@ -25,20 +25,20 @@ def send_file(file_name: str, file_content: BytesIO, file_type: str):
 
 
 async def convert_ids_to_zip(
-    IDs: conlist(
+    ids: conlist(
         constr(strip_whitespace=True, min_length=20, max_length=20), unique_items=True
     ) = Query(...)
 ):
-    return await convert_query_to_zip(searchQuery(IDs=IDs))
+    return await convert_query_to_zip(SearchQuery(ids=ids))
 
 
 async def convert_query_to_zip(
-    searchQ: fastapiSearchQuery = Depends(fastapiSearchQuery),
+    search_q: FastapiSearchQuery = Depends(FastapiSearchQuery),
 ):
 
-    searchQ.complete = True
+    search_q.complete = True
 
-    articles = config_options.esArticleClient.queryDocuments(searchQ)["documents"]
+    articles = config_options.es_article_client.query_documents(search_q)["documents"]
 
     if articles:
         zip_file = BytesIO()
@@ -47,7 +47,7 @@ async def convert_query_to_zip(
             for article in articles:
                 zip_archive.writestr(
                     f"OSINTer-MD-articles/{article.source.replace(' ', '-')}/{article.title.replace(' ', '-')}.md",
-                    convertArticleToMD(article).getvalue(),
+                    convert_article_to_md(article).getvalue(),
                 )
 
         return zip_file
