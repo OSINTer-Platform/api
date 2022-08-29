@@ -9,11 +9,11 @@ from ..auth import get_user_from_token
 
 from ...users import User
 from ...common import HTTPError
-from ...dependencies import get_collection_IDs
+from ...dependencies import get_collection_ids
 from ...utils.documents import send_file, convert_ids_to_zip
 
 from modules.objects import BaseArticle
-from modules.elastic import searchQuery
+from modules.elastic import SearchQuery
 from ... import config_options
 
 from datetime import date
@@ -100,12 +100,12 @@ class ModAction(str, Enum):
 def modify_collection(
     collection_name: str,
     mod_action: ModAction,
-    IDs: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
+    ids : conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
         ...
     ),
     current_user: User = Depends(get_user_from_token),
 ):
-    if current_user.modify_collections(mod_action.value, collection_name, IDs=IDs):
+    if current_user.modify_collections(mod_action.value, collection_name, ids=ids):
         return current_user.collections
     else:
         raise HTTPException(
@@ -149,17 +149,17 @@ def clear_collection(
     },
 )
 def get_collection_contents(
-    collection_IDs: conlist(
+    collection_ids: conlist(
         constr(strip_whitespace=True, min_length=20, max_length=20),
         unique_items=True,
-    ) = Depends(get_collection_IDs),
+    ) = Depends(get_collection_ids),
 ):
 
     return (
-        config_options.esArticleClient.queryDocuments(
-            searchQuery(limit=10_000, IDs=collection_IDs, complete=False)
+        config_options.es_article_client.query_documents(
+            SearchQuery(limit=10_000, ids=collection_ids, complete=False)
         )["documents"]
-        if collection_IDs
+        if collection_ids
         else []
     )
 
@@ -175,13 +175,13 @@ def get_collection_contents(
 )
 async def download_collection_contents(
     collection_name: str = Path(...),
-    collection_IDs: conlist(
+    collection_ids: conlist(
         constr(strip_whitespace=True, min_length=20, max_length=20),
         unique_items=True,
-    ) = Depends(get_collection_IDs),
+    ) = Depends(get_collection_ids),
 ):
     return send_file(
         file_name=f"OSINTer-{collection_name.replace(' ', '-').replace('/', '-')}-articles-{date.today()}.zip",
-        file_content=await convert_ids_to_zip(collection_IDs),
+        file_content=await convert_ids_to_zip(collection_ids),
         file_type="application/zip",
     )

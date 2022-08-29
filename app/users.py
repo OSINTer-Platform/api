@@ -13,12 +13,12 @@ ph = argon2.PasswordHasher()
 class Feed(BaseModel):
     feed_name: str
     limit: Optional[int] = None
-    sortBy: Optional[str] = None
-    sortOrder: Optional[str] = None
-    searchTerm: Optional[str] = None
-    firstDate: Optional[datetime] = None
-    lastDate: Optional[datetime] = None
-    sourceCategory: Optional[List[str]] = None
+    sort_by: Optional[str] = None
+    sort_order: Optional[str] = None
+    search_term: Optional[str] = None
+    first_date: Optional[datetime] = None
+    last_date: Optional[datetime] = None
+    source_category: Optional[List[str]] = None
     highlight: Optional[bool] = None
 
 
@@ -32,13 +32,13 @@ class BaseUser(BaseModel):
         arbitrary_types_allowed = True
 
     def user_exist(self):
-        queryResponse = self.es_conn.search(
+        query_response = self.es_conn.search(
             index=self.index_name,
             body={"query": {"term": {"username": {"value": self.username}}}},
         )
 
-        if int(queryResponse["hits"]["total"]["value"]) != 0:
-            self.user_details = queryResponse["hits"]["hits"][0]
+        if int(query_response["hits"]["total"]["value"]) != 0:
+            self.user_details = query_response["hits"]["hits"][0]
             return True
         else:
             return False
@@ -75,18 +75,18 @@ class BaseUser(BaseModel):
                 doc={field_name: field_value},
             )
 
-    def _set_password_hash(self, passwordHash):
-        self._update_current_user(self, "password_hash", passwordHash)
+    def _set_password_hash(self, password_hash):
+        self._update_current_user(self, "password_hash", password_hash)
 
     def _set_email_hash(self, email_hash):
         self._update_current_user(self, "email_hash", email_hash)
 
-    def _verify_hashed_value(self, value, hash_value, updateMethod):
+    def _verify_hashed_value(self, value, hash_value, update_method):
         try:
             ph.verify(hash_value, value)
 
             if ph.check_needs_rehash(hash_value):
-                updateMethod(ph.hash(password))
+                update_method(ph.hash(password))
 
             return True
 
@@ -95,7 +95,7 @@ class BaseUser(BaseModel):
 
     def change_password(self, password):
         if self.user_exists():
-            self.setPasswordHash(ph.hash(password))
+            self._set_password_hash(ph.hash(password))
 
     # Will verify that clear text [password] matches the one for the current user
     def verify_password(self, password):
@@ -134,7 +134,7 @@ class User(BaseUser):
 
         return self.collections
 
-    def modify_collections(self, action, collection_name, IDs=None):
+    def modify_collections(self, action, collection_name, ids=None):
         if not self.get_collections():
             return False
 
@@ -152,14 +152,14 @@ class User(BaseUser):
                 self.collections.pop(collection_name)
 
             elif action == "extend":
-                for ID in IDs:
-                    if not ID in self.collections[collection_name]:
-                        self.collections[collection_name].append(ID)
+                for id in ids:
+                    if not id in self.collections[collection_name]:
+                        self.collections[collection_name].append(id)
 
             elif action == "subtract":
-                for ID in IDs:
+                for id in ids:
                     try:
-                        self.collections[collection_name].remove(ID)
+                        self.collections[collection_name].remove(id)
                     except ValueError:
                         pass
 

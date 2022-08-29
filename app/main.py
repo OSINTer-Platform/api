@@ -7,7 +7,7 @@ from .routers import auth
 
 from . import config_options
 
-from modules.elastic import elasticDB
+from modules.elastic import ElasticDB
 
 app = FastAPI(
     servers=[

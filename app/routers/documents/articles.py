@@ -2,13 +2,13 @@ from fastapi import APIRouter, Depends, Query, HTTPException, status
 
 from ... import config_options
 
-from modules.elastic import searchQuery
-from modules.files import convertArticleToMD
+from modules.elastic import SearchQuery
+from modules.files import convert_article_to_md
 from modules.objects import FullArticle, BaseArticle
-from modules.profiles import collectWebsiteDetails
+from modules.profiles import collect_website_details
 
 from ...utils.documents import convert_ids_to_zip, convert_query_to_zip, send_file
-from ...dependencies import fastapiSearchQuery
+from ...dependencies import FastapiSearchQuery
 from ...common import HTTPError
 
 from pydantic import conlist, constr
@@ -22,8 +22,8 @@ router = APIRouter()
 
 @router.get("/overview/newest", response_model=List[BaseArticle])
 async def get_newest_articles():
-    return config_options.esArticleClient.queryDocuments(
-        searchQuery(limit=50, complete=False)
+    return config_options.es_article_client.query_documents(
+        SearchQuery(limit=50, complete=False)
     )["documents"]
 
 
@@ -32,28 +32,28 @@ async def get_newest_articles():
     response_model=List[FullArticle],
     response_model_exclude_unset=True,
 )
-async def search_articles(query: fastapiSearchQuery = Depends(fastapiSearchQuery)):
-    articles = config_options.esArticleClient.queryDocuments(query)["documents"]
+async def search_articles(query: FastapiSearchQuery = Depends(FastapiSearchQuery)):
+    articles = config_options.es_article_client.query_documents(query)["documents"]
     return articles
 
 
 @router.get("/content", response_model=List[FullArticle])
 async def get_article_content(
-    IDs: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
+    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
         ...
     )
 ):
-    for ID in IDs:
-        config_options.esArticleClient.incrementReadCounter(ID)
+    for id in ids:
+        config_options.es_article_client.increment_read_counter(id)
 
-    return config_options.esArticleClient.queryDocuments(
-        searchQuery(IDs=IDs, complete=True)
+    return config_options.es_article_client.query_documents(
+        SearchQuery(ids=ids, complete=True)
     )["documents"]
 
 
 @router.get("/categories", response_model=Dict[str, Dict[str, str]])
 async def get_list_of_categories():
-    return collectWebsiteDetails(config_options.esArticleClient)
+    return collect_website_details(config_options.es_article_client)
 
 
 @router.get(
@@ -67,18 +67,18 @@ async def get_list_of_categories():
     },
 )
 def download_single_markdown_file(
-    ID: constr(strip_whitespace=True, min_length=20, max_length=20) = Query(...)
+    id: constr(strip_whitespace=True, min_length=20, max_length=20) = Query(...)
 ):
-    article = config_options.esArticleClient.queryDocuments(
-        searchQuery(limit=1, IDs=[ID], complete=True)
+    article = config_options.es_article_client.query_documents(
+        SearchQuery(limit=1, ids=[id], complete=True)
     )["documents"][0]
 
     if article != []:
-        articleFile = convertArticleToMD(article)
+        article_file = convert_article_to_md(article)
 
         return send_file(
             file_name=f"{article.title.replace(' ', '-')}.md",
-            file_content=articleFile,
+            file_content=article_file,
             file_type="text/markdown",
         )
     else:
