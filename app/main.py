@@ -3,7 +3,7 @@ from fastapi.staticfiles import StaticFiles
 
 from .routers.documents import articles, tweets
 from .routers.users import feeds, collections
-from .routers import auth
+from .routers import auth, ml
 
 from . import config_options
 
@@ -31,3 +31,5 @@ app.include_router(feeds.router, prefix="/users/feeds", tags=["feed"])
 app.include_router(
     collections.router, prefix="/users/collections", tags=["collections"]
 )
+
+app.include_router(ml.router, prefix="/ml", tags=["ml"])
