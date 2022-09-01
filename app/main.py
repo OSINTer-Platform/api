@@ -32,4 +32,5 @@ app.include_router(
     collections.router, prefix="/users/collections", tags=["collections"]
 )
 
+ml.mount_routers()
 app.include_router(ml.router, prefix="/ml", tags=["ml"])
