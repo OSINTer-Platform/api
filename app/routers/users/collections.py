@@ -26,27 +26,16 @@ def get_my_collections(current_user: User = Depends(get_user_from_token)):
     return current_user.get_collections()
 
 
-@router.post(
+@router.put(
     "/create/{collection_name}",
     status_code=status.HTTP_201_CREATED,
     response_model=Dict[str, List[str]],
-    responses={
-        409: {
-            "model": HTTPError,
-            "description": "Returned when collection with the supplied name already exist",
-        }
-    },
 )
 def create_new_collection(
     collection_name: str, current_user: User = Depends(get_user_from_token)
 ):
-    if current_user.modify_collections("add", collection_name):
-        return current_user.collections
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Collection with that name already exists",
-        )
+    current_user.modify_collections("add", collection_name)
+    return current_user.collections
 
 
 @router.delete(
