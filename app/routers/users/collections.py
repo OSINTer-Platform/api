@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Body
 
 from typing import Dict, List
 from pydantic import conlist, constr
@@ -32,9 +32,13 @@ def get_my_collections(current_user: User = Depends(get_user_from_token)):
     response_model=Dict[str, List[str]],
 )
 def create_new_collection(
-    collection_name: str, current_user: User = Depends(get_user_from_token)
+    collection_name: str,
+    current_user: User = Depends(get_user_from_token),
+    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Body(
+        []
+    ),
 ):
-    current_user.modify_collections("add", collection_name)
+    current_user.modify_collections("add", collection_name, ids)
     return current_user.collections
 
 
@@ -89,7 +93,7 @@ class ModAction(str, Enum):
 def modify_collection(
     collection_name: str,
     mod_action: ModAction,
-    ids : conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
+    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
         ...
     ),
     current_user: User = Depends(get_user_from_token),

@@ -142,7 +142,7 @@ class User(BaseUser):
             if collection_name in self.collections:
                 return False
             else:
-                self.collections[collection_name] = []
+                self.collections[collection_name] = ids if ids else []
 
         else:
             if not collection_name in self.collections:
