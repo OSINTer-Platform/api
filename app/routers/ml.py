@@ -8,6 +8,10 @@ from modules.elastic import SearchQuery
 from .. import config_options
 from ..common import HTTPError
 
+# Used for article cluster download endpoint
+from ..utils.documents import send_file, convert_query_to_zip
+from io import BytesIO
+from datetime import date
 
 router = APIRouter()
 article_router = APIRouter()
@@ -69,3 +73,24 @@ def get_articles_from_cluster(
         )
 
     return articles_from_cluster
+
+
+@article_router.get(
+    "/download/cluster/{cluster_id}",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when cluster isn't found",
+        }
+    },
+)
+async def download_articles_from_cluster(cluster_id: int):
+    query = get_article_cluster_query(cluster_id)
+    zip_file: BytesIO = await convert_query_to_zip(query)
+
+    return send_file(
+        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{cluster_id}-Download.zip",
+        file_content=zip_file,
+        file_type="application/zip",
+    )
