@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Query, HTTPException
+from fastapi import APIRouter, Query, HTTPException, Depends
 
 from typing import List, Dict
 
 from modules.objects import FullArticle
+from modules.elastic import SearchQuery
+
 from .. import config_options
 from ..common import HTTPError
 
@@ -19,6 +21,10 @@ def mount_routers():
 @router.get("/")
 def check_ml_availability():
     return {"available": config_options.ML_AVAILABLE}
+
+
+def get_article_cluster_query(cluster_id: int):
+    return SearchQuery(limit=0, cluster_id=cluster_id)
 
 
 @article_router.get("/clusters", response_model=List[Dict[str, int]])
@@ -46,12 +52,16 @@ def get_article_clusters():
         }
     },
 )
-def get_articles_from_cluster(cluster_id: int, complete: bool = Query(True)):
-    query = {"size": 0, "query": {"term": {"ml.cluster": {"value": cluster_id}}}}
+def get_articles_from_cluster(
+    query: SearchQuery = Depends(get_article_cluster_query),
+    complete: bool = Query(True),
+):
+
+    query.complete = complete
 
     articles_from_cluster: List[
         FullArticle
-    ] = config_options.es_article_client.query_large(query, complete)
+    ] = config_options.es_article_client.query_documents(query)["documents"]
 
     if not articles_from_cluster:
         raise HTTPException(
