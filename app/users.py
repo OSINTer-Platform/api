@@ -11,7 +11,6 @@ ph = argon2.PasswordHasher()
 
 # This is a datamodel used for storing information about a users feed. A feed for a user, is simply a set of query paramaters, used for search for articles relevant to a user, when that feed is selected.
 class Feed(BaseModel):
-    feed_name: str
     limit: Optional[int] = None
     sort_by: Optional[str] = None
     sort_order: Optional[str] = None
@@ -124,7 +123,15 @@ class User(BaseUser):
     collections: Dict[str, List[str]] = {"Read Later": [], "Already Read": []}
 
     def _serialize_feeds(self):
-        return [self.feeds[feed_name].dict() for feed_name in self.feeds]
+        return [
+            {**feed.dict(), "feed_name": feed_name}
+            for feed_name, feed in self.feeds.items()
+        ]
+
+    def _deserialize_feeds(self, feeds):
+        for feed in feeds:
+            feed_name = feed.pop("feed_name")
+            self.feeds[feed_name] = Feed(**feed)
 
     def get_collections(self):
         if not self.user_exist():
@@ -172,42 +179,35 @@ class User(BaseUser):
 
     def get_feeds(self):
         if not self.user_exist():
-            return []
+            return None
 
         self.feeds = {}
 
         user_data = self.user_details["_source"]
 
         if "feeds" in user_data:
-            for feed in user_data["feeds"]:
-                feed_name = feed["feed_name"]
-                self.feeds[feed_name] = Feed(**feed)
+            self._deserialize_feeds(user_data["feeds"])
 
-        return self._serialize_feeds()
+        return self.feeds
 
-    # Will ad feed if given feed object or remove feed if only given name
-    def update_feed_list(self, feed=None, feed_name=None):
-        self.get_feeds()
+    # Will add feed if given feed object and name or remove feed if only given name
+    def update_feed_list(self, feed_name: str, feed: Feed = None):
 
-        if not self.user_exist():
-            return False
+        if self.get_feeds() is None:
+            return None
         else:
             if feed:
-                self.feeds[feed.feed_name] = feed
-
-            elif feed_name:
-                try:
-                    self.feeds.pop(feed_name)
-                except KeyError:
-                    return False
+                self.feeds[feed_name] = feed
 
             else:
-                return False
+                try:
+                    self.feeds.pop(feed_name)
+                except KeyError as e:
+                    return None
 
-            current_feeds = self._serialize_feeds()
-            self._update_current_user("feeds", current_feeds)
+            self._update_current_user("feeds", self._serialize_feeds())
 
-            return current_feeds
+            return self.feeds
 
 
 def create_user(current_user: BaseUser, password: str, email: str = ""):
