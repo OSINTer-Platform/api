@@ -27,7 +27,7 @@ def get_my_collections(current_user: User = Depends(get_user_from_token)):
 
 
 @router.put(
-    "/create/{collection_name}",
+    "/{collection_name}",
     status_code=status.HTTP_201_CREATED,
     response_model=Dict[str, List[str]],
 )
@@ -43,7 +43,7 @@ def create_new_collection(
 
 
 @router.delete(
-    "/remove/{collection_name}",
+    "/{collection_name}",
     response_model=Dict[str, List[str]],
     responses={
         404: {
@@ -80,7 +80,7 @@ class ModAction(str, Enum):
 
 
 @router.post(
-    "/modify/{collection_name}/{mod_action}",
+    "/{collection_name}/{mod_action}",
     status_code=status.HTTP_200_OK,
     response_model=Dict[str, List[str]],
     responses={
@@ -107,32 +107,8 @@ def modify_collection(
         )
 
 
-@router.post(
-    "/clear/{collection_name}",
-    status_code=status.HTTP_200_OK,
-    response_model=Dict[str, List[str]],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when supplied name for collection doesn't match any feed for that user",
-        }
-    },
-)
-def clear_collection(
-    collection_name: str,
-    current_user: User = Depends(get_user_from_token),
-):
-    if current_user.modify_collections("clear", collection_name):
-        return current_user.collections
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Found no collection with given name",
-        )
-
-
 @router.get(
-    "/get-contents/{collection_name}",
+    "/{collection_name}",
     response_model=List[BaseArticle],
     responses={
         404: {
@@ -158,7 +134,7 @@ def get_collection_contents(
 
 
 @router.get(
-    "/download/{collection_name}",
+    "/{collection_name}/export",
     responses={
         404: {
             "model": HTTPError,

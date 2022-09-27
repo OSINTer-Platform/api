@@ -16,7 +16,7 @@ def get_my_feeds(current_user: User = Depends(get_user_from_token)):
 
 
 @router.put(
-    "/create/{feed_name}",
+    "/{feed_name}",
     status_code=status.HTTP_201_CREATED,
     response_model=Dict[str, Feed],
 )
@@ -28,7 +28,7 @@ def create_new_feed(
 
 
 @router.delete(
-    "/remove/{feed_name}",
+    "/{feed_name}",
     status_code=status.HTTP_200_OK,
     response_model=Dict[str, Feed],
     responses={

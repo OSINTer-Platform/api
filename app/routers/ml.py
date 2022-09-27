@@ -76,7 +76,7 @@ def get_articles_from_cluster(
 
 
 @article_router.get(
-    "/download/cluster/{cluster_id}",
+    "/cluster/{cluster_id}/export",
     tags=["download"],
     responses={
         404: {

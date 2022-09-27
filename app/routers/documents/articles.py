@@ -20,7 +20,7 @@ from datetime import date
 router = APIRouter()
 
 
-@router.get("/overview/newest", response_model=List[BaseArticle])
+@router.get("/newest", response_model=List[BaseArticle])
 async def get_newest_articles():
     return config_options.es_article_client.query_documents(
         SearchQuery(limit=50, complete=False)
@@ -28,7 +28,7 @@ async def get_newest_articles():
 
 
 @router.get(
-    "/overview/search",
+    "/search",
     response_model=List[FullArticle],
     response_model_exclude_unset=True,
 )
@@ -56,18 +56,39 @@ async def get_list_of_categories():
     return collect_website_details(config_options.es_article_client)
 
 
+# Has to be defined above route for download_single_markdown_file, as it will otherwise collide due to the part of the route "multiple" can be interpreted as an ID
 @router.get(
-    "/download/MD/single",
+    "/export/multiple",
     tags=["download"],
     responses={
         404: {
             "model": HTTPError,
-            "description": "Returned requested article doesn't exist",
+            "description": "Returned when no of the requested article exist",
+        }
+    },
+)
+def download_multiple_markdown_files_using_ids(
+    zip_file: BytesIO = Depends(convert_ids_to_zip),
+):
+    return send_file(
+        file_name=f"OSINTer-MD-articles-{date.today()}-ID-Download.zip",
+        file_content=zip_file,
+        file_type="application/zip",
+    )
+
+
+@router.get(
+    "/export/{id}",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when requested article doesn't exist",
         }
     },
 )
 def download_single_markdown_file(
-    id: constr(strip_whitespace=True, min_length=20, max_length=20) = Query(...)
+    id: constr(strip_whitespace=True, min_length=20, max_length=20)
 ):
     article = config_options.es_article_client.query_documents(
         SearchQuery(limit=1, ids=[id], complete=True)
@@ -88,27 +109,7 @@ def download_single_markdown_file(
 
 
 @router.get(
-    "/download/MD/multiple/ID",
-    tags=["download"],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when no of the requested article exist",
-        }
-    },
-)
-def download_multiple_markdown_files_using_ids(
-    zip_file: BytesIO = Depends(convert_ids_to_zip),
-):
-    return send_file(
-        file_name=f"OSINTer-MD-articles-{date.today()}-ID-Download.zip",
-        file_content=zip_file,
-        file_type="application/zip",
-    )
-
-
-@router.get(
-    "/download/MD/multiple/search",
+    "/export/search",
     tags=["download"],
     responses={
         404: {
