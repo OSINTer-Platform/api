@@ -77,6 +77,7 @@ def remove_existing_collection(
 class ModAction(str, Enum):
     extend = "extend"
     subtract = "subtract"
+    clear = "clear"
 
 
 @router.post(
@@ -94,7 +95,7 @@ def modify_collection(
     collection_name: str,
     mod_action: ModAction,
     ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
-        ...
+        []
     ),
     current_user: User = Depends(get_user_from_token),
 ):
