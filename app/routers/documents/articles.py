@@ -78,6 +78,26 @@ def download_multiple_markdown_files_using_ids(
 
 
 @router.get(
+    "/export/search",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when query matches no articles",
+        }
+    },
+)
+def download_multiple_markdown_files_using_search(
+    zip_file: BytesIO = Depends(convert_query_to_zip),
+):
+    return send_file(
+        file_name=f"OSINTer-MD-articles-{date.today()}-Search-Download.zip",
+        file_content=zip_file,
+        file_type="application/zip",
+    )
+
+
+@router.get(
     "/export/{id}",
     tags=["download"],
     responses={
@@ -106,23 +126,3 @@ def download_single_markdown_file(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
-
-
-@router.get(
-    "/export/search",
-    tags=["download"],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when query matches no articles",
-        }
-    },
-)
-def download_multiple_markdown_files_using_search(
-    zip_file: BytesIO = Depends(convert_query_to_zip),
-):
-    return send_file(
-        file_name=f"OSINTer-MD-articles-{date.today()}-Search-Download.zip",
-        file_content=zip_file,
-        file_type="application/zip",
-    )
