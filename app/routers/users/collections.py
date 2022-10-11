@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path, Body
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    Query,
+    Path,
+    Body,
+    Response,
+)
 
 from typing import Dict, List
 from pydantic import conlist, constr
@@ -141,6 +150,9 @@ def get_collection_contents(
             "model": HTTPError,
             "description": "Returned either if supplied name doesn't match any collection for current user, or if no articles from the collection was found",
         },
+        204: {
+            "description": "Returned when collection is empty",
+        },
     },
 )
 async def download_collection_contents(
@@ -150,6 +162,8 @@ async def download_collection_contents(
         unique_items=True,
     ) = Depends(get_collection_ids),
 ):
+    if not collection_ids:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     return send_file(
         file_name=f"OSINTer-{collection_name.replace(' ', '-').replace('/', '-')}-articles-{date.today()}.zip",
         file_content=await convert_ids_to_zip(collection_ids),
