@@ -40,4 +40,4 @@ async def get_article_content(
 
 @router.get("/categories", response_model=List[str])
 async def get_list_of_categories():
-    return config_options.es_tweet_client.get_source_category_list_from_db()
+    return config_options.es_tweet_client.get_unique_values()

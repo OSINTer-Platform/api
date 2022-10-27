@@ -1,4 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Path
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    status,
+    Query,
+    Path,
+    Body,
+    Response,
+)
 
 from typing import Dict, List
 from pydantic import conlist, constr
@@ -26,31 +35,24 @@ def get_my_collections(current_user: User = Depends(get_user_from_token)):
     return current_user.get_collections()
 
 
-@router.post(
-    "/create/{collection_name}",
+@router.put(
+    "/{collection_name}",
     status_code=status.HTTP_201_CREATED,
     response_model=Dict[str, List[str]],
-    responses={
-        409: {
-            "model": HTTPError,
-            "description": "Returned when collection with the supplied name already exist",
-        }
-    },
 )
 def create_new_collection(
-    collection_name: str, current_user: User = Depends(get_user_from_token)
+    collection_name: str,
+    current_user: User = Depends(get_user_from_token),
+    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Body(
+        []
+    ),
 ):
-    if current_user.modify_collections("add", collection_name):
-        return current_user.collections
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Collection with that name already exists",
-        )
+    current_user.modify_collections("add", collection_name, ids)
+    return current_user.collections
 
 
 @router.delete(
-    "/remove/{collection_name}",
+    "/{collection_name}",
     response_model=Dict[str, List[str]],
     responses={
         404: {
@@ -84,10 +86,11 @@ def remove_existing_collection(
 class ModAction(str, Enum):
     extend = "extend"
     subtract = "subtract"
+    clear = "clear"
 
 
 @router.post(
-    "/modify/{collection_name}/{mod_action}",
+    "/{collection_name}/{mod_action}",
     status_code=status.HTTP_200_OK,
     response_model=Dict[str, List[str]],
     responses={
@@ -100,8 +103,8 @@ class ModAction(str, Enum):
 def modify_collection(
     collection_name: str,
     mod_action: ModAction,
-    ids : conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
-        ...
+    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
+        []
     ),
     current_user: User = Depends(get_user_from_token),
 ):
@@ -114,32 +117,8 @@ def modify_collection(
         )
 
 
-@router.post(
-    "/clear/{collection_name}",
-    status_code=status.HTTP_200_OK,
-    response_model=Dict[str, List[str]],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when supplied name for collection doesn't match any feed for that user",
-        }
-    },
-)
-def clear_collection(
-    collection_name: str,
-    current_user: User = Depends(get_user_from_token),
-):
-    if current_user.modify_collections("clear", collection_name):
-        return current_user.collections
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Found no collection with given name",
-        )
-
-
 @router.get(
-    "/get-contents/{collection_name}",
+    "/{collection_name}",
     response_model=List[BaseArticle],
     responses={
         404: {
@@ -165,11 +144,14 @@ def get_collection_contents(
 
 
 @router.get(
-    "/download/{collection_name}",
+    "/{collection_name}/export",
     responses={
         404: {
             "model": HTTPError,
             "description": "Returned either if supplied name doesn't match any collection for current user, or if no articles from the collection was found",
+        },
+        204: {
+            "description": "Returned when collection is empty",
         },
     },
 )
@@ -180,6 +162,8 @@ async def download_collection_contents(
         unique_items=True,
     ) = Depends(get_collection_ids),
 ):
+    if not collection_ids:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     return send_file(
         file_name=f"OSINTer-{collection_name.replace(' ', '-').replace('/', '-')}-articles-{date.today()}.zip",
         file_content=await convert_ids_to_zip(collection_ids),

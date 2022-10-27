@@ -20,7 +20,7 @@ from datetime import date
 router = APIRouter()
 
 
-@router.get("/overview/newest", response_model=List[BaseArticle])
+@router.get("/newest", response_model=List[BaseArticle])
 async def get_newest_articles():
     return config_options.es_article_client.query_documents(
         SearchQuery(limit=50, complete=False)
@@ -28,7 +28,7 @@ async def get_newest_articles():
 
 
 @router.get(
-    "/overview/search",
+    "/search",
     response_model=List[FullArticle],
     response_model_exclude_unset=True,
 )
@@ -56,39 +56,9 @@ async def get_list_of_categories():
     return collect_website_details(config_options.es_article_client)
 
 
+# Has to be defined above route for download_single_markdown_file, as it will otherwise collide due to the part of the route "multiple" can be interpreted as an ID
 @router.get(
-    "/download/MD/single",
-    tags=["download"],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned requested article doesn't exist",
-        }
-    },
-)
-def download_single_markdown_file(
-    id: constr(strip_whitespace=True, min_length=20, max_length=20) = Query(...)
-):
-    article = config_options.es_article_client.query_documents(
-        SearchQuery(limit=1, ids=[id], complete=True)
-    )["documents"][0]
-
-    if article != []:
-        article_file = convert_article_to_md(article)
-
-        return send_file(
-            file_name=f"{article.title.replace(' ', '-')}.md",
-            file_content=article_file,
-            file_type="text/markdown",
-        )
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
-        )
-
-
-@router.get(
-    "/download/MD/multiple/ID",
+    "/export/multiple",
     tags=["download"],
     responses={
         404: {
@@ -108,7 +78,7 @@ def download_multiple_markdown_files_using_ids(
 
 
 @router.get(
-    "/download/MD/multiple/search",
+    "/export/search",
     tags=["download"],
     responses={
         404: {
@@ -125,3 +95,34 @@ def download_multiple_markdown_files_using_search(
         file_content=zip_file,
         file_type="application/zip",
     )
+
+
+@router.get(
+    "/export/{id}",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when requested article doesn't exist",
+        }
+    },
+)
+def download_single_markdown_file(
+    id: constr(strip_whitespace=True, min_length=20, max_length=20)
+):
+    article = config_options.es_article_client.query_documents(
+        SearchQuery(limit=1, ids=[id], complete=True)
+    )["documents"][0]
+
+    if article != []:
+        article_file = convert_article_to_md(article)
+
+        return send_file(
+            file_name=f"{article.title.replace(' ', '-')}.md",
+            file_content=article_file,
+            file_type="text/markdown",
+        )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )

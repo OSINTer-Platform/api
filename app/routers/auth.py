@@ -129,6 +129,11 @@ async def send_password_recovery_mail(
     )
 
 
+@router.get("/status")
+async def get_auth_status(current_user: User = Depends(get_user_from_token)):
+    return
+
+
 @router.post("/logout")
 async def logout(response: Response, current_user: User = Depends(get_user_from_token)):
     response.delete_cookie(key="access_token")
@@ -179,7 +184,7 @@ async def login(
         "httponly": True,
         "samesite": "strict",
         "path": "/",
-        "secure": config_options.HTTPS,
+        "secure": config_options.ENABLE_HTTPS,
     }
 
     if remember_me:
