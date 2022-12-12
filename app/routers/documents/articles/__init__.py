@@ -1,15 +1,18 @@
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 
-from ... import config_options
+from .... import config_options
 
 from modules.elastic import SearchQuery
 from modules.files import convert_article_to_md
 from modules.objects import FullArticle, BaseArticle
 from modules.profiles import collect_website_details
 
-from ...utils.documents import convert_ids_to_zip, convert_query_to_zip, send_file
-from ...dependencies import FastapiSearchQuery
-from ...common import HTTPError
+from ....utils.documents import convert_ids_to_zip, convert_query_to_zip, send_file
+from ....dependencies import FastapiSearchQuery
+from ....common import HTTPError
+
+from .utils import get_newest_articles
+from .rss import router as rss_router
 
 from pydantic import conlist, constr
 from typing import List, Dict
@@ -18,14 +21,9 @@ from io import BytesIO
 from datetime import date
 
 router = APIRouter()
+router.include_router(rss_router, tags=["rss"])
 
-
-@router.get("/newest", response_model=List[BaseArticle])
-async def get_newest_articles():
-    return config_options.es_article_client.query_documents(
-        SearchQuery(limit=50, complete=False)
-    )["documents"]
-
+router.get("/newest", response_model=List[BaseArticle])(get_newest_articles)
 
 @router.get(
     "/search",

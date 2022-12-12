@@ -1,6 +1,7 @@
 python-multipart
 python-jose[cryptography]
 fastapi
+fastapi-rss
 pydantic
 uvicorn[standard]
 gunicorn # Used as process manager for uvicorn processes
