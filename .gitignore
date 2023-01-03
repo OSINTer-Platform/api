@@ -4,3 +4,4 @@ __pycache__
 secret.key
 osinter_users.db
 logs
+.env
