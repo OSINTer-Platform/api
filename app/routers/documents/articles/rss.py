@@ -1,16 +1,11 @@
-from . import config_options
-from .utils import get_newest_articles
-
 from fastapi import APIRouter
-
 from fastapi_rss import RSSResponse
 
-from modules.elastic import SearchQuery
-from modules.objects import BaseArticle
-
 from ....utils.rss import generate_rss_response
+from .utils import get_newest_articles
 
 router = APIRouter()
+
 
 @router.get("/newest/rss")
 def get_newest_rss() -> RSSResponse:

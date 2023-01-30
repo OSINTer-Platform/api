@@ -1,13 +1,9 @@
-from fastapi import FastAPI, Depends, Request
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI
 
-from .routers.documents import articles, tweets
-from .routers.users import feeds, collections
 from .routers import auth, ml
+from .routers.documents import articles, tweets
+from .routers.users import collections, feeds
 
-from . import config_options
-
-from modules.elastic import ElasticDB
 
 app = FastAPI(
     servers=[

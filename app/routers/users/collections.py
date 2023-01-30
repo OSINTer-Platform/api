@@ -1,31 +1,27 @@
+from datetime import date
+from enum import Enum
+from typing import Dict, List
+
 from fastapi import (
     APIRouter,
+    Body,
     Depends,
     HTTPException,
-    status,
-    Query,
     Path,
-    Body,
+    Query,
     Response,
+    status,
 )
 
-from typing import Dict, List
-from pydantic import conlist, constr
-
-from enum import Enum
-
-from ..auth import get_user_from_token
-
-from ...users import User
-from ...common import HTTPError
-from ...dependencies import get_collection_ids
-from ...utils.documents import send_file, convert_ids_to_zip
-
-from modules.objects import BaseArticle
 from modules.elastic import SearchQuery
-from ... import config_options
+from modules.objects import BaseArticle
 
-from datetime import date
+from ... import config_options
+from ...common import EsIDList, HTTPError
+from ...dependencies import get_collection_ids
+from ...users import User
+from ...utils.documents import convert_ids_to_zip, send_file
+from ..auth import get_user_from_token
 
 router = APIRouter()
 
@@ -43,9 +39,7 @@ def get_my_collections(current_user: User = Depends(get_user_from_token)):
 def create_new_collection(
     collection_name: str,
     current_user: User = Depends(get_user_from_token),
-    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Body(
-        []
-    ),
+    ids: EsIDList = Body([]),
 ):
     current_user.modify_collections("add", collection_name, ids)
     return current_user.collections
@@ -103,9 +97,7 @@ class ModAction(str, Enum):
 def modify_collection(
     collection_name: str,
     mod_action: ModAction,
-    ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20)) = Query(
-        []
-    ),
+    ids: EsIDList = Query([]),
     current_user: User = Depends(get_user_from_token),
 ):
     if current_user.modify_collections(mod_action.value, collection_name, ids=ids):
@@ -128,16 +120,13 @@ def modify_collection(
     },
 )
 def get_collection_contents(
-    collection_ids: conlist(
-        constr(strip_whitespace=True, min_length=20, max_length=20),
-        unique_items=True,
-    ) = Depends(get_collection_ids),
+    collection_ids: EsIDList = Depends(get_collection_ids),
 ):
 
     return (
         config_options.es_article_client.query_documents(
             SearchQuery(limit=10_000, ids=collection_ids, complete=False)
-        )["documents"]
+        )
         if collection_ids
         else []
     )
@@ -157,10 +146,7 @@ def get_collection_contents(
 )
 async def download_collection_contents(
     collection_name: str = Path(...),
-    collection_ids: conlist(
-        constr(strip_whitespace=True, min_length=20, max_length=20),
-        unique_items=True,
-    ) = Depends(get_collection_ids),
+    collection_ids: EsIDList = Depends(get_collection_ids),
 ):
     if not collection_ids:
         return Response(status_code=status.HTTP_204_NO_CONTENT)

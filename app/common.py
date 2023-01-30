@@ -1,7 +1,17 @@
-from pydantic import BaseModel
-from typing import List, Dict, Union, Optional
-
 from enum import Enum
+
+from pydantic import BaseModel, ConstrainedList, ConstrainedStr
+
+
+class EsID(ConstrainedStr):
+    strip_whitespace = True
+    min_length = 20
+    max_length = 20
+
+
+class EsIDList(ConstrainedList):
+    item_type = EsID
+    unique_items = True
 
 
 class DefaultResponseStatus(str, Enum):
@@ -19,7 +29,7 @@ class DefaultResponse(BaseModel):
 
 class HTTPError(BaseModel):
     detail: str
-    headers: Dict[str, str]
+    headers: dict[str, str]
 
     class Config:
         schema_extra = {

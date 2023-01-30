@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Query, HTTPException, Depends
+from collections.abc import Sequence
+from datetime import date
+from io import BytesIO
+from typing import TypedDict
 
-from typing import List, Dict
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from modules.objects import FullArticle
 from modules.elastic import SearchQuery
+from modules.objects import FullArticle
 
 from .. import config_options
 from ..common import HTTPError
-
-# Used for article cluster download endpoint
-from ..utils.documents import send_file, convert_query_to_zip
-from io import BytesIO
-from datetime import date
+from ..utils.documents import convert_query_to_zip, send_file
 
 router = APIRouter()
 article_router = APIRouter()
@@ -31,13 +30,18 @@ def get_article_cluster_query(cluster_id: int):
     return SearchQuery(limit=0, cluster_id=cluster_id)
 
 
-@article_router.get("/clusters", response_model=List[Dict[str, int]])
+class ClusterListItem(TypedDict):
+    cluster_id: str
+    content_count: int
+
+
+@article_router.get("/clusters", response_model=list[ClusterListItem])
 def get_article_clusters():
-    clusters: Dict[int, int] = config_options.es_article_client.get_unique_values(
+    clusters: dict[str, int] = config_options.es_article_client.get_unique_values(
         "ml.cluster"
     )
 
-    cluster_list: List[Dict[str, int]] = [
+    cluster_list: list[ClusterListItem] = [
         {"cluster_id": cluster_id, "content_count": count}
         for cluster_id, count in clusters.items()
     ]
@@ -47,7 +51,7 @@ def get_article_clusters():
 
 @article_router.get(
     "/cluster/{cluster_id}",
-    response_model=List[FullArticle],
+    response_model=list[FullArticle],
     response_model_exclude_unset=True,
     responses={
         404: {
@@ -63,9 +67,9 @@ def get_articles_from_cluster(
 
     query.complete = complete
 
-    articles_from_cluster: List[
+    articles_from_cluster: Sequence[
         FullArticle
-    ] = config_options.es_article_client.query_documents(query)["documents"]
+    ] = config_options.es_article_client.query_documents(query)
 
     if not articles_from_cluster:
         raise HTTPException(

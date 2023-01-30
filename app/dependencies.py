@@ -1,24 +1,20 @@
-from modules.elastic import SearchQuery
-
-from fastapi import Query, Path
-from datetime import datetime
-from typing import Optional
-from pydantic import conlist, constr
 from dataclasses import dataclass
 
+from fastapi import Path, Query
 from fastapi import Depends, HTTPException, status
+
+from modules.elastic import SearchQuery
+
+from .common import EsIDList
 from .routers.auth import get_user_from_token
 from .users import User
-from .common import HTTPError
 
 
 # Using wrapper around searchQuery class, to force fastapi to make all arguments query (and not body), by using Query([defaultArgument]) and not just [defaultargument]
 @dataclass
 class FastapiSearchQuery(SearchQuery):
-    source_category: Optional[conlist(constr(strip_whitespace=True))] = Query(None)
-    ids: Optional[
-        conlist(constr(strip_whitespace=True, min_length=20, max_length=20))
-    ] = Query(None)
+    source_category: list[str] | None = Query(None)
+    ids: EsIDList | None = Query(None)
 
 
 def get_collection_ids(

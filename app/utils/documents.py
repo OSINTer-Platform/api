@@ -1,20 +1,20 @@
-from fastapi import Query, HTTPException, status, Depends
-from fastapi.responses import StreamingResponse
+from collections.abc import Sequence
+from io import BytesIO, StringIO
+from zipfile import ZipFile
 
-from .. import config_options
+from fastapi import Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
 from modules.elastic import SearchQuery
 from modules.files import convert_article_to_md
+from modules.objects import FullArticle
 
+from .. import config_options
+from ..common import EsIDList
 from ..dependencies import FastapiSearchQuery
 
-from pydantic import conlist, constr
 
-from zipfile import ZipFile
-from io import BytesIO
-
-
-def send_file(file_name: str, file_content: BytesIO, file_type: str):
+def send_file(file_name: str, file_content: StringIO | BytesIO, file_type: str):
     response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
 
     response.headers[
@@ -24,21 +24,19 @@ def send_file(file_name: str, file_content: BytesIO, file_type: str):
     return response
 
 
-async def convert_ids_to_zip(
-    ids: conlist(
-        constr(strip_whitespace=True, min_length=20, max_length=20), unique_items=True
-    ) = Query(...)
-):
+async def convert_ids_to_zip(ids: EsIDList = Query(...)):
     return await convert_query_to_zip(SearchQuery(ids=ids))
 
 
 async def convert_query_to_zip(
-    search_q: FastapiSearchQuery = Depends(FastapiSearchQuery),
+    search_q: SearchQuery = Depends(FastapiSearchQuery),
 ):
 
     search_q.complete = True
 
-    articles = config_options.es_article_client.query_documents(search_q)["documents"]
+    articles: Sequence[FullArticle] = config_options.es_article_client.query_documents(
+        search_q
+    )
 
     if articles:
         zip_file = BytesIO()
