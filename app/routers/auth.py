@@ -1,74 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Query
-from fastapi.security import OAuth2, OAuth2PasswordRequestForm
+from datetime import timedelta
 
-from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from fastapi.security import OAuth2PasswordRequestForm
 
-from jose import JWTError, jwt
-from datetime import datetime, timedelta
+from app.users.auth import create_access_token, get_user_from_token
 
 from ..users import create_user, User
-from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
-
-from ..utils.auth import (
-    OAuth2PasswordBearerWithCookie,
-    OAuth2PasswordRequestFormWithEmail,
-)
-
 from .. import config_options
+from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
+from ..utils.auth import OAuth2PasswordRequestFormWithEmail
+
 
 router = APIRouter()
-
-oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(
-            hours=config_options.ACCESS_TOKEN_EXPIRE_HOURS
-        )
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, config_options.SECRET_KEY, algorithm=config_options.JWT_ALGORITHMS[0]
-    )
-    return encoded_jwt
-
-
-def get_user_from_username(username: str):
-    return User(
-        username=username,
-        index_name=config_options.ELASTICSEARCH_USER_INDEX,
-        es_conn=config_options.es_conn,
-    )
-
-
-async def get_user_from_token(token: str = Depends(oauth2_scheme)):
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-
-    try:
-        payload = jwt.decode(
-            token, config_options.SECRET_KEY, algorithms=config_options.JWT_ALGORITHMS
-        )
-        username: str = payload.get("sub")
-
-        if username is None:
-            raise credentials_exception
-
-    except JWTError:
-        raise credentials_exception
-
-    user: User = get_user_from_username(username=username)
-
-    if not user.user_exist():
-        raise credentials_exception
-
-    return user
 
 
 # Should also check whether mail server is active and available, once implemented
