@@ -1,14 +1,12 @@
-from fastapi import Depends, HTTPException, status
-
-from jose import JWTError, jwt
 from datetime import datetime, timedelta
 
-from .crud import verify_user
-from .schemas import UserBase
-
-from ..utils.auth import OAuth2PasswordBearerWithCookie
+from fastapi import Depends, HTTPException, status
+from jose import JWTError, jwt
 
 from .. import config_options
+from ..utils.auth import OAuth2PasswordBearerWithCookie
+from .crud import verify_user
+from .schemas import UserBase
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
