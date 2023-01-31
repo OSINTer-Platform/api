@@ -118,7 +118,9 @@ async def login(
 
     access_token = create_access_token(
         data={"sub": current_user.username},
-        expires_delta=timedelta(days=30) if remember_me else None,
+        expires_delta=timedelta(hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS)
+        if remember_me
+        else None,
     )
 
     cookie_options = {
