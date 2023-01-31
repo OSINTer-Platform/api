@@ -26,8 +26,6 @@ def generate_rss_item(
     )  # pyright: ignore
 
     if source_details:
-        if article.profile == "cybernews":
-            print(article)
         item.source = RSSSource(
             content=source_details[article.profile]["name"],
             attrs=RSSSourceAttrs(url=source_details[article.profile]["url"]),
