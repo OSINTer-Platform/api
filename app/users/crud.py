@@ -1,12 +1,12 @@
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from couchdb import Database
+from couchdb import Database, ResourceConflict
 from couchdb.client import ViewResults
 
-from . import get_db_conn, models
+from . import get_db_conn, models, schemas
 
 ph = PasswordHasher()
 
@@ -81,3 +81,85 @@ def remove_user(username: str) -> bool:
     return True
 
 
+def create_feed(
+    feed_params: schemas.FeedCreate,
+    name: str,
+    owner: UUID | None = None,
+) -> schemas.Feed:
+
+    feed = models.Feed(
+        **feed_params.dict(exclude_none=True), name=name, _id=uuid4().hex
+    )
+
+    if owner:
+        feed.owner = owner
+
+    feed.store(db_conn)
+
+    return schemas.Feed.from_orm(feed)
+
+
+def create_collection(
+    name: str,
+    owner: UUID | None = None,
+    ids: list[str] | None = None,
+) -> schemas.Collection:
+
+    collection = models.Collection(name=name, _id=uuid4().hex)
+
+    if owner:
+        collection.owner = owner
+    if ids:
+        collection.ids = ids
+
+    collection.store(db_conn)
+
+    return schemas.Collection.from_orm(collection)
+
+
+def get_feed_list(user: schemas.UserBase) -> list[schemas.ItemBase]:
+    all_feeds: ViewResults = models.Feed.get_minimal_info(db_conn)
+
+    # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
+    all_feeds.options["keys"] = user.feed_ids
+
+    return [schemas.Feed.from_orm(feed) for feed in all_feeds]
+
+
+def get_feeds(user: schemas.UserBase) -> dict[str, schemas.Feed]:
+    all_feeds: ViewResults = models.Feed.all(db_conn)
+
+    # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
+    all_feeds.options["keys"] = user.feed_ids
+
+    return {feed._id: schemas.Feed.from_orm(feed) for feed in list(all_feeds)}
+
+
+# Has to verify the user owns the item before deletion
+def remove_item(
+    user: schemas.UserBase,
+    id: str,
+    item_type: Literal["feed", "collection"],
+) -> bool:
+    if item_type == "feed":
+        source = models.Feed
+    elif item_type == "collection":
+        source = models.Collection
+
+    try:
+        item: models.Collection | models.Feed = list(
+            source.get_minimal_info(db_conn)[id]
+        )[0]
+    except IndexError:
+        # Indicates that the item no longer exists
+        return True
+
+    if item.owner != user.id.hex:
+        return False
+
+    try:
+        db_conn.delete(item)
+    except ResourceConflict:
+        return False
+
+    return True
