@@ -13,16 +13,14 @@ class ORMGetter(GetterDict):
         else:
             return super().get(key, default)
 
+
 # Used for mapping the _id field of the DB model to the schemas id field
 class ORMBase(BaseModel):
-
     def dict(self, *args, **kwargs) -> dict[str, Any]:
         obj = super().dict(*args, **kwargs)
 
         obj["_id"] = obj.pop("id").hex
-
         return obj
-
 
     class Config:
         orm_mode = True
@@ -64,8 +62,8 @@ class UserBase(ORMBase):
 
     active: bool = True
 
-    feed_ids: list[str] = []
-    collection_ids: list[str] = []
+    feed_ids: set[str] = set()
+    collection_ids: set[str] = set()
 
 
 class User(UserBase):
