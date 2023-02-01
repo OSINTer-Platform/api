@@ -41,7 +41,7 @@ class User(Document):
         """
         function(doc) {
             if(doc.type == "user") {
-                emit(doc.username, { username : doc.username, hashed_password : doc.hashed_password, hashed_email : doc.hashed_email });
+                emit(doc.username, { username : doc.username, hashed_password : doc.hashed_password, hashed_email : doc.hashed_email, active : doc.active });
             }
         }""",
     )
