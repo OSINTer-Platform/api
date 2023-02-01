@@ -2,7 +2,7 @@ from datetime import date
 from io import BytesIO
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from modules.elastic import SearchQuery
 from modules.files import convert_article_to_md
@@ -10,9 +10,9 @@ from modules.objects import BaseArticle, FullArticle
 from modules.profiles import collect_website_details
 
 from .... import config_options
-from ....common import EsID, EsIDList, HTTPError
+from ....common import EsID, HTTPError
 from ....dependencies import FastapiSearchQuery
-from ....utils.documents import convert_ids_to_zip, convert_query_to_zip, send_file
+from ....utils.documents import convert_query_to_zip, send_file
 from .rss import router as rss_router
 from .utils import get_newest_articles
 
@@ -32,44 +32,8 @@ async def search_articles(query: FastapiSearchQuery = Depends(FastapiSearchQuery
     return articles
 
 
-@router.get("/content", response_model=List[FullArticle])
-async def get_article_content(ids: EsIDList = Query(...)):
-    for id in ids:
-        config_options.es_article_client.increment_read_counter(id)
-
-    return config_options.es_article_client.query_documents(
-        SearchQuery(ids=ids, complete=True)
-    )
-
-
-@router.get("/categories", response_model=Dict[str, Dict[str, str]])
-async def get_list_of_categories():
-    return collect_website_details(config_options.es_article_client)
-
-
-# Has to be defined above route for download_single_markdown_file, as it will otherwise collide due to the part of the route "multiple" can be interpreted as an ID
 @router.get(
-    "/export/multiple",
-    tags=["download"],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when no of the requested article exist",
-        }
-    },
-)
-def download_multiple_markdown_files_using_ids(
-    zip_file: BytesIO = Depends(convert_ids_to_zip),
-):
-    return send_file(
-        file_name=f"OSINTer-MD-articles-{date.today()}-ID-Download.zip",
-        file_content=zip_file,
-        file_type="application/zip",
-    )
-
-
-@router.get(
-    "/export/search",
+    "/search/export",
     tags=["download"],
     responses={
         404: {
@@ -88,8 +52,13 @@ def download_multiple_markdown_files_using_search(
     )
 
 
+@router.get("/categories", response_model=Dict[str, Dict[str, str]])
+async def get_list_of_categories():
+    return collect_website_details(config_options.es_article_client)
+
+
 @router.get(
-    "/export/{id}",
+    "/{id}/export",
     tags=["download"],
     responses={
         404: {
@@ -111,6 +80,31 @@ def download_single_markdown_file(id: EsID):
             file_content=article_file,
             file_type="text/markdown",
         )
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
+        )
+
+
+@router.get(
+    "/{id}/content",
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when requested article doesn't exist",
+        }
+    },
+    response_model=FullArticle,
+)
+def get_article_content(id: EsID):
+    config_options.es_article_client.increment_read_counter(id)
+
+    article = config_options.es_article_client.query_documents(
+        SearchQuery(limit=1, ids=[id], complete=True)
+    )[0]
+
+    if article != []:
+        return article
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
