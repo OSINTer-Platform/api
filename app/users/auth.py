@@ -26,7 +26,28 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-async def get_user_from_token(token: str = Depends(oauth2_scheme)):
+def get_user_object(username: str, password: str | None = None) -> UserBase:
+
+    user_obj = verify_user(username=username, password=password)
+
+    if user_obj:
+        return UserBase.from_orm(user_obj)
+    else:
+        if password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+
+async def get_user_from_token(token: str = Depends(oauth2_scheme)) -> UserBase:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -45,9 +66,4 @@ async def get_user_from_token(token: str = Depends(oauth2_scheme)):
     except JWTError:
         raise credentials_exception
 
-    user: UserBase | None = verify_user(username)
-
-    if not isinstance(user, UserBase):
-        raise credentials_exception
-
-    return user
+    return get_user_object(username)
