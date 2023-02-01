@@ -13,15 +13,26 @@ class ORMGetter(GetterDict):
         else:
             return super().get(key, default)
 
+# Used for mapping the _id field of the DB model to the schemas id field
+class ORMBase(BaseModel):
 
-class ItemBase(BaseModel):
-    id: UUID = uuid4()
-    name: str
-    owner: UUID | None = None
+    def dict(self, *args, **kwargs) -> dict[str, Any]:
+        obj = super().dict(*args, **kwargs)
+
+        obj["_id"] = obj.pop("id").hex
+
+        return obj
+
 
     class Config:
         orm_mode = True
         getter_dict = ORMGetter
+
+
+class ItemBase(ORMBase):
+    id: UUID = uuid4()
+    name: str
+    owner: UUID | None = None
 
 
 class FeedCreate(BaseModel):
@@ -47,7 +58,7 @@ class Collection(ItemBase):
     items: list[str] = []
 
 
-class UserBase(BaseModel):
+class UserBase(ORMBase):
     id: UUID
     username: str
 
@@ -55,10 +66,6 @@ class UserBase(BaseModel):
 
     feed_ids: list[str] = []
     collection_ids: list[str] = []
-
-    class Config:
-        orm_mode = True
-        getter_dict = ORMGetter
 
 
 class User(UserBase):
