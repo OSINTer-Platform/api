@@ -21,7 +21,7 @@ def verify_user(
     email: str | None = None,
 ) -> Literal[False] | models.User:
 
-    users: ViewResults = models.User.get_minimal_info(db_conn)[username]
+    users: ViewResults = models.User.auth_info(db_conn)[username]
     try:
         user: models.User = list(users)[0]
     except IndexError:

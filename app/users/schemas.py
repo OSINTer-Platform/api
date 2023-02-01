@@ -62,15 +62,15 @@ class UserBase(ORMBase):
 
     active: bool = True
 
+
+class User(UserBase):
     feed_ids: set[UUID] = set()
     collection_ids: set[UUID] = set()
 
-
-class User(UserBase):
     feeds: list[Feed] = []
     collections: list[Collection] = []
 
 
-class UserCreate(UserBase):
+class UserAuth(UserBase):
     hashed_password: str
     hashed_email: str | None

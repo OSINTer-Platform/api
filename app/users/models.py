@@ -16,10 +16,11 @@ class User(Document):
     username = TextField()
     active = BooleanField()
 
+    # User
     feed_ids = ListField(TextField())
     collection_ids = ListField(TextField())
 
-    # UserCreate
+    # UserAuth
     hashed_password = TextField()
     hashed_email = TextField()
 
@@ -36,7 +37,7 @@ class User(Document):
         }""",
     )
 
-    get_minimal_info = ViewField(
+    auth_info = ViewField(
         "users",
         """
         function(doc) {
@@ -122,7 +123,7 @@ class Collection(Document):
 
 views: list[ViewDefinition] = [
     User.all,
-    User.get_minimal_info,
+    User.auth_info,
     Feed.all,
     Feed.get_minimal_info,
     Collection.all,
