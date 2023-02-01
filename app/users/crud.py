@@ -81,6 +81,44 @@ def remove_user(username: str) -> bool:
     return True
 
 
+def modify_user_subscription(
+    user_id: UUID,
+    ids: list[str],
+    action: Literal["subscribe", "unsubscribe"],
+    item_type: Literal["feed", "collection"],
+) -> bool:
+
+    try:
+        user: models.User = list(models.User.all(db_conn)[user_id.hex])[0]
+    except IndexError:
+        return False
+
+    user_schema = schemas.User.from_orm(user)
+
+    if item_type == "feed":
+        source = user_schema.feed_ids
+    elif item_type == "collection":
+        source = user_schema.collection_ids
+    else:
+        raise NotImplementedError
+
+    if action == "subscribe":
+        source = source.union(ids)
+    elif action == "unsubscribe":
+        source.difference_update(ids)
+    else:
+        raise NotImplementedError
+
+    if item_type == "feed":
+        user.feed_ids = list(source)
+    elif item_type == "collection":
+        user.collection_ids = list(source)
+
+    user.store(db_conn)
+
+    return True
+
+
 def create_feed(
     feed_params: schemas.FeedCreate,
     name: str,
