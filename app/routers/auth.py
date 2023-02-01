@@ -3,9 +3,10 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.users.auth import create_access_token, get_user_from_token
+from app.users.auth import create_access_token, get_user_from_token, get_user_object
+from app.users.crud import create_user, verify_user
+from app.users.schemas import UserBase
 
-from ..users import create_user, User
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
 from ..utils.auth import OAuth2PasswordRequestFormWithEmail
@@ -46,18 +47,18 @@ async def send_password_recovery_mail(
 ):
 
     if mail_available:
-        current_user = get_user_from_username(username)
+        current_user = verify_user(username=username)
 
-        if not current_user.user_exist():
+        if not current_user:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User with that username wasn't found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-
-        if current_user.verify_email(email):
-            # This needs to send the recovery email, once implemented
-            pass
+        else:
+            if verify_user(username=username, email=email):
+                # This needs to send the recovery email, once implemented
+                pass
 
     else:
         raise HTTPException(
@@ -73,12 +74,17 @@ async def send_password_recovery_mail(
 
 
 @router.get("/status")
-async def get_auth_status(current_user: User = Depends(get_user_from_token)):
+async def get_auth_status(
+    current_user: UserBase = Depends(get_user_from_token),  # pyright: ignore
+):
     return
 
 
 @router.post("/logout")
-async def logout(response: Response, current_user: User = Depends(get_user_from_token)):
+async def logout(
+    response: Response,
+    current_user: UserBase = Depends(get_user_from_token),  # pyright: ignore
+):
     response.delete_cookie(key="access_token")
     return
 
@@ -89,11 +95,11 @@ async def logout(response: Response, current_user: User = Depends(get_user_from_
         200: {},
         401: {
             "model": HTTPError,
-            "description": "Returned when the username exist in DB but doesn't match the password",
+            "description": "Returned when password doesn't match username",
         },
         404: {
             "model": HTTPError,
-            "description": "Returned when the username doesn't exist in DB",
+            "description": "Returned when username isn't found in DB",
         },
     },
 )
@@ -102,22 +108,10 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = Query(False),
 ):
-    current_user = get_user_from_username(form_data.username)
-    if not current_user.user_exist():
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User with that username wasn't found",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    elif not current_user.verify_password(form_data.password):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    user = get_user_object(username=form_data.username, password=form_data.password)
 
     access_token = create_access_token(
-        data={"sub": current_user.username},
+        data={"sub": user.username},
         expires_delta=timedelta(hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS)
         if remember_me
         else None,
@@ -155,8 +149,9 @@ async def login(
     },
 )
 async def signup(form_data: OAuth2PasswordRequestFormWithEmail = Depends()):
-    current_user = get_user_from_username(form_data.username)
-    if create_user(current_user, form_data.password, form_data.email):
+    if create_user(
+        username=form_data.username, password=form_data.password, email=form_data.email
+    ):
         return DefaultResponse(status=DefaultResponseStatus.SUCCESS, msg="User created")
     else:
         raise HTTPException(
