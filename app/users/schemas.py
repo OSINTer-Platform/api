@@ -19,7 +19,7 @@ class ORMBase(BaseModel):
     def dict(self, *args, **kwargs) -> dict[str, Any]:
         obj = super().dict(*args, **kwargs)
 
-        obj["_id"] = obj.pop("id").hex
+        obj["_id"] = obj.pop("id")
         return obj
 
     class Config:
@@ -62,8 +62,8 @@ class UserBase(ORMBase):
 
     active: bool = True
 
-    feed_ids: set[str] = set()
-    collection_ids: set[str] = set()
+    feed_ids: set[UUID] = set()
+    collection_ids: set[UUID] = set()
 
 
 class User(UserBase):

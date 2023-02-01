@@ -5,6 +5,7 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from couchdb import Database, ResourceConflict
 from couchdb.client import ViewResults
+from fastapi.encoders import jsonable_encoder
 
 from . import get_db_conn, models, schemas
 
@@ -60,7 +61,7 @@ def create_user(
     password_hash = ph.hash(password)
 
     new_user = models.User(
-        _id=uuid4().hex,
+        _id=str(uuid4()),
         username=username,
         active=True,
         hashed_password=password_hash,
@@ -83,13 +84,13 @@ def remove_user(username: str) -> bool:
 
 def modify_user_subscription(
     user_id: UUID,
-    ids: list[str],
+    ids: set[UUID],
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
 ) -> bool:
 
     try:
-        user: models.User = list(models.User.all(db_conn)[user_id.hex])[0]
+        user: models.User = list(models.User.all(db_conn)[str(user_id)])[0]
     except IndexError:
         return False
 
@@ -110,9 +111,9 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if item_type == "feed":
-        user.feed_ids = list(source)
+        user.feed_ids = jsonable_encoder(source)
     elif item_type == "collection":
-        user.collection_ids = list(source)
+        user.collection_ids = jsonable_encoder(source)
 
     user.store(db_conn)
 
@@ -126,11 +127,11 @@ def create_feed(
 ) -> schemas.Feed:
 
     feed = models.Feed(
-        **feed_params.dict(exclude_none=True), name=name, _id=uuid4().hex
+        **feed_params.dict(exclude_none=True), name=name, _id=str(uuid4())
     )
 
     if owner:
-        feed.owner = owner
+        feed.owner = str(owner)
 
     feed.store(db_conn)
 
@@ -140,35 +141,35 @@ def create_feed(
 def create_collection(
     name: str,
     owner: UUID | None = None,
-    ids: list[str] | None = None,
+    ids: set[UUID] | None = None,
 ) -> schemas.Collection:
 
-    collection = models.Collection(name=name, _id=uuid4().hex)
+    collection = models.Collection(name=name, _id=str(uuid4()))
 
     if owner:
-        collection.owner = owner
+        collection.owner = str(owner)
     if ids:
-        collection.ids = ids
+        collection.ids = list(ids)
 
     collection.store(db_conn)
 
     return schemas.Collection.from_orm(collection)
 
 
-def get_feed_list(user: schemas.UserBase) -> list[schemas.ItemBase]:
+def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
     all_feeds: ViewResults = models.Feed.get_minimal_info(db_conn)
 
     # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
-    all_feeds.options["keys"] = user.feed_ids
+    all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
     return [schemas.Feed.from_orm(feed) for feed in all_feeds]
 
 
-def get_feeds(user: schemas.UserBase) -> dict[str, schemas.Feed]:
+def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
     all_feeds: ViewResults = models.Feed.all(db_conn)
 
     # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
-    all_feeds.options["keys"] = user.feed_ids
+    all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
     return {feed._id: schemas.Feed.from_orm(feed) for feed in list(all_feeds)}
 
@@ -176,7 +177,7 @@ def get_feeds(user: schemas.UserBase) -> dict[str, schemas.Feed]:
 # Has to verify the user owns the item before deletion
 def remove_item(
     user: schemas.UserBase,
-    id: str,
+    id: UUID,
     item_type: Literal["feed", "collection"],
 ) -> bool:
     if item_type == "feed":
@@ -186,13 +187,13 @@ def remove_item(
 
     try:
         item: models.Collection | models.Feed = list(
-            source.get_minimal_info(db_conn)[id]
+            source.get_minimal_info(db_conn)[str(id)]
         )[0]
     except IndexError:
         # Indicates that the item no longer exists
         return True
 
-    if item.owner != user.id.hex:
+    if item.owner != user.id:
         return False
 
     try:
