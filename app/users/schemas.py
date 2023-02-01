@@ -1,16 +1,27 @@
 from datetime import datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel
+from pydantic.utils import GetterDict
+
+# Needed, as pydantic would otherwise ignore the _id field from the DB models
+class ORMGetter(GetterDict):
+    def get(self, key: str, default: Any) -> Any:
+        if key == "_id":
+            return self._obj._id
+        else:
+            return super().get(key, default)
 
 
 class ItemBase(BaseModel):
-    _id: UUID = uuid4()
+    id: UUID = uuid4()
     name: str
     owner: UUID | None = None
 
     class Config:
         orm_mode = True
+        getter_dict = ORMGetter
 
 
 class FeedCreate(BaseModel):
@@ -37,7 +48,7 @@ class Collection(ItemBase):
 
 
 class UserBase(BaseModel):
-    _id: UUID = uuid4()
+    id: UUID
     username: str
 
     active: bool = True
@@ -47,6 +58,7 @@ class UserBase(BaseModel):
 
     class Config:
         orm_mode = True
+        getter_dict = ORMGetter
 
 
 class User(UserBase):
