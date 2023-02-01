@@ -1,31 +1,61 @@
-from dataclasses import dataclass
+from enum import Enum
+from typing import cast
+from fastapi import Query
 
-from fastapi import Path, Query
-from fastapi import Depends, HTTPException, status
+from datetime import datetime
 
 from modules.elastic import SearchQuery
 
-from .common import EsIDList
-from .routers.auth import get_user_from_token
-from .users import User
+from pydantic import constr, conlist
 
 
-# Using wrapper around searchQuery class, to force fastapi to make all arguments query (and not body), by using Query([defaultArgument]) and not just [defaultargument]
-@dataclass
+class SortBy(Enum):
+    PublishDate = "publish_date"
+    TimesRead = "read_times"
+    Source = "source"
+    Author = "author"
+    TimeOfScraping = "inserted_at"
+    BestMatch = None
+
+
+class SortOrder(Enum):
+    Descending = "desc"
+    Ascending = "asc"
+
+
 class FastapiSearchQuery(SearchQuery):
-    source_category: list[str] | None = Query(None)
-    ids: EsIDList | None = Query(None)
+    """
+    Wrapper around the searchquery class used by the backend to search in elasticsearch
+    """
 
+    def __init__(
+        self,
+        limit: int = Query(10_000),
+        sort_by: SortBy | None = Query(SortBy.BestMatch),
+        sort_order: SortOrder | None = Query(SortOrder.Descending),
+        search_term: str | None = Query(None),
+        first_date: datetime | None = Query(None),
+        last_date: datetime | None = Query(None),
+        source_category: list[str] | None = Query(None),
+        ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20))
+        | None = Query(None),  # pyright: ignore
+        highlight: bool = Query(False),
+        highlight_symbol: str = Query("**"),
+        complete: bool = Query(False),
+        cluster_id: int | None = Query(None),
+    ):
 
-def get_collection_ids(
-    collection_name: str = Path(...), current_user: User = Depends(get_user_from_token)
-):
-    try:
-        collection_ids = current_user.get_collections()[collection_name]
-    except KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Found no collection with given name",
+        super().__init__(
+            limit=limit,
+            sort_by=sort_by.value if sort_by else None,
+            sort_order=sort_order.value if sort_order else None,
+            search_term=search_term,
+            first_date=first_date,
+            last_date=last_date,
+            source_category=source_category,
+            ids=cast(list[str], ids),
+            highlight=highlight,
+            highlight_symbol=highlight_symbol,
+            complete=complete,
+            cluster_id=cluster_id,
         )
-
-    return collection_ids
