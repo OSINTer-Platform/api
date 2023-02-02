@@ -43,6 +43,20 @@ def verify_user(
 
     return user
 
+def get_full_user_object(username: str, complete: bool = False) -> None | schemas.User:
+    users: ViewResults = models.User.by_username(db_conn)[username]
+
+    try:
+        user: schemas.User = schemas.User.from_orm(list(users)[0])
+    except IndexError:
+        return None
+
+    if complete:
+        user.feeds = list(get_feeds(user).values())
+        user.collections = list(get_collections(user))
+
+    return user
+
 
 # Ensures that usernames are unique
 def create_user(
