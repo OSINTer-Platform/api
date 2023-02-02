@@ -26,28 +26,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
     return encoded_jwt
 
 
-def get_user_object(username: str, password: str | None = None) -> UserBase:
-
-    user_obj = verify_user(username=username, password=password)
-
-    if user_obj:
-        return UserBase.from_orm(user_obj)
-    else:
-        if password:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-
-
-async def get_user_from_token(token: str = Depends(oauth2_scheme)) -> UserBase:
+async def get_username_from_token(token: str = Depends(oauth2_scheme)) -> str:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -66,4 +45,25 @@ async def get_user_from_token(token: str = Depends(oauth2_scheme)) -> UserBase:
     except JWTError:
         raise credentials_exception
 
-    return get_user_object(username)
+    return username
+
+
+def verify_auth_data(username: str = Depends(get_username_from_token), password: str | None = None) -> UserBase:
+
+    user_obj = verify_user(username=username, password=password)
+
+    if user_obj:
+        return UserBase.from_orm(user_obj)
+    else:
+        if password:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found",
+                headers={"WWW-Authenticate": "Bearer"},
+            )

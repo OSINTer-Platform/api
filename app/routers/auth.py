@@ -3,7 +3,7 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.users.auth import create_access_token, get_user_from_token, get_user_object
+from app.users.auth import create_access_token, verify_auth_data
 from app.users.crud import create_user, verify_user
 from app.users.schemas import UserBase
 
@@ -75,7 +75,7 @@ async def send_password_recovery_mail(
 
 @router.get("/status")
 async def get_auth_status(
-    current_user: UserBase = Depends(get_user_from_token),  # pyright: ignore
+    current_user: UserBase = Depends(verify_auth_data),
 ):
     return
 
@@ -83,7 +83,7 @@ async def get_auth_status(
 @router.post("/logout")
 async def logout(
     response: Response,
-    current_user: UserBase = Depends(get_user_from_token),  # pyright: ignore
+    current_user: UserBase = Depends(verify_auth_data),
 ):
     response.delete_cookie(key="access_token")
     return
@@ -108,7 +108,7 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = Query(False),
 ):
-    user = get_user_object(username=form_data.username, password=form_data.password)
+    user = verify_auth_data(username=form_data.username, password=form_data.password)
 
     access_token = create_access_token(
         data={"sub": user.username},
