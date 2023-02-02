@@ -168,10 +168,17 @@ def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
 def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
     all_feeds: ViewResults = models.Feed.all(db_conn)
 
-    # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
     return {feed._id: schemas.Feed.from_orm(feed) for feed in list(all_feeds)}
+
+
+def get_collections(user: schemas.User) -> list[schemas.Collection]:
+    all_collections: ViewResults = models.Collection.all(db_conn)
+
+    all_collections.options["keys"] = jsonable_encoder(user.collection_ids)
+
+    return [schemas.Collection.from_orm(collection) for collection in all_collections]
 
 
 # Has to verify the user owns the item before deletion
