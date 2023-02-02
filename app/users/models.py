@@ -37,6 +37,16 @@ class User(Document):
         }""",
     )
 
+    by_username = ViewField(
+        "users",
+        """
+        function(doc) {
+            if(doc.type == "user") {
+                emit(doc.username, { username : doc.username, active: doc.active, feed_ids: doc.feed_ids, collection_ids: doc.collection_ids });
+            }
+        }""",
+    )
+
     auth_info = ViewField(
         "users",
         """
@@ -124,6 +134,7 @@ class Collection(Document):
 views: list[ViewDefinition] = [
     User.all,
     User.auth_info,
+    User.by_username,
     Feed.all,
     Feed.get_minimal_info,
     Collection.all,
