@@ -1,50 +1,72 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from uuid import UUID
 
-from typing import Dict
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from ..auth import get_user_from_token
-
-from ...users import User, Feed
 from ...common import HTTPError
+from ...users import crud, schemas
+from ...users.auth import get_full_user
 
 router = APIRouter()
 
 
-@router.get("/list", response_model=Dict[str, Feed])
-def get_my_feeds(current_user: User = Depends(get_user_from_token)):
-    return current_user.get_feeds()
+@router.get("/base-list", response_model=list[schemas.ItemBase])
+def get_base_of_my_subscribed_feeds(
+    current_user: schemas.User = Depends(get_full_user),
+):
+    return crud.get_feed_list(current_user)
 
 
-@router.put(
+@router.get("/list", response_model=dict[str, schemas.Feed])
+def get_my_subscribed_feeds(
+    current_user: schemas.User = Depends(get_full_user),
+):
+    return crud.get_feeds(current_user)
+
+
+@router.post(
     "/{feed_name}",
     status_code=status.HTTP_201_CREATED,
-    response_model=Dict[str, Feed],
+    response_model=dict[str, schemas.Feed],
 )
-def create_new_feed(
-    feed_name: str, feed: Feed, current_user: User = Depends(get_user_from_token)
+def create_feed(
+    feed_name: str,
+    feed_params: schemas.FeedCreate,
+    subscribe: bool = Query(True),
+    current_user: schemas.User = Depends(get_full_user),
 ):
-    feeds = current_user.update_feed_list(feed_name, feed)
-    return feeds
+    feed: schemas.Feed = crud.create_feed(
+        feed_params=feed_params, name=feed_name, owner=current_user.id
+    )
+
+    if subscribe:
+        crud.modify_user_subscription(
+            user_id=current_user.id,
+            ids={feed.id,},
+            action="subscribe",
+            item_type="feed"
+        )
+
+    return crud.get_feeds(current_user)
 
 
 @router.delete(
-    "/{feed_name}",
+    "/{feed_id}",
     status_code=status.HTTP_200_OK,
-    response_model=Dict[str, Feed],
+    response_model=dict[str, schemas.Feed],
     responses={
-        404: {
+        403: {
             "model": HTTPError,
-            "description": "Returned when supplied name for feed doesn't match any feed for that user.",
-        }
+            "description": "Returned when user doesn't own that feed",
+        },
     },
 )
-def remove_existing_feed(
-    feed_name: str, current_user: User = Depends(get_user_from_token)
+def delete_feed(
+    feed_id: UUID, current_user: schemas.User = Depends(get_full_user)
 ):
-    if current_user.update_feed_list(feed_name) is not None:
-        return current_user.feeds
+    if crud.remove_item(current_user, feed_id, "feed"):
+        return crud.get_feeds(current_user)
     else:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="No feed with that name found",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No feed with that name owned by you found",
         )
