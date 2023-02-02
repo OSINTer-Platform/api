@@ -5,8 +5,8 @@ from jose import JWTError, jwt
 
 from .. import config_options
 from ..utils.auth import OAuth2PasswordBearerWithCookie
-from .crud import verify_user
-from .schemas import UserBase
+from .crud import get_full_user_object, verify_user
+from .schemas import User, UserBase
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
@@ -67,3 +67,16 @@ def verify_auth_data(username: str = Depends(get_username_from_token), password:
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+def get_full_user(username: str = Depends(get_username_from_token)) -> User:
+
+    user_obj = get_full_user_object(username)
+
+    if user_obj:
+        return user_obj
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
