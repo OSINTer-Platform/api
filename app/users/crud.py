@@ -139,10 +139,16 @@ def create_feed(
     feed_params: schemas.FeedCreate,
     name: str,
     owner: UUID | None = None,
+    id: UUID | None = None,
 ) -> schemas.Feed:
 
+    if not id:
+        id = uuid4()
+
     feed = models.Feed(
-        **feed_params.dict(exclude_none=True), name=name, _id=str(uuid4())
+        name=name,
+        _id=str(id),
+        **feed_params.dict(exclude_none=True),
     )
 
     if owner:
@@ -156,15 +162,23 @@ def create_feed(
 def create_collection(
     name: str,
     owner: UUID | None = None,
+    id: UUID | None = None,
     ids: set[UUID] | None = None,
 ) -> schemas.Collection:
 
-    collection = models.Collection(name=name, _id=str(uuid4()))
+    if not id:
+        id = uuid4()
+
+    collection = models.Collection(
+        name=name,
+        owner=str(owner),
+        _id=str(id),
+    )
 
     if owner:
         collection.owner = str(owner)
     if ids:
-        collection.ids = list(ids)
+        collection.ids = jsonable_encoder(ids)
 
     collection.store(db_conn)
 
