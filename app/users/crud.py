@@ -5,7 +5,6 @@ from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from couchdb import Database, ResourceConflict
 from couchdb.client import ViewResults
-from fastapi import HTTPException, status
 from fastapi.encoders import jsonable_encoder
 
 from . import get_db_conn, models, schemas
@@ -103,15 +102,12 @@ def modify_user_subscription(
     ids: set[UUID],
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
-) -> models.User:
+) -> models.User | None:
 
     try:
         user: models.User = list(models.User.all(db_conn)[str(user_id)])[0]
     except IndexError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"No user with id {user_id} found",
-        )
+        return None
 
     user_schema = schemas.User.from_orm(user)
 

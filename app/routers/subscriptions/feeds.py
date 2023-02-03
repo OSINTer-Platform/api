@@ -1,8 +1,7 @@
-from uuid import UUID
-
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from ...common import HTTPError
+from app.users import models
+
 from ...users import crud, schemas
 from ...users.auth import get_full_user
 
@@ -39,16 +38,22 @@ def create_feed(
     )
 
     if subscribe:
-        current_user = schemas.User.from_orm(
-            crud.modify_user_subscription(
-                user_id=current_user.id,
-                ids={
-                    feed.id,
-                },
-                action="subscribe",
-                item_type="feed",
-            )
+        user_obj: models.User | None = crud.modify_user_subscription(
+            user_id=current_user.id,
+            ids={
+                feed.id,
+            },
+            action="subscribe",
+            item_type="feed",
         )
+
+        if not user_obj:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No user with id {current_user.id} found",
+            )
+
+        current_user = schemas.User.from_orm(user_obj)
 
     return crud.get_feeds(current_user)
 
