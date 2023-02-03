@@ -1,34 +1,18 @@
 from datetime import datetime
-from typing import Any
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel
-from pydantic.utils import GetterDict
-
-# Needed, as pydantic would otherwise ignore the _id field from the DB models
-class ORMGetter(GetterDict):
-    def get(self, key: str, default: Any) -> Any:
-        if key == "_id":
-            return self._obj._id
-        else:
-            return super().get(key, default)
+from pydantic import BaseModel, Field
 
 
 # Used for mapping the _id field of the DB model to the schemas id field
 class ORMBase(BaseModel):
-    def dict(self, *args, **kwargs) -> dict[str, Any]:
-        obj = super().dict(*args, **kwargs)
-
-        obj["_id"] = obj.pop("id")
-        return obj
-
     class Config:
         orm_mode = True
-        getter_dict = ORMGetter
+        allow_population_by_field_name = True
 
 
 class ItemBase(ORMBase):
-    id: UUID = uuid4()
+    id: UUID = Field(alias="_id", default_factory=uuid4)
     name: str
     owner: UUID | None = None
 
@@ -57,7 +41,7 @@ class Collection(ItemBase):
 
 
 class UserBase(ORMBase):
-    id: UUID
+    id: UUID = Field(alias="_id")
     username: str
 
     active: bool = True
