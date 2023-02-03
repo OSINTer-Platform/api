@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Type, cast
 from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
@@ -208,6 +208,40 @@ def get_collections(user: schemas.User) -> list[schemas.Collection]:
     all_collections.options["keys"] = jsonable_encoder(user.collection_ids)
 
     return [schemas.Collection.from_orm(collection) for collection in all_collections]
+
+
+def modify_item(
+    id: UUID,
+    contents: schemas.FeedCreate | set[UUID],
+    user: schemas.UserBase,
+) -> int:
+    if isinstance(contents, schemas.FeedCreate):
+        item_source: Type = models.Feed
+    elif isinstance(contents, set):
+        item_source: Type = models.Collection
+    else:
+        raise NotImplementedError
+
+    try:
+        item: models.Feed | models.Collection = list(
+            item_source.get_minimal_info(db_conn)[str(id)]
+        )[0]
+    except (IndexError, ResourceNotFound):
+        return 404
+
+    if item.type not in ["feed", "collection"]:
+        return 404
+    elif item.owner != str(user.id):
+        return 403
+
+    if isinstance(contents, schemas.FeedCreate):
+        create_feed(
+            feed_params=contents, owner=user.id, id=id, name=cast(str, item.name)
+        )
+    elif isinstance(contents, set):
+        create_collection(name=cast(str, item.name), owner=user.id, id=id, ids=contents)
+
+    return 0
 
 
 # Has to verify the user owns the item before deletion
