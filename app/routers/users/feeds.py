@@ -39,11 +39,15 @@ def create_feed(
     )
 
     if subscribe:
-        crud.modify_user_subscription(
-            user_id=current_user.id,
-            ids={feed.id,},
-            action="subscribe",
-            item_type="feed"
+        current_user = schemas.User.from_orm(
+            crud.modify_user_subscription(
+                user_id=current_user.id,
+                ids={
+                    feed.id,
+                },
+                action="subscribe",
+                item_type="feed",
+            )
         )
 
     return crud.get_feeds(current_user)
@@ -60,9 +64,7 @@ def create_feed(
         },
     },
 )
-def delete_feed(
-    feed_id: UUID, current_user: schemas.User = Depends(get_full_user)
-):
+def delete_feed(feed_id: UUID, current_user: schemas.User = Depends(get_full_user)):
     if crud.remove_item(current_user, feed_id, "feed"):
         return crud.get_feeds(current_user)
     else:
