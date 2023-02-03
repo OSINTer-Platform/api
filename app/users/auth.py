@@ -48,7 +48,9 @@ async def get_username_from_token(token: str = Depends(oauth2_scheme)) -> str:
     return username
 
 
-def verify_auth_data(username: str = Depends(get_username_from_token), password: str | None = None) -> UserBase:
+def verify_auth_data(
+    username: str = Depends(get_username_from_token), password: str | None = None
+) -> UserBase:
 
     user_obj = verify_user(username=username, password=password)
 
@@ -67,6 +69,13 @@ def verify_auth_data(username: str = Depends(get_username_from_token), password:
                 detail="User not found",
                 headers={"WWW-Authenticate": "Bearer"},
             )
+
+
+def get_user_from_token(
+    username: str = Depends(get_username_from_token)
+) -> UserBase:
+    return verify_auth_data(username)
+
 
 def get_full_user(username: str = Depends(get_username_from_token)) -> User:
 
