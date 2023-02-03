@@ -22,10 +22,10 @@ app.include_router(tweets.router, prefix="/tweets", tags=["tweets"])
 
 app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
-app.include_router(feeds.router, prefix="/users/feeds", tags=["feed"])
+app.include_router(feeds.router, prefix="/my/feeds", tags=["feed"])
 
 app.include_router(
-    collections.router, prefix="/users/collections", tags=["collections"]
+   collections.router, prefix="/my/collections", tags=["collections"]
 )
 
 ml.mount_routers()
