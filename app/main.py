@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from .routers import auth, ml
 from .routers.documents import articles, tweets
-from .routers.users import collections, feeds
+from .routers.subscriptions import collections, feeds
 
 
 app = FastAPI(
