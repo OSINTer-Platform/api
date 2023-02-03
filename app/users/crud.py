@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from couchdb import Database, ResourceConflict
+from couchdb import Database, ResourceConflict, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
@@ -200,26 +200,17 @@ def get_collections(user: schemas.User) -> list[schemas.Collection]:
 def remove_item(
     user: schemas.UserBase,
     id: UUID,
-    item_type: Literal["feed", "collection"],
 ) -> bool:
-    if item_type == "feed":
-        source = models.Feed
-    elif item_type == "collection":
-        source = models.Collection
-
     try:
-        item: models.Collection | models.Feed = list(
-            source.get_minimal_info(db_conn)[str(id)]
-        )[0]
-    except IndexError:
-        # Indicates that the item no longer exists
+        item = db_conn[str(id)]
+    except ResourceNotFound:
         return True
 
-    if item.owner != user.id:
+    if item["type"] not in ["feed", "collection"] or item["owner"] != str(user.id):
         return False
 
     try:
-        db_conn.delete(item)
+        del db_conn[str(id)]
     except ResourceConflict:
         return False
 
