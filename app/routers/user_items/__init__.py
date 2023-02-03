@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.common import HTTPError
 from app.users import crud, schemas
-from app.users.auth import get_full_user
+from app.users.auth import verify_auth_data
 
 
 router = APIRouter()
@@ -12,8 +12,7 @@ router = APIRouter()
 
 @router.delete(
     "/{feed_id}",
-    status_code=status.HTTP_200_OK,
-    response_model=dict[str, schemas.Feed],
+    status_code=status.HTTP_204_NO_CONTENT,
     responses={
         403: {
             "model": HTTPError,
@@ -21,9 +20,11 @@ router = APIRouter()
         },
     },
 )
-def delete_feed(feed_id: UUID, current_user: schemas.User = Depends(get_full_user)):
+def delete_feed(
+    feed_id: UUID, current_user: schemas.UserBase = Depends(verify_auth_data)
+):
     if crud.remove_item(current_user, feed_id):
-        return crud.get_feeds(current_user)
+        return
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
