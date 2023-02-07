@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -30,3 +31,55 @@ def delete_item(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No item with that name owned by you found",
         )
+
+
+responses: dict[int, dict[str, Any]] = {
+    404: {
+        "model": HTTPError,
+        "description": "Returned when item doesn't already exist",
+        "detail": "No item with that ID found",
+        "status_code": status.HTTP_404_NOT_FOUND,
+    },
+    403: {
+        "model": HTTPError,
+        "description": "Returned when the user doesn't own that item",
+        "detail": "The requested item isn't owned by the authenticated user",
+        "status_code": status.HTTP_403_FORBIDDEN,
+    },
+}
+
+
+def update_item(
+    item_id: UUID,
+    contents: schemas.FeedCreate | set[UUID],
+    current_user: schemas.UserBase,
+):
+    response_code: int = crud.modify_item(
+        id=item_id, contents=contents, user=current_user
+    )
+
+    if response_code == 0:
+        return
+    else:
+        raise HTTPException(
+            status_code=responses[response_code]["status_code"],
+            detail=responses[response_code]["detail"],
+        )
+
+
+@router.put("/feed/{feed_id}", responses=responses)  # pyright: ignore
+def update_feed(
+    feed_id: UUID,
+    contents: schemas.FeedCreate,
+    current_user: schemas.User = Depends(get_user_from_token),
+):
+    update_item(feed_id, contents, current_user)
+
+
+@router.put("/collection/{collection_id}", responses=responses)  # pyright: ignore
+def update_collection(
+    collection_id: UUID,
+    contents: set[UUID],
+    current_user: schemas.User = Depends(get_user_from_token),
+):
+    update_item(collection_id, contents, current_user)
