@@ -223,9 +223,9 @@ def modify_item(
         raise NotImplementedError
 
     try:
-        item: models.Feed | models.Collection = list(
-            item_source.get_minimal_info(db_conn)[str(id)]
-        )[0]
+        item: models.Feed | models.Collection = list(item_source.all(db_conn)[str(id)])[
+            0
+        ]
     except (IndexError, ResourceNotFound):
         return 404
 
@@ -235,11 +235,18 @@ def modify_item(
         return 403
 
     if isinstance(contents, schemas.FeedCreate):
-        create_feed(
-            feed_params=contents, owner=user.id, id=id, name=cast(str, item.name)
+        new_item: models.Feed = models.Feed(
+            **schemas.Feed.from_orm(item).dict(exclude_none=True),
+            **contents.dict(exclude_none=True),
         )
+
+        new_item.store(db_conn)
+
     elif isinstance(contents, set):
-        create_collection(name=cast(str, item.name), owner=user.id, id=id, ids=contents)
+        item = cast(models.Collection, item)
+
+        item.ids = list(contents)
+        item.store(db_conn)
 
     return 0
 
