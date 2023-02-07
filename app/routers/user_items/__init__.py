@@ -4,29 +4,29 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.common import HTTPError
 from app.users import crud, schemas
-from app.users.auth import verify_auth_data
+from app.users.auth import get_user_from_token
 
 
 router = APIRouter()
 
 
 @router.delete(
-    "/{feed_id}",
+    "/{item_id}",
     status_code=status.HTTP_204_NO_CONTENT,
     responses={
         403: {
             "model": HTTPError,
-            "description": "Returned when user doesn't own that feed",
+            "description": "Returned when user doesn't own that item",
         },
     },
 )
-def delete_feed(
-    feed_id: UUID, current_user: schemas.UserBase = Depends(verify_auth_data)
+def delete_item(
+    item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
 ):
-    if crud.remove_item(current_user, feed_id):
+    if crud.remove_item(current_user, item_id):
         return
     else:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No feed with that name owned by you found",
+            detail="No item with that name owned by you found",
         )
