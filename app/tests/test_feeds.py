@@ -1,0 +1,112 @@
+from collections.abc import Callable
+from typing import Any
+from uuid import uuid4
+
+from fastapi.encoders import jsonable_encoder
+import pytest
+
+from app.users.schemas import FeedCreate
+
+from . import client
+
+
+def create_feed(feed: FeedCreate, name: str) -> tuple[str, dict[str, str]]:
+    r = client.post(f"/my/feeds/{name}", json=jsonable_encoder(feed))
+    assert r.status_code == 201
+
+    for feed_id, feed_content in r.json().items():
+        if feed_content["name"] == name:
+            assert feed_content == {
+                **jsonable_encoder(feed),
+                "_id": feed_id,
+                "name": name,
+                "owner": feed_content["owner"],
+            }
+
+            return feed_id, feed_content
+
+    else:
+        assert False
+
+
+def modify_feed(feed_id: str, feed_content: FeedCreate | dict[str, str]) -> None:
+    if isinstance(feed_content, dict):
+        content = feed_content
+    elif isinstance(feed_content, FeedCreate):
+        content = jsonable_encoder(feed_content)
+    else:
+        raise NotImplementedError
+
+    r = client.put(f"/user-items/feed/{feed_id}", json=content)
+    assert r.status_code == 200
+
+
+def confirm_precense(feed_id: str, feed_content: dict[str, str] | FeedCreate) -> None:
+    r = client.get(f"/my/feeds/list")
+
+    assert r.status_code == 200
+
+    if isinstance(feed_content, FeedCreate):
+        online_feed = r.json()[feed_id]
+        assert online_feed == {
+            **jsonable_encoder(feed_content),
+            "_id": feed_id,
+            "name": online_feed["name"],
+            "owner": online_feed["owner"],
+        }
+    elif isinstance(feed_content, dict):
+        assert r.json()[feed_id] == feed_content
+    else:
+        raise NotImplementedError
+
+
+def delete_feed(feed_id: str) -> None:
+    r = client.delete(f"/user-items/{feed_id}")
+
+    assert r.status_code == 204
+
+
+@pytest.mark.usefixtures("auth_user")
+class TestFeeds:
+    def test_empty(self):
+        r = client.get("/my/feeds/list")
+        assert r.status_code == 200
+        assert r.json() == {}
+
+    def test_feed_creation_and_deletion(
+        self, get_feeds: Callable[[int], list[FeedCreate]]
+    ):
+        # Represents state generated locally to be uploaded
+        feeds: list[FeedCreate] = get_feeds()  # pyright: ignore
+
+        # Represents the state stored by the server
+        online_feeds: dict[str, dict[str, Any]] = {}
+
+        for feed in feeds:
+            feed_id, feed_content = create_feed(feed, uuid4().hex)
+
+            online_feeds[feed_id] = feed_content
+
+        for feed_id, feed_content in online_feeds.items():
+            confirm_precense(feed_id, feed_content)
+            delete_feed(feed_id)
+
+        self.test_empty()
+
+    def test_feed_modification(self, get_feeds):
+        # Represents initial feeds
+        feeds: list[FeedCreate] = get_feeds()
+
+        new_feeds: dict[str, FeedCreate] = {}
+
+        for feed in feeds:
+            feed_id, _ = create_feed(feed, uuid4().hex)
+            new_feeds[feed_id] = get_feeds(1)[0]
+
+        for feed_id, feed_content in new_feeds.items():
+            modify_feed(feed_id, feed_content)
+
+        for feed_id, feed_content in new_feeds.items():
+
+            confirm_precense(feed_id, feed_content)
+            delete_feed(feed_id)

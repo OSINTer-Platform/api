@@ -5,3 +5,5 @@ secret.key
 osinter_users.db
 logs
 .env
+**/.pytest_cache/
+.hypothesis
