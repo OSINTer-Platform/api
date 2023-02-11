@@ -54,13 +54,18 @@ def update_item(
     contents: schemas.FeedCreate | set[UUID],
     current_user: schemas.UserBase,
 ):
-    response_code: int = crud.modify_item(
-        id=item_id, contents=contents, user=current_user
-    )
-
-    if response_code == 0:
-        return
+    if isinstance(contents, schemas.FeedCreate):
+        response_code: int | None = crud.modify_feed(
+            id=item_id, contents=contents, user=current_user
+        )
+    elif isinstance(contents, set):
+        response_code: int | None = crud.modify_collection(
+            id=item_id, contents=contents, user=current_user
+        )
     else:
+        raise NotImplementedError
+
+    if response_code:
         raise HTTPException(
             status_code=responses[response_code]["status_code"],
             detail=responses[response_code]["detail"],
