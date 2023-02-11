@@ -29,7 +29,7 @@ class FeedCreate(BaseModel):
     first_date: datetime | None = None
     last_date: datetime | None = None
 
-    source_category: list[str] | None = None
+    source_category: list[str] = []
 
 
 class Feed(ItemBase, FeedCreate):
