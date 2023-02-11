@@ -1,4 +1,4 @@
-from typing import Literal, Type, cast
+from typing import Literal
 from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
@@ -210,45 +210,35 @@ def get_collections(user: schemas.User) -> list[schemas.Collection]:
     return [schemas.Collection.from_orm(collection) for collection in all_collections]
 
 
-def modify_item(
-    id: UUID,
-    contents: schemas.FeedCreate | set[UUID],
-    user: schemas.UserBase,
-) -> int:
-    if isinstance(contents, schemas.FeedCreate):
-        item_source: Type = models.Feed
-    elif isinstance(contents, set):
-        item_source: Type = models.Collection
-    else:
-        raise NotImplementedError
+def modify_feed(
+    id: UUID, contents: schemas.FeedCreate, user: schemas.UserBase
+) -> int | None:
+    item: models.Feed | None = models.Feed.load(db_conn, str(id))
 
-    try:
-        item: models.Feed | models.Collection = list(item_source.all(db_conn)[str(id)])[
-            0
-        ]
-    except (IndexError, ResourceNotFound):
-        return 404
-
-    if item.type not in ["feed", "collection"]:
+    if item is None or item.type != "feed":
         return 404
     elif item.owner != str(user.id):
         return 403
 
-    if isinstance(contents, schemas.FeedCreate):
-        new_item: models.Feed = models.Feed(
-            **schemas.Feed.from_orm(item).dict(exclude_none=True),
-            **contents.dict(exclude_none=True),
-        )
+    for k, v in contents.dict(exclude_unset=True).items():
+        setattr(item, k, v)
 
-        new_item.store(db_conn)
+    item.store(db_conn)
 
-    elif isinstance(contents, set):
-        item = cast(models.Collection, item)
 
-        item.ids = list(contents)
-        item.store(db_conn)
+def modify_collection(
+    id: UUID, contents: set[UUID], user: schemas.UserBase
+) -> int | None:
+    item: models.Collection | None = models.Collection.load(db_conn, str(id))
 
-    return 0
+    if item is None or item.type != "collection":
+        return 404
+    elif item.owner != str(user.id):
+        return 403
+
+    item.ids = jsonable_encoder(contents)
+
+    item.store(db_conn)
 
 
 # Has to verify the user owns the item before deletion
