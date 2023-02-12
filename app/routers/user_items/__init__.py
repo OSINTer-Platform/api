@@ -11,28 +11,6 @@ from app.users.auth import get_user_from_token
 router = APIRouter()
 
 
-@router.delete(
-    "/{item_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses={
-        403: {
-            "model": HTTPError,
-            "description": "Returned when user doesn't own that item",
-        },
-    },
-)
-def delete_item(
-    item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
-):
-    if crud.remove_item(current_user, item_id):
-        return
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="No item with that name owned by you found",
-        )
-
-
 responses: dict[int, dict[str, Any]] = {
     404: {
         "model": HTTPError,
@@ -55,6 +33,22 @@ def handle_crud_response(response_code: int | None):
             status_code=responses[response_code]["status_code"],
             detail=responses[response_code]["detail"],
         )
+
+
+@router.delete(
+    "/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    responses={
+        403: {
+            "model": HTTPError,
+            "description": "Returned when user doesn't own that item",
+        },
+    },
+)
+def delete_item(
+    item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
+):
+    return handle_crud_response(crud.remove_item(current_user, item_id))
 
 
 @router.put("/feed/{feed_id}", responses=responses)  # pyright: ignore
