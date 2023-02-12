@@ -111,3 +111,20 @@ class TestFeeds:
 
         for feed_id, feed_content in post_mod_feeds.items():
             confirm_precense(feed_id, feed_content)
+
+    def test_feed_renaming(self, new_feeds: dict[str, dict[str, str]]):
+
+        feed_names: dict[str, str] = {}
+
+        for feed_id in new_feeds.keys():
+            feed_names[feed_id] = uuid4().hex
+
+        for feed_id, new_name in feed_names.items():
+            r = client.put(f"/user-items/{feed_id}/name?new_name={new_name}")
+            assert r.status_code == 200
+
+        for feed_id, new_name in feed_names.items():
+            r = client.get("/my/feeds/list")
+
+            assert r.status_code == 200
+            assert r.json()[feed_id]["name"] == new_name
