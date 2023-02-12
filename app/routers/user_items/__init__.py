@@ -51,6 +51,15 @@ def delete_item(
     return handle_crud_response(crud.remove_item(current_user, item_id))
 
 
+@router.put("/{item_id}/name", responses=responses)  # pyright: ignore
+def update_item_name(
+    item_id: UUID,
+    new_name: str,
+    current_user: schemas.User = Depends(get_user_from_token),
+):
+    crud.change_item_name(item_id, new_name, current_user)
+
+
 @router.put("/feed/{feed_id}", responses=responses)  # pyright: ignore
 def update_feed(
     feed_id: UUID,
