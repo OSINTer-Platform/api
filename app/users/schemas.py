@@ -37,7 +37,7 @@ class Feed(ItemBase, FeedCreate):
 
 
 class Collection(ItemBase):
-    items: list[str] = []
+    ids: set[str] = set()
 
 
 class UserBase(ORMBase):

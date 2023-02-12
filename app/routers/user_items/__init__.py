@@ -1,9 +1,9 @@
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from app.common import HTTPError
+from app.common import EsID, HTTPError
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
 
@@ -74,9 +74,9 @@ def update_feed(
 @router.put("/collection/{collection_id}", responses=responses)  # pyright: ignore
 def update_collection(
     collection_id: UUID,
-    contents: set[UUID],
+    contents: set[EsID],
     current_user: schemas.User = Depends(get_user_from_token),
 ):
     return handle_crud_response(
-        crud.modify_collection(id=collection_id, contents=contents, user=current_user)
+        crud.modify_collection(id=collection_id, contents=cast(set[str], contents), user=current_user)
     )

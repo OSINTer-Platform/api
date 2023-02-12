@@ -163,7 +163,7 @@ def create_collection(
     name: str,
     owner: UUID | None = None,
     id: UUID | None = None,
-    ids: set[UUID] | None = None,
+    ids: set[str] | None = None,
 ) -> schemas.Collection:
 
     if not id:
@@ -178,7 +178,7 @@ def create_collection(
     if owner:
         collection.owner = str(owner)
     if ids:
-        collection.ids = jsonable_encoder(ids)
+        collection.ids = list(ids)
 
     collection.store(db_conn)
 
@@ -230,7 +230,7 @@ def modify_feed(
 
 
 def modify_collection(
-    id: UUID, contents: set[UUID], user: schemas.UserBase
+    id: UUID, contents: set[str], user: schemas.UserBase
 ) -> int | None:
     item: models.Collection | None = models.Collection.load(db_conn, str(id))
 
@@ -239,7 +239,7 @@ def modify_collection(
     elif item.owner != str(user.id):
         return 403
 
-    item.ids = jsonable_encoder(contents)
+    item.ids = list(contents)
 
     item.store(db_conn)
 
