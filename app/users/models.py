@@ -58,7 +58,14 @@ class User(Document):
     )
 
 
-class Feed(Document):
+class UserItem(Document):
+    _id = TextField()
+    name = TextField()
+    owner = TextField()
+    type = TextField()
+
+
+class Feed(UserItem):
     _id = TextField()
     name = TextField()
 
@@ -100,7 +107,7 @@ class Feed(Document):
     )
 
 
-class Collection(Document):
+class Collection(UserItem):
     _id = TextField()
     name = TextField()
 
