@@ -49,22 +49,7 @@ responses: dict[int, dict[str, Any]] = {
 }
 
 
-def update_item(
-    item_id: UUID,
-    contents: schemas.FeedCreate | set[UUID],
-    current_user: schemas.UserBase,
-):
-    if isinstance(contents, schemas.FeedCreate):
-        response_code: int | None = crud.modify_feed(
-            id=item_id, contents=contents, user=current_user
-        )
-    elif isinstance(contents, set):
-        response_code: int | None = crud.modify_collection(
-            id=item_id, contents=contents, user=current_user
-        )
-    else:
-        raise NotImplementedError
-
+def handle_crud_response(response_code: int | None):
     if response_code:
         raise HTTPException(
             status_code=responses[response_code]["status_code"],
@@ -78,7 +63,9 @@ def update_feed(
     contents: schemas.FeedCreate,
     current_user: schemas.User = Depends(get_user_from_token),
 ):
-    update_item(feed_id, contents, current_user)
+    return handle_crud_response(
+        crud.modify_feed(id=feed_id, contents=contents, user=current_user)
+    )
 
 
 @router.put("/collection/{collection_id}", responses=responses)  # pyright: ignore
@@ -87,4 +74,6 @@ def update_collection(
     contents: set[UUID],
     current_user: schemas.User = Depends(get_user_from_token),
 ):
-    update_item(collection_id, contents, current_user)
+    return handle_crud_response(
+        crud.modify_collection(id=collection_id, contents=contents, user=current_user)
+    )
