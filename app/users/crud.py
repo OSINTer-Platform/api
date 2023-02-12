@@ -54,7 +54,7 @@ def get_full_user_object(username: str, complete: bool = False) -> None | schema
 
     if complete:
         user.feeds = list(get_feeds(user).values())
-        user.collections = list(get_collections(user))
+        user.collections = list(get_collections(user).values())
 
     return user
 
@@ -202,12 +202,15 @@ def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
     return {feed._id: schemas.Feed.from_orm(feed) for feed in list(all_feeds)}
 
 
-def get_collections(user: schemas.User) -> list[schemas.Collection]:
+def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
     all_collections: ViewResults = models.Collection.all(db_conn)
 
     all_collections.options["keys"] = jsonable_encoder(user.collection_ids)
 
-    return [schemas.Collection.from_orm(collection) for collection in all_collections]
+    return {
+        collection._id: schemas.Collection.from_orm(collection)
+        for collection in all_collections
+    }
 
 
 def modify_feed(
