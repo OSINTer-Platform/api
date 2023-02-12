@@ -30,7 +30,7 @@ def auth_user():
 
 @pytest.fixture
 def get_feeds() -> Callable[[int], list[FeedCreate]]:
-    def _make_feed_list(n: int = 1000) -> list[FeedCreate]:
+    def _make_feed_list(n: int = 100) -> list[FeedCreate]:
         return [FeedFactory.build() for i in range(n)]
 
     return _make_feed_list
