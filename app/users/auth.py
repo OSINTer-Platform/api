@@ -71,9 +71,7 @@ def verify_auth_data(
             )
 
 
-def get_user_from_token(
-    username: str = Depends(get_username_from_token)
-) -> UserBase:
+def get_user_from_token(username: str = Depends(get_username_from_token)) -> UserBase:
     return verify_auth_data(username)
 
 

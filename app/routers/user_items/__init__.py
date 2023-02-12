@@ -78,5 +78,7 @@ def update_collection(
     current_user: schemas.User = Depends(get_user_from_token),
 ):
     return handle_crud_response(
-        crud.modify_collection(id=collection_id, contents=cast(set[str], contents), user=current_user)
+        crud.modify_collection(
+            id=collection_id, contents=cast(set[str], contents), user=current_user
+        )
     )

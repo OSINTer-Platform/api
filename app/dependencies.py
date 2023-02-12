@@ -37,8 +37,10 @@ class FastapiSearchQuery(SearchQuery):
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
         source_category: list[str] | None = Query(None),
-        ids: conlist(constr(strip_whitespace=True, min_length=20, max_length=20))
-        | None = Query(None),  # pyright: ignore
+        ids: conlist(
+            constr(strip_whitespace=True, min_length=20, max_length=20)
+        )  # pyright: ignore
+        | None = Query(None),
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
         complete: bool = Query(False),
