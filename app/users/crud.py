@@ -258,18 +258,17 @@ def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | N
 def remove_item(
     user: schemas.UserBase,
     id: UUID,
-) -> bool:
+) -> int | None:
     try:
         item = db_conn[str(id)]
     except ResourceNotFound:
-        return True
+        return
 
-    if item["type"] not in ["feed", "collection"] or item["owner"] != str(user.id):
-        return False
+    if item["type"] not in ["feed", "collection"]:
+        return 404
+    elif item["owner"] != str(user.id):
+        return 403
 
-    try:
-        del db_conn[str(id)]
-    except ResourceConflict:
-        return False
+    del db_conn[str(id)]
 
-    return True
+    return
