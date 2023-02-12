@@ -2,7 +2,7 @@ from fastapi import FastAPI
 
 from .routers import auth, ml
 from .routers.documents import articles, tweets
-from .routers.subscriptions import collections, feeds
+from .routers.subscriptions import feeds, collections
 from .routers import user_items
 
 
@@ -25,9 +25,7 @@ app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
 app.include_router(feeds.router, prefix="/my/feeds", tags=["feed"])
 
-app.include_router(
-   collections.router, prefix="/my/collections", tags=["collections"]
-)
+app.include_router(collections.router, prefix="/my/collections", tags=["collections"])
 
 app.include_router(user_items.router, prefix="/user-items", tags=["user-items"])
 
