@@ -60,53 +60,54 @@ def confirm_precense(feed_id: str, feed_content: dict[str, str] | FeedCreate) ->
         raise NotImplementedError
 
 
+def confirm_empty():
+    r = client.get("/my/feeds/list")
+    assert r.status_code == 200
+    assert r.json() == {}
+
+
 def delete_feed(feed_id: str) -> None:
     r = client.delete(f"/user-items/{feed_id}")
 
     assert r.status_code == 204
 
 
-@pytest.mark.usefixtures("auth_user")
+@pytest.fixture
+def new_feeds(auth_user, get_feeds):
+    feeds: list[FeedCreate] = get_feeds()
+
+    new_feeds: dict[str, dict[str, str]] = {}
+
+    for feed in feeds:
+        feed_id, feed_content = create_feed(feed, uuid4().hex)
+        new_feeds[feed_id] = feed_content
+
+    yield new_feeds
+
+    for feed_id in new_feeds.keys():
+        delete_feed(feed_id)
+
+    confirm_empty()
+
+
 class TestFeeds:
-    def test_empty(self):
-        r = client.get("/my/feeds/list")
-        assert r.status_code == 200
-        assert r.json() == {}
+    def test_empty(self, auth_user):
+        confirm_empty()
 
-    def test_feed_creation_and_deletion(
-        self, get_feeds: Callable[[int], list[FeedCreate]]
-    ):
-        # Represents state generated locally to be uploaded
-        feeds: list[FeedCreate] = get_feeds()  # pyright: ignore
-
-        # Represents the state stored by the server
-        online_feeds: dict[str, dict[str, Any]] = {}
-
-        for feed in feeds:
-            feed_id, feed_content = create_feed(feed, uuid4().hex)
-
-            online_feeds[feed_id] = feed_content
-
-        for feed_id, feed_content in online_feeds.items():
-            confirm_precense(feed_id, feed_content)
-            delete_feed(feed_id)
-
-        self.test_empty()
-
-    def test_feed_modification(self, get_feeds):
-        # Represents initial feeds
-        feeds: list[FeedCreate] = get_feeds()
-
-        new_feeds: dict[str, FeedCreate] = {}
-
-        for feed in feeds:
-            feed_id, _ = create_feed(feed, uuid4().hex)
-            new_feeds[feed_id] = get_feeds(1)[0]
+    def test_feed_creation_and_deletion(self, new_feeds: dict[str, dict[str, str]]):
 
         for feed_id, feed_content in new_feeds.items():
+            confirm_precense(feed_id, feed_content)
+
+    def test_feed_modification(self, get_feeds, new_feeds: dict[str, dict[str, str]]):
+
+        post_mod_feeds: dict[str, FeedCreate] = {}
+
+        for feed_id in new_feeds.keys():
+            post_mod_feeds[feed_id] = get_feeds(1)[0]
+
+        for feed_id, feed_content in post_mod_feeds.items():
             modify_feed(feed_id, feed_content)
 
-        for feed_id, feed_content in new_feeds.items():
-
+        for feed_id, feed_content in post_mod_feeds.items():
             confirm_precense(feed_id, feed_content)
-            delete_feed(feed_id)
