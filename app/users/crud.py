@@ -241,6 +241,19 @@ def modify_collection(
     item.store(db_conn)
 
 
+def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:
+    item: models.UserItem | None = models.UserItem.load(db_conn, str(id))
+
+    if item is None or not item.type in ["feed", "collection"]:
+        return 404
+    elif item.owner != str(user.id):
+        return 403
+
+    item.name = new_name
+
+    item.store(db_conn)
+
+
 # Has to verify the user owns the item before deletion
 def remove_item(
     user: schemas.UserBase,
