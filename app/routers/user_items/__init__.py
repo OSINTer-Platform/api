@@ -1,3 +1,5 @@
+from datetime import date
+from io import BytesIO
 from typing import Type, TypedDict, cast
 from uuid import UUID
 
@@ -6,6 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from app.common import EsID, HTTPError
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
+from app.utils.documents import convert_query_to_zip, send_file
+from modules.elastic import SearchQuery
 from modules.objects import FullArticle
 
 from ... import config_options
@@ -38,11 +42,24 @@ responses: dict[int, ResponseType] = {
 
 
 def handle_crud_response(response_code: int | None):
-    if response_code:
+    if response_code is not None:
         raise HTTPException(
             status_code=responses[response_code]["status_code"],
             detail=responses[response_code]["detail"],
         )
+
+
+def get_query_from_item(item_id: UUID) -> SearchQuery | None:
+    item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
+
+    if isinstance(item, int):
+        return handle_crud_response(item)
+    elif not isinstance(item, schemas.Feed | schemas.Collection):
+        raise NotImplementedError
+
+    q = item.to_query()
+
+    return q
 
 
 @router.delete(
@@ -61,19 +78,32 @@ def delete_item(
     return handle_crud_response(crud.remove_item(current_user, item_id))
 
 
-@router.get("/{item_id}/articles", response_model=list[FullArticle], response_model_exclude_unset=True)
-def get_item_articles(item_id: UUID, complete: bool = Query(False)):
-    item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
+@router.get(
+    "/{item_id}/articles",
+    response_model=list[FullArticle],
+    response_model_exclude_unset=True,
+)
+def get_item_articles(
+    search_query: SearchQuery = Depends(get_query_from_item),
+    complete: bool = Query(False),
+):
+    search_query.complete = complete
+    return config_options.es_article_client.query_documents(search_query)
 
-    if isinstance(item, int):
-        return handle_crud_response(item)
-    elif not isinstance(item, schemas.Feed | schemas.Collection):
-        raise NotImplementedError
 
-    q = item.to_query()
-    q.complete = complete
+@router.get(
+    "/{item_id}/export",
+    response_model=list[FullArticle],
+    response_model_exclude_unset=True,
+)
+def export_item_articles(search_query: SearchQuery = Depends(get_query_from_item)):
+    zip_file: BytesIO = convert_query_to_zip(search_query)
 
-    return config_options.es_article_client.query_documents(q)
+    return send_file(
+        file_name=f"OSINTer-MD-articles-{date.today()}-Item-Download.zip",
+        file_content=zip_file,
+        file_type="application/zip",
+    )
 
 
 @router.put("/{item_id}/name", responses=responses)  # pyright: ignore
