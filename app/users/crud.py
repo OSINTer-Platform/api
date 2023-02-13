@@ -3,7 +3,7 @@ from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from couchdb import Database, ResourceNotFound
+from couchdb import Database, Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
@@ -211,6 +211,19 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
         collection._id: schemas.Collection.from_orm(collection)
         for collection in all_collections
     }
+
+def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
+    try:
+        item: Document = db_conn[str(id)]
+    except ResourceNotFound:
+        return 404
+
+    if item["type"] == "feed":
+        return schemas.Feed(**dict(item))
+    elif item["type"] == "collection":
+        return schemas.Collection(**dict(item))
+    else:
+        return 404
 
 
 def modify_feed(
