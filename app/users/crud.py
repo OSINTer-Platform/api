@@ -148,7 +148,7 @@ def create_feed(
     feed = models.Feed(
         name=name,
         _id=str(id),
-        **feed_params.dict(exclude_unset=True),
+        **feed_params.dict(),
     )
 
     if owner:

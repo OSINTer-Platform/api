@@ -2,6 +2,7 @@ from datetime import datetime
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
+from app.dependencies import ArticleSortBy, ArticleSortOrder
 
 
 # Used for mapping the _id field of the DB model to the schemas id field
@@ -18,18 +19,21 @@ class ItemBase(ORMBase):
 
 
 class FeedCreate(BaseModel):
-    limit: int | None = None
+    limit: int | None = 100
 
-    sort_by: str | None = None
-    sort_order: str | None = None
+    sort_by: ArticleSortBy | None = ArticleSortBy.PublishDate
+    sort_order: ArticleSortOrder | None = ArticleSortOrder.Descending
 
     search_term: str | None = None
-    highlight: bool | None = None
+    highlight: bool | None = False
 
     first_date: datetime | None = None
     last_date: datetime | None = None
 
     source_category: list[str] = []
+
+    class Config:
+        use_enum_values = True
 
 
 class Feed(ItemBase, FeedCreate):
