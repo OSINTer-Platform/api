@@ -24,11 +24,11 @@ def send_file(file_name: str, file_content: StringIO | BytesIO, file_type: str):
     return response
 
 
-async def convert_ids_to_zip(ids: EsIDList = Query(...)):
-    return await convert_query_to_zip(SearchQuery(ids=ids))
+def convert_ids_to_zip(ids: EsIDList = Query(...)):
+    return convert_query_to_zip(SearchQuery(ids=ids))
 
 
-async def convert_query_to_zip(
+def convert_query_to_zip(
     search_q: SearchQuery = Depends(FastapiSearchQuery),
 ):
 

@@ -91,7 +91,7 @@ def get_articles_from_cluster(
 )
 async def download_articles_from_cluster(cluster_id: int):
     query = get_article_cluster_query(cluster_id)
-    zip_file: BytesIO = await convert_query_to_zip(query)
+    zip_file: BytesIO = convert_query_to_zip(query)
 
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{cluster_id}-Download.zip",
