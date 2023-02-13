@@ -1,11 +1,14 @@
 from typing import Type, TypedDict, cast
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.common import EsID, HTTPError
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
+from modules.objects import FullArticle
+
+from ... import config_options
 
 
 router = APIRouter()
@@ -56,6 +59,21 @@ def delete_item(
     item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
 ):
     return handle_crud_response(crud.remove_item(current_user, item_id))
+
+
+@router.get("/{item_id}/articles", response_model=list[FullArticle], response_model_exclude_unset=True)
+def get_item_articles(item_id: UUID, complete: bool = Query(False)):
+    item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
+
+    if isinstance(item, int):
+        return handle_crud_response(item)
+    elif not isinstance(item, schemas.Feed | schemas.Collection):
+        raise NotImplementedError
+
+    q = item.to_query()
+    q.complete = complete
+
+    return config_options.es_article_client.query_documents(q)
 
 
 @router.put("/{item_id}/name", responses=responses)  # pyright: ignore
