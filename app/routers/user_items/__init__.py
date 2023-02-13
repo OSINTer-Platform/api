@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Type, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,7 +11,14 @@ from app.users.auth import get_user_from_token
 router = APIRouter()
 
 
-responses: dict[int, dict[str, Any]] = {
+class ResponseType(TypedDict):
+    model: Type[HTTPError]
+    description: str
+    detail: str
+    status_code: int
+
+
+responses: dict[int, ResponseType] = {
     404: {
         "model": HTTPError,
         "description": "Returned when item doesn't already exist",
