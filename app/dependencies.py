@@ -8,8 +8,11 @@ from modules.elastic import SearchQuery
 
 from pydantic import constr, conlist
 
+class StrEnum(str, Enum):
+    def __str__(self) -> str:
+            return self.value
 
-class SortBy(Enum):
+class ArticleSortBy(StrEnum):
     PublishDate = "publish_date"
     TimesRead = "read_times"
     Source = "source"
@@ -18,7 +21,7 @@ class SortBy(Enum):
     BestMatch = None
 
 
-class SortOrder(Enum):
+class ArticleSortOrder(StrEnum):
     Descending = "desc"
     Ascending = "asc"
 
@@ -31,8 +34,8 @@ class FastapiSearchQuery(SearchQuery):
     def __init__(
         self,
         limit: int = Query(10_000),
-        sort_by: SortBy | None = Query(SortBy.BestMatch),
-        sort_order: SortOrder | None = Query(SortOrder.Descending),
+        sort_by: ArticleSortBy | None = Query(ArticleSortBy.BestMatch),
+        sort_order: ArticleSortOrder | None = Query(ArticleSortOrder.Descending),
         search_term: str | None = Query(None),
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
