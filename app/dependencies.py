@@ -8,9 +8,11 @@ from modules.elastic import SearchQuery
 
 from pydantic import constr, conlist
 
+
 class StrEnum(str, Enum):
     def __str__(self) -> str:
-            return self.value
+        return self.value
+
 
 class ArticleSortBy(StrEnum):
     PublishDate = "publish_date"

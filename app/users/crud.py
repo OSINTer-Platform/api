@@ -212,6 +212,7 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
         for collection in all_collections
     }
 
+
 def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
     try:
         item: Document = db_conn[str(id)]

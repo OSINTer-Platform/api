@@ -6,6 +6,7 @@ from app.users.schemas import Collection
 
 from . import client
 
+
 def create_collection(content: list[str], name: str) -> tuple[str, Collection]:
     r = client.post(f"/my/collections/{name}", json=content)
     assert r.status_code == 201
@@ -19,6 +20,7 @@ def create_collection(content: list[str], name: str) -> tuple[str, Collection]:
     else:
         assert False
 
+
 def modify_collection(id: str, collection: Collection | list[str]) -> None:
     if isinstance(collection, Collection):
         r = client.put(f"/user-items/collection/{id}", json=list(collection.ids))
@@ -29,11 +31,13 @@ def modify_collection(id: str, collection: Collection | list[str]) -> None:
 
     assert r.status_code == 200
 
+
 def confirm_content(id: str, content: list[str]) -> None:
     r = client.get("/my/collections/list")
     assert r.status_code == 200
 
     assert set(r.json()[id]["ids"]) == set(content)
+
 
 def confirm_presence(id: str, collection: Collection) -> None:
     r = client.get(f"/my/collections/list")
@@ -54,6 +58,7 @@ def delete_collection(collection_id: str) -> None:
     r = client.delete(f"/user-items/{collection_id}")
     assert r.status_code == 204
 
+
 @pytest.fixture
 def new_collections(auth_user, get_collections):
     collections: list[list[str]] = get_collections()
@@ -69,15 +74,20 @@ def new_collections(auth_user, get_collections):
     for id in new_collections.keys():
         delete_collection(id)
 
+
 class TestCollections:
     def test_empty(self, auth_user):
         confirm_empty()
 
-    def test_collection_creation_and_deletion(self, new_collections: dict[str, Collection]):
+    def test_collection_creation_and_deletion(
+        self, new_collections: dict[str, Collection]
+    ):
         for id, collection in new_collections.items():
             confirm_presence(id, collection)
 
-    def test_collection_modification(self, new_collections: dict[str, Collection], get_collections):
+    def test_collection_modification(
+        self, new_collections: dict[str, Collection], get_collections
+    ):
         post_mod_collections: dict[str, list[str]] = {}
 
         for id in new_collections.keys():

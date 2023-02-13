@@ -39,18 +39,14 @@ class FeedCreate(BaseModel):
 
     def to_query(self):
         return SearchQuery(
-            limit = self.limit if self.limit else 0,
-
+            limit=self.limit if self.limit else 0,
             sort_by=str(self.sort_by) if self.sort_by else None,
             sort_order=str(self.sort_order) if self.sort_order else None,
-
             search_term=self.search_term,
             highlight=True if self.search_term and self.highlight else False,
-
             first_date=self.first_date,
             last_date=self.last_date,
-
-            source_category=self.source_category
+            source_category=self.source_category,
         )
 
 
@@ -64,11 +60,9 @@ class Collection(ItemBase):
     def to_query(self):
         return SearchQuery(
             limit=10_000 if len(self.ids) < 10_000 else 0,
-
             sort_by=ArticleSortBy.PublishDate.value,
             sort_order=ArticleSortOrder.Descending.value,
-
-            ids=list(self.ids)
+            ids=list(self.ids),
         )
 
 

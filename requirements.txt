@@ -1,14 +1,14 @@
-python-multipart
-python-jose[cryptography]
+python - multipart
+python - jose[cryptography]
 fastapi
-fastapi-rss
+fastapi - rss
 pydantic
 uvicorn[standard]
-gunicorn # Used as process manager for uvicorn processes
+gunicorn  # Used as process manager for uvicorn processes
 
 elasticsearch
-argon2-cffi
+argon2 - cffi
 requests
 
-python-dotenv
+python - dotenv
 CouchDB
