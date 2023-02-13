@@ -1,6 +1,6 @@
 from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
 from app.common import EsID
 from app.users import models
@@ -23,9 +23,9 @@ def get_my_subscribed_collections(
     status_code=status.HTTP_201_CREATED,
     response_model=dict[str, schemas.Collection],
 )
-def create_feed(
+def create_collection(
     collection_name: str,
-    ids: set[EsID] = Query(set()),
+    ids: set[EsID] = Body(set()),
     subscribe: bool = Query(True),
     current_user: schemas.User = Depends(get_full_user),
 ):
