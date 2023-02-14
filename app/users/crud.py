@@ -3,15 +3,13 @@ from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from couchdb import Database, Document, ResourceNotFound
+from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
-from . import get_db_conn, models, schemas
+from . import models, schemas, db as db_conn
 
 ph = PasswordHasher()
-
-db_conn: Database = get_db_conn()
 
 
 # Return of db model for user is for use in following crud functions
