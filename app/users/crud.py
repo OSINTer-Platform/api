@@ -64,6 +64,7 @@ def create_user(
     username: str,
     password: str,
     email: str | None = "",
+    id: UUID | None = None,
 ) -> bool:
     if verify_user(username):
         return False
@@ -73,10 +74,13 @@ def create_user(
     else:
         email_hash = None
 
+    if not id:
+        id = uuid4()
+
     password_hash = ph.hash(password)
 
     new_user = models.User(
-        _id=str(uuid4()),
+        _id=str(id),
         username=username,
         active=True,
         hashed_password=password_hash,
