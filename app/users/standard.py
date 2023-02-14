@@ -4,8 +4,7 @@ from app.users import crud
 
 from secrets import token_urlsafe
 
-
-feeds = {
+standard_feeds = {
     "Log4J": schemas.FeedCreate(
         search_term="log4j",
         highlight=True,
@@ -21,13 +20,13 @@ feeds = {
 }
 
 
-def create_items():
+def create_standard_items():
     crud.remove_user("OSINTer")
     crud.create_user(username="OSINTer", password=token_urlsafe(64), id=UUID(int=0))
 
     stored_feeds: set[UUID] = set()
 
-    for feed_name, feed in feeds.items():
+    for feed_name, feed in standard_feeds.items():
         new_feed = crud.create_feed(feed_params=feed, name=feed_name, owner=UUID(int=0))
         stored_feeds.add(new_feed.id)
 

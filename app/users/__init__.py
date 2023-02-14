@@ -1,5 +1,4 @@
-from couchdb import Server
-from couchdb.client import Server
+from couchdb import Server, Database
 from couchdb.http import PreconditionFailed
 from couchdb.mapping import ViewDefinition
 
@@ -7,15 +6,19 @@ from .. import config_options
 from .models import views
 
 
-couch = Server(config_options.COUCHDB_URL)
+from couchdb import Database, Server
+from .. import config_options
 
-try:
-    db = couch.create(config_options.COUCHDB_NAME)
-except PreconditionFailed:
-    db = couch[config_options.COUCHDB_NAME]
+def get_db_conn() -> Database:
+    return Server(config_options.COUCHDB_URL)[config_options.COUCHDB_NAME]
 
-ViewDefinition.sync_many(db, views)
 
-from .standard import create_items
+def init_db():
+    couch = Server(config_options.COUCHDB_URL)
 
-create_items()
+    try:
+        db = couch.create(config_options.COUCHDB_NAME)
+    except PreconditionFailed:
+        db = couch[config_options.COUCHDB_NAME]
+
+    ViewDefinition.sync_many(db, views)

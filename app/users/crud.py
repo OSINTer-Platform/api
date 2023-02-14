@@ -7,9 +7,12 @@ from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
-from . import models, schemas, db as db_conn
+
+from . import models, schemas, get_db_conn
 
 ph = PasswordHasher()
+
+db_conn = get_db_conn()
 
 
 # Return of db model for user is for use in following crud functions
