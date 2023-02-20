@@ -137,3 +137,18 @@ def update_collection(
             id=collection_id, contents=cast(set[str], contents), user=current_user
         )
     )
+
+
+class StandardItems(TypedDict, total=False):
+    feeds: dict[str, schemas.Feed]
+    collections: dict[str, schemas.Collection]
+
+standard_user: schemas.User = cast(schemas.User, crud.get_full_user_object("OSINTer"))
+standard_items: StandardItems = {
+    "feeds" : crud.get_feeds(standard_user),
+    #"collections" : crud.get_collections(standard_user),
+}
+
+@router.get("/standard", response_model=StandardItems)
+def get_standard_items():
+    return standard_items
