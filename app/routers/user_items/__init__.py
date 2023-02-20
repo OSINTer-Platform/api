@@ -110,7 +110,7 @@ def export_item_articles(search_query: SearchQuery = Depends(get_query_from_item
 def update_item_name(
     item_id: UUID,
     new_name: str,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.UserBase = Depends(get_user_from_token),
 ):
     crud.change_item_name(item_id, new_name, current_user)
 
@@ -119,7 +119,7 @@ def update_item_name(
 def update_feed(
     feed_id: UUID,
     contents: schemas.FeedCreate,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.UserBase = Depends(get_user_from_token),
 ):
     return handle_crud_response(
         crud.modify_feed(id=feed_id, contents=contents, user=current_user)
@@ -130,7 +130,7 @@ def update_feed(
 def update_collection(
     collection_id: UUID,
     contents: set[EsID],
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.UserBase = Depends(get_user_from_token),
 ):
     return handle_crud_response(
         crud.modify_collection(
