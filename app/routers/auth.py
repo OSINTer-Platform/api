@@ -3,9 +3,9 @@ from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.users.auth import create_access_token, get_user_from_token, verify_auth_data
+from app.users.auth import create_access_token, get_full_user, get_user_from_token, verify_auth_data
 from app.users.crud import create_user, verify_user
-from app.users.schemas import UserBase
+from app.users.schemas import User, UserBase
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -73,11 +73,11 @@ async def send_password_recovery_mail(
     )
 
 
-@router.get("/status")
+@router.get("/status", response_model=User)
 async def get_auth_status(
-    current_user: UserBase = Depends(get_user_from_token),
+    current_user: User = Depends(get_full_user),
 ):
-    return
+    return current_user.dict()
 
 
 @router.post("/logout")
