@@ -92,6 +92,14 @@ def get_item_articles(
     search_query.complete = complete
     return config_options.es_article_client.query_documents(search_query)
 
+@router.get(
+    "/{item_id}/content",
+    response_model=schemas.Feed | schemas.Collection,
+    response_model_exclude_unset=True,
+)
+def get_item_contents(item_id: UUID):
+    return handle_crud_response(crud.get_item(item_id))
+
 
 @router.get(
     "/{item_id}/export",
