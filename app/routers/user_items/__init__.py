@@ -41,12 +41,14 @@ responses: dict[int, ResponseType] = {
 }
 
 
-def handle_crud_response(response_code: int | None):
-    if response_code is not None:
+def handle_crud_response(response):
+    if isinstance(response, int):
         raise HTTPException(
-            status_code=responses[response_code]["status_code"],
-            detail=responses[response_code]["detail"],
+            status_code=responses[response]["status_code"],
+            detail=responses[response]["detail"],
         )
+
+    return response
 
 
 def get_query_from_item(item_id: UUID) -> SearchQuery | None:
@@ -55,7 +57,7 @@ def get_query_from_item(item_id: UUID) -> SearchQuery | None:
     if isinstance(item, int):
         return handle_crud_response(item)
     elif not isinstance(item, schemas.Feed | schemas.Collection):
-        raise NotImplementedError
+        return handle_crud_response(404)
 
     q = item.to_query()
 
