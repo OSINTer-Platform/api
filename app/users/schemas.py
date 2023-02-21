@@ -18,6 +18,7 @@ class ItemBase(ORMBase):
     id: UUID = Field(alias="_id", default_factory=uuid4)
     name: str
     owner: UUID | None = None
+    type: str
 
 
 class FeedCreate(BaseModel):
