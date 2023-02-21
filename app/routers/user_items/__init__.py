@@ -114,7 +114,7 @@ def update_item_name(
     new_name: str,
     current_user: schemas.UserBase = Depends(get_user_from_token),
 ):
-    crud.change_item_name(item_id, new_name, current_user)
+    return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
 
 
 @router.put("/feed/{feed_id}", responses=responses)  # pyright: ignore
