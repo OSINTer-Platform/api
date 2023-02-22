@@ -17,6 +17,12 @@ def open_db_conn():
     db_conn = get_db_conn()
 
 
+try:
+    open_db_conn()
+except:
+    pass
+
+
 # Return of db model for user is for use in following crud functions
 def verify_user(
     username: str,
