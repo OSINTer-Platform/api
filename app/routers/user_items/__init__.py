@@ -159,6 +159,6 @@ standard_items: StandardItems = {
     #"collections" : crud.get_collections(standard_user),
 }
 
-@router.get("/standard", response_model=StandardItems)
+@router.get("/standard/feeds", response_model=dict[str, schemas.Feed])
 def get_standard_items():
-    return standard_items
+    return standard_items['feeds']
