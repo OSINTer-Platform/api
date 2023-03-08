@@ -5,17 +5,20 @@ from .routers.documents import articles, tweets
 from .routers.subscriptions import feeds, collections
 from .routers import user_items
 
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    servers=[
-        {
-            "url": "https://dev.osinter.dk/api",
-            "description": "Development and Testing env",
-        },
-        {"url": "https://osinter.dk/api", "description": "Production env"},
-    ],
-    root_path="/api",
+    root_path="/",
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
 
