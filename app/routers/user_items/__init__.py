@@ -92,6 +92,7 @@ def get_item_articles(
     search_query.complete = complete
     return config_options.es_article_client.query_documents(search_query)
 
+
 @router.get(
     "/{item_id}/content",
     response_model=schemas.Feed | schemas.Collection,
@@ -153,12 +154,14 @@ class StandardItems(TypedDict, total=False):
     feeds: dict[str, schemas.Feed]
     collections: dict[str, schemas.Collection]
 
+
 standard_user: schemas.User = cast(schemas.User, crud.get_full_user_object("OSINTer"))
 standard_items: StandardItems = {
-    "feeds" : crud.get_feeds(standard_user),
-    #"collections" : crud.get_collections(standard_user),
+    "feeds": crud.get_feeds(standard_user),
+    # "collections" : crud.get_collections(standard_user),
 }
+
 
 @router.get("/standard/feeds", response_model=dict[str, schemas.Feed])
 def get_standard_items():
-    return standard_items['feeds']
+    return standard_items["feeds"]

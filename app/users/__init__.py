@@ -9,6 +9,7 @@ from .models import views
 from couchdb import Database, Server
 from .. import config_options
 
+
 def get_db_conn() -> Database:
     return Server(config_options.COUCHDB_URL)[config_options.COUCHDB_NAME]
 

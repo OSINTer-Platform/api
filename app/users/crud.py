@@ -12,6 +12,7 @@ from . import models, schemas, get_db_conn
 
 ph = PasswordHasher()
 
+
 def open_db_conn():
     global db_conn
     db_conn = get_db_conn()
