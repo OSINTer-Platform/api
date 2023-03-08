@@ -1,8 +1,9 @@
 from datetime import datetime
+from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field
-from app.dependencies import ArticleSortBy, ArticleSortOrder
+from app.dependencies import ArticleSortBy
 
 from modules.elastic import SearchQuery
 
@@ -24,8 +25,8 @@ class ItemBase(ORMBase):
 class FeedCreate(BaseModel):
     limit: int | None = 100
 
-    sort_by: ArticleSortBy | None = ArticleSortBy.PublishDate
-    sort_order: ArticleSortOrder | None = ArticleSortOrder.Descending
+    sort_by: ArticleSortBy | None = "publish_date"
+    sort_order: Literal["desc", "asc"] = "desc"
 
     search_term: str | None = None
     highlight: bool | None = False
@@ -35,14 +36,11 @@ class FeedCreate(BaseModel):
 
     source_category: list[str] = []
 
-    class Config:
-        use_enum_values = True
-
     def to_query(self):
         return SearchQuery(
             limit=self.limit if self.limit else 0,
-            sort_by=str(self.sort_by) if self.sort_by else None,
-            sort_order=str(self.sort_order) if self.sort_order else None,
+            sort_by=self.sort_by,
+            sort_order=self.sort_order,
             search_term=self.search_term,
             highlight=True if self.search_term and self.highlight else False,
             first_date=self.first_date,
@@ -61,8 +59,8 @@ class Collection(ItemBase):
     def to_query(self):
         return SearchQuery(
             limit=10_000 if len(self.ids) < 10_000 else 0,
-            sort_by=ArticleSortBy.PublishDate.value,
-            sort_order=ArticleSortOrder.Descending.value,
+            sort_by="publish_date",
+            sort_order="desc",
             ids=list(self.ids),
         )
 

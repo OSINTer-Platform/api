@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import cast
+from typing import Literal, cast
 from fastapi import Query
 
 from datetime import datetime
@@ -8,24 +7,9 @@ from modules.elastic import SearchQuery
 
 from pydantic import constr, conlist
 
-
-class StrEnum(str, Enum):
-    def __str__(self) -> str:
-        return self.value
-
-
-class ArticleSortBy(StrEnum):
-    PublishDate = "publish_date"
-    TimesRead = "read_times"
-    Source = "source"
-    Author = "author"
-    TimeOfScraping = "inserted_at"
-    BestMatch = None
-
-
-class ArticleSortOrder(StrEnum):
-    Descending = "desc"
-    Ascending = "asc"
+ArticleSortBy = Literal[
+    "publish_date", "read_times", "source", "author", "inserted_at", ""
+]
 
 
 class FastapiSearchQuery(SearchQuery):
@@ -36,8 +20,8 @@ class FastapiSearchQuery(SearchQuery):
     def __init__(
         self,
         limit: int = Query(10_000),
-        sort_by: ArticleSortBy | None = Query(ArticleSortBy.BestMatch),
-        sort_order: ArticleSortOrder | None = Query(ArticleSortOrder.Descending),
+        sort_by: ArticleSortBy | None = Query(""),
+        sort_order: Literal["desc", "asc"] | None = Query("desc"),
         search_term: str | None = Query(None),
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
@@ -54,8 +38,8 @@ class FastapiSearchQuery(SearchQuery):
 
         super().__init__(
             limit=limit,
-            sort_by=sort_by.value if sort_by else None,
-            sort_order=sort_order.value if sort_order else None,
+            sort_by=sort_by,
+            sort_order=sort_order,
             search_term=search_term,
             first_date=first_date,
             last_date=last_date,
