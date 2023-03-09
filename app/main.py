@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+from typing import Callable
+from urllib.parse import parse_qsl, urlencode
+from fastapi import FastAPI, Request
 
 from .routers import auth, ml
 from .routers.documents import articles, tweets
@@ -18,6 +20,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def filter_blank_query_params(request: Request, call_next: Callable):
+    scope = request.scope
+    if scope and scope.get("query_string"):
+        filtered_query_params = parse_qsl(
+            qs=scope["query_string"].decode("latin-1"),
+            keep_blank_values=False,
+        )
+        scope["query_string"] = urlencode(filtered_query_params).encode("latin-1")
+    return await call_next(request)
 
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
