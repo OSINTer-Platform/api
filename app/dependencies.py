@@ -19,7 +19,7 @@ class FastapiSearchQuery(SearchQuery):
 
     def __init__(
         self,
-        limit: int = Query(10_000),
+        limit: int = Query(0),
         sort_by: ArticleSortBy | None = Query(""),
         sort_order: Literal["desc", "asc"] | None = Query("desc"),
         search_term: str | None = Query(None),
