@@ -35,7 +35,6 @@ class FastapiSearchQuery(SearchQuery):
         complete: bool = Query(False),
         cluster_id: int | None = Query(None),
     ):
-
         super().__init__(
             limit=limit,
             sort_by=sort_by,

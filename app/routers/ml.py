@@ -64,7 +64,6 @@ def get_articles_from_cluster(
     query: SearchQuery = Depends(get_article_cluster_query),
     complete: bool = Query(True),
 ):
-
     query.complete = complete
 
     articles_from_cluster: Sequence[

@@ -51,7 +51,6 @@ async def get_username_from_token(token: str = Depends(oauth2_scheme)) -> str:
 def verify_auth_data(
     username: str = Depends(get_username_from_token), password: str | None = None
 ) -> UserBase:
-
     user_obj = verify_user(username=username, password=password)
 
     if user_obj:
@@ -76,7 +75,6 @@ def get_user_from_token(username: str = Depends(get_username_from_token)) -> Use
 
 
 def get_full_user(username: str = Depends(get_username_from_token)) -> User:
-
     user_obj = get_full_user_object(username)
 
     if user_obj:

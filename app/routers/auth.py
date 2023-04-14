@@ -50,7 +50,6 @@ async def check_password_recovery_availability(
 async def send_password_recovery_mail(
     username: str, email: str, mail_available: bool = Depends(check_mail_available)
 ):
-
     if mail_available:
         current_user = verify_user(username=username)
 

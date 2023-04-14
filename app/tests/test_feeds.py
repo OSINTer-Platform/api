@@ -93,12 +93,10 @@ class TestFeeds:
         confirm_empty()
 
     def test_feed_creation_and_deletion(self, new_feeds: dict[str, dict[str, str]]):
-
         for feed_id, feed_content in new_feeds.items():
             confirm_precense(feed_id, feed_content)
 
     def test_feed_modification(self, get_feeds, new_feeds: dict[str, dict[str, str]]):
-
         post_mod_feeds: dict[str, FeedCreate] = {}
 
         for feed_id in new_feeds.keys():
@@ -111,7 +109,6 @@ class TestFeeds:
             confirm_precense(feed_id, feed_content)
 
     def test_feed_renaming(self, new_feeds: dict[str, dict[str, str]]):
-
         feed_names: dict[str, str] = {}
 
         for feed_id in new_feeds.keys():

@@ -31,7 +31,6 @@ def convert_ids_to_zip(ids: EsIDList = Query(...)):
 def convert_query_to_zip(
     search_q: SearchQuery = Depends(FastapiSearchQuery),
 ):
-
     search_q.complete = True
 
     articles: Sequence[FullArticle] = config_options.es_article_client.query_documents(

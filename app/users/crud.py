@@ -30,7 +30,6 @@ def verify_user(
     password: str | None = None,
     email: str | None = None,
 ) -> Literal[False] | models.User:
-
     users: ViewResults = models.User.auth_info(db_conn)[username]
     try:
         user: models.User = list(users)[0]
@@ -117,7 +116,6 @@ def modify_user_subscription(
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
 ) -> models.User | None:
-
     try:
         user: models.User = list(models.User.all(db_conn)[str(user_id)])[0]
     except IndexError:
@@ -155,7 +153,6 @@ def create_feed(
     owner: UUID | None = None,
     id: UUID | None = None,
 ) -> schemas.Feed:
-
     if not id:
         id = uuid4()
 
@@ -179,7 +176,6 @@ def create_collection(
     id: UUID | None = None,
     ids: set[str] | None = None,
 ) -> schemas.Collection:
-
     if not id:
         id = uuid4()
 
