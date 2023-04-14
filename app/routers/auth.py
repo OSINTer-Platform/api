@@ -142,6 +142,36 @@ async def login(
 
 
 @router.post(
+    "/get-token",
+    responses={
+        200: {},
+        401: {
+            "model": HTTPError,
+            "description": "Returned when password doesn't match username",
+        },
+        404: {
+            "model": HTTPError,
+            "description": "Returned when username isn't found in DB",
+        },
+    },
+)
+async def get_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    remember_me: bool = Query(False),
+):
+    user = verify_auth_data(username=form_data.username, password=form_data.password)
+
+    access_token = create_access_token(
+        data={"sub": user.username},
+        expires_delta=timedelta(hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS)
+        if remember_me
+        else None,
+    )
+
+    return access_token
+
+
+@router.post(
     "/signup",
     status_code=status.HTTP_201_CREATED,
     response_model=DefaultResponse,
