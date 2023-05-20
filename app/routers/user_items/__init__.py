@@ -97,6 +97,7 @@ def get_item_articles(
     "/{item_id}/content",
     response_model=schemas.Feed | schemas.Collection,
     response_model_exclude_unset=True,
+    response_model_exclude_none=True,
 )
 def get_item_contents(item_id: UUID):
     return handle_crud_response(crud.get_item(item_id))
@@ -162,6 +163,10 @@ standard_items: StandardItems = {
 }
 
 
-@router.get("/standard/feeds", response_model=dict[str, schemas.Feed])
+@router.get(
+    "/standard/feeds",
+    response_model=dict[str, schemas.Feed],
+    response_model_exclude_none=True,
+)
 def get_standard_items():
     return standard_items["feeds"]
