@@ -1,4 +1,5 @@
 from typing import Dict, Optional, no_type_check
+from urllib.parse import unquote
 
 from fastapi import HTTPException, Request, status
 from fastapi.openapi.models import OAuthFlowPassword, OAuthFlows as OAuthFlowsModel
@@ -27,6 +28,9 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         authorization: str | None = request.cookies.get(
             "access_token"
         )  # changed to accept access token from httpOnly Cookie
+
+        if authorization:
+            authorization = unquote(authorization)
 
         scheme, param = get_authorization_scheme_param(authorization)
         if not authorization or scheme.lower() != "bearer":
