@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -93,6 +94,33 @@ async def logout(
     return
 
 
+class TokenWithDetails(TypedDict):
+    token: str
+    expire: timedelta
+    secure: bool
+
+
+def get_token_with_details(
+    username: str, password: str, remember: bool
+) -> TokenWithDetails:
+    expire_date = timedelta(
+        hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
+        if remember
+        else config_options.ACCESS_TOKEN_EXPIRE_HOURS
+    )
+    user = verify_auth_data(username=username, password=password)
+
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=expire_date
+    )
+
+    return {
+        "token": access_token,
+        "expire": expire_date,
+        "secure": config_options.ENABLE_HTTPS,
+    }
+
+
 @router.post(
     "/login",
     responses={
@@ -112,28 +140,19 @@ async def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = Query(False),
 ):
-    user = verify_auth_data(username=form_data.username, password=form_data.password)
-
-    access_token = create_access_token(
-        data={"sub": user.username},
-        expires_delta=timedelta(hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS)
-        if remember_me
-        else None,
+    token: TokenWithDetails = get_token_with_details(
+        username=form_data.username, password=form_data.password, remember=remember_me
     )
 
     cookie_options = {
         "key": "access_token",
-        "value": f"Bearer {access_token}",
+        "value": f"Bearer {token['expire']}",
+        "max_age": token["expire"].total_seconds(),
         "httponly": True,
         "samesite": "strict",
         "path": "/",
-        "secure": config_options.ENABLE_HTTPS,
+        "secure": token["secure"],
     }
-
-    if remember_me:
-        cookie_options["max_age"] = timedelta(
-            hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
-        ).total_seconds()
 
     response.set_cookie(**cookie_options)
 
@@ -158,16 +177,11 @@ async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = Query(False),
 ):
-    user = verify_auth_data(username=form_data.username, password=form_data.password)
-
-    access_token = create_access_token(
-        data={"sub": user.username},
-        expires_delta=timedelta(hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS)
-        if remember_me
-        else None,
+    token: TokenWithDetails = get_token_with_details(
+        username=form_data.username, password=form_data.password, remember=remember_me
     )
 
-    return access_token
+    return token
 
 
 @router.post(
