@@ -146,7 +146,7 @@ async def login(
 
     cookie_options = {
         "key": "access_token",
-        "value": f"Bearer {token['expire']}",
+        "value": f"Bearer {token['token']}",
         "max_age": token["expire"].total_seconds(),
         "httponly": True,
         "samesite": "strict",
