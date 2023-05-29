@@ -58,7 +58,17 @@ def create_feed(
 
     return crud.get_feeds(current_user)
 
-@router.delete("/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.put("/subscription/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
+def subscribe_to_collection(
+    feed_id: UUID,
+    current_user: schemas.User = Depends(get_full_user),
+):
+    crud.modify_user_subscription(
+        user_id=current_user.id, ids={feed_id}, action="subscribe", item_type="feed"
+    )
+
+
+@router.delete("/subscription/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
 def unsubscribe_from_collection(
     feed_id: UUID,
     current_user: schemas.User = Depends(get_full_user),
