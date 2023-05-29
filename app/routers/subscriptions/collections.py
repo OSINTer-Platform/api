@@ -22,7 +22,7 @@ def get_my_subscribed_collections(
 @router.post(
     "/{collection_name}",
     status_code=status.HTTP_201_CREATED,
-    response_model=dict[str, schemas.Collection],
+    response_model=schemas.Collection,
 )
 def create_collection(
     collection_name: str,
@@ -50,9 +50,7 @@ def create_collection(
                 detail=f"No user with id {current_user.id} found",
             )
 
-        current_user = schemas.User.from_orm(user_obj)
-
-    return crud.get_collections(current_user)
+    return collection
 
 
 @router.put("/subscription/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)

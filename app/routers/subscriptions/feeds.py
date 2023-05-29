@@ -26,7 +26,7 @@ def get_my_subscribed_feeds(
 @router.post(
     "/{feed_name}",
     status_code=status.HTTP_201_CREATED,
-    response_model=dict[str, schemas.Feed],
+    response_model=schemas.Feed,
 )
 def create_feed(
     feed_name: str,
@@ -54,9 +54,8 @@ def create_feed(
                 detail=f"No user with id {current_user.id} found",
             )
 
-        current_user = schemas.User.from_orm(user_obj)
+    return feed
 
-    return crud.get_feeds(current_user)
 
 @router.put("/subscription/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
 def subscribe_to_collection(
