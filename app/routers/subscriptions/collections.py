@@ -1,4 +1,5 @@
 from typing import cast
+from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
@@ -52,3 +53,15 @@ def create_collection(
         current_user = schemas.User.from_orm(user_obj)
 
     return crud.get_collections(current_user)
+
+@router.delete("/{collection_id}", status_code=status.HTTP_204_NO_CONTENT)
+def unsubscribe_from_collection(
+    collection_id: UUID,
+    current_user: schemas.User = Depends(get_full_user),
+):
+    crud.modify_user_subscription(
+        user_id=current_user.id,
+        ids={collection_id},
+        action="unsubscribe",
+        item_type="collection",
+    )
