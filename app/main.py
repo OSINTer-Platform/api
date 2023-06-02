@@ -10,7 +10,7 @@ from .routers import user_items
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    root_path="/",
+    root_path="/api/",
 )
 
 app.add_middleware(
