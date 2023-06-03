@@ -239,7 +239,7 @@ def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
 
 def modify_feed(
     id: UUID, contents: schemas.FeedCreate, user: schemas.UserBase
-) -> int | None:
+) -> int | schemas.Feed:
     item: models.Feed | None = models.Feed.load(db_conn, str(id))
 
     if item is None or item.type != "feed":
@@ -252,10 +252,12 @@ def modify_feed(
 
     item.store(db_conn)
 
+    return schemas.Feed.from_orm(item)
+
 
 def modify_collection(
     id: UUID, contents: set[str], user: schemas.UserBase
-) -> int | None:
+) -> int | schemas.Collection:
     item: models.Collection | None = models.Collection.load(db_conn, str(id))
 
     if item is None or item.type != "collection":
@@ -266,6 +268,8 @@ def modify_collection(
     item.ids = list(contents)
 
     item.store(db_conn)
+
+    return schemas.Collection.from_orm(item)
 
 
 def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:

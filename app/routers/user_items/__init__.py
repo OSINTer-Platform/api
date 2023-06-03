@@ -1,6 +1,6 @@
 from datetime import date
 from io import BytesIO
-from typing import Type, TypedDict, cast
+from typing import Type, TypeVar, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -41,7 +41,10 @@ responses: dict[int, ResponseType] = {
 }
 
 
-def handle_crud_response(response):
+R = TypeVar("R")
+
+
+def handle_crud_response(response: R) -> R:
     if isinstance(response, int):
         raise HTTPException(
             status_code=responses[response]["status_code"],
@@ -55,9 +58,12 @@ def get_query_from_item(item_id: UUID) -> SearchQuery | None:
     item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
 
     if isinstance(item, int):
-        return handle_crud_response(item)
+        handle_crud_response(item)
+        return
+
     elif not isinstance(item, schemas.Feed | schemas.Collection):
-        return handle_crud_response(404)
+        handle_crud_response(404)
+        return
 
     q = item.to_query()
 
@@ -127,7 +133,9 @@ def update_item_name(
     return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
 
 
-@router.put("/feed/{feed_id}", responses=responses)  # pyright: ignore
+@router.put(
+    "/feed/{feed_id}", responses=responses, response_model=schemas.Feed
+)  # pyright: ignore
 def update_feed(
     feed_id: UUID,
     contents: schemas.FeedCreate,
@@ -138,7 +146,11 @@ def update_feed(
     )
 
 
-@router.put("/collection/{collection_id}", responses=responses)  # pyright: ignore
+@router.put(
+    "/collection/{collection_id}",
+    responses=responses,
+    response_model=schemas.Collection,
+)  # pyright: ignore
 def update_collection(
     collection_id: UUID,
     contents: set[EsID],
