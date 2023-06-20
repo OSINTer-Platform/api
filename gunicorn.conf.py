@@ -9,3 +9,6 @@ def on_starting(_):
 
 def post_fork(_, __):
     open_db_conn()
+
+if __name__ == "__main__":
+    on_starting(None)
