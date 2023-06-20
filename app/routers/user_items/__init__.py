@@ -1,6 +1,6 @@
 from datetime import date
 from io import BytesIO
-from typing import Type, TypeVar, TypedDict, cast
+from typing import Any, TypeVar, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -18,14 +18,7 @@ from ... import config_options
 router = APIRouter()
 
 
-class ResponseType(TypedDict):
-    model: Type[HTTPError]
-    description: str
-    detail: str
-    status_code: int
-
-
-responses: dict[int, ResponseType] = {
+responses: dict[int | str, dict[str, Any]] = {
     404: {
         "model": HTTPError,
         "description": "Returned when item doesn't already exist",
@@ -71,14 +64,7 @@ def get_query_from_item(item_id: UUID) -> SearchQuery | None:
 
 
 @router.delete(
-    "/{item_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
-    responses={
-        403: {
-            "model": HTTPError,
-            "description": "Returned when user doesn't own that item",
-        },
-    },
+    "/{item_id}", status_code=status.HTTP_204_NO_CONTENT, responses=responses
 )
 def delete_item(
     item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
@@ -133,9 +119,7 @@ def update_item_name(
     return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
 
 
-@router.put(
-    "/feed/{feed_id}", responses=responses, response_model=schemas.Feed
-)  # pyright: ignore
+@router.put("/feed/{feed_id}", responses=responses, response_model=schemas.Feed)
 def update_feed(
     feed_id: UUID,
     contents: schemas.FeedCreate,
@@ -150,7 +134,7 @@ def update_feed(
     "/collection/{collection_id}",
     responses=responses,
     response_model=schemas.Collection,
-)  # pyright: ignore
+)
 def update_collection(
     collection_id: UUID,
     contents: set[EsID],
