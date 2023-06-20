@@ -152,6 +152,7 @@ def create_feed(
     name: str,
     owner: UUID | None = None,
     id: UUID | None = None,
+    deleteable=True,
 ) -> schemas.Feed:
     if not id:
         id = uuid4()
@@ -159,6 +160,7 @@ def create_feed(
     feed = models.Feed(
         name=name,
         _id=str(id),
+        deleteable=deleteable,
         **feed_params.dict(),
     )
 
@@ -175,6 +177,7 @@ def create_collection(
     owner: UUID | None = None,
     id: UUID | None = None,
     ids: set[str] | None = None,
+    deleteable=True,
 ) -> schemas.Collection:
     if not id:
         id = uuid4()
@@ -183,6 +186,7 @@ def create_collection(
         name=name,
         owner=str(owner),
         _id=str(id),
+        deleteable=deleteable,
     )
 
     if owner:
@@ -299,6 +303,8 @@ def remove_item(
         return 404
     elif item["owner"] != str(user.id):
         return 403
+    elif not item["deleteable"]:
+        return 422
 
     del db_conn[str(id)]
 

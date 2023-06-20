@@ -63,6 +63,7 @@ class UserItem(Document):
     name = TextField()
     owner = TextField()
     type = TextField()
+    deleteable = BooleanField(default=True)
 
 
 class Feed(UserItem):

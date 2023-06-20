@@ -31,6 +31,12 @@ responses: dict[int | str, dict[str, Any]] = {
         "detail": "The requested item isn't owned by the authenticated user",
         "status_code": status.HTTP_403_FORBIDDEN,
     },
+    422: {
+        "model": HTTPError,
+        "description": "Returned when user tries to delete items that are not deleteable",
+        "detail": "The specified feed or collection is marked as non-deleteable",
+        "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
+    },
 }
 
 
