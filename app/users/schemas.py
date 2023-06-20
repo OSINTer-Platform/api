@@ -74,6 +74,8 @@ class UserBase(ORMBase):
 
 
 class User(UserBase):
+    already_read: UUID | None = None
+
     feed_ids: set[UUID] = set()
     collection_ids: set[UUID] = set()
 

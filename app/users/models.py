@@ -16,6 +16,8 @@ class User(Document):
     username = TextField()
     active = BooleanField()
 
+    already_read = TextField()
+
     # User
     feed_ids = ListField(TextField())
     collection_ids = ListField(TextField())
@@ -42,7 +44,7 @@ class User(Document):
         """
         function(doc) {
             if(doc.type == "user") {
-                emit(doc.username, { username : doc.username, active: doc.active, feed_ids: doc.feed_ids, collection_ids: doc.collection_ids });
+                emit(doc.username, { username : doc.username, active: doc.active, already_read : doc.already_read, feed_ids: doc.feed_ids, collection_ids: doc.collection_ids });
             }
         }""",
     )

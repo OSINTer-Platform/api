@@ -96,7 +96,11 @@ def create_user(
         hashed_email=email_hash,
     )
 
+    collection = create_collection("Already Read", id, deleteable=False)
+    new_user.already_read = collection.id
+
     new_user.store(db_conn)
+    modify_user_subscription(id, set([collection.id]), "subscribe", "collection")
 
     return True
 
