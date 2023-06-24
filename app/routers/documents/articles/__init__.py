@@ -2,7 +2,9 @@ from datetime import date
 from io import BytesIO
 from typing import Dict, List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
+from app.users.crud import modify_collection
 
 from modules.elastic import SearchQuery
 from modules.files import convert_article_to_md
@@ -96,8 +98,19 @@ def download_single_markdown_file(id: EsID):
     },
     response_model=FullArticle,
 )
-def get_article_content(id: EsID):
+async def get_article_content(id: EsID, request: Request):
     config_options.es_article_client.increment_read_counter(id)
+
+    try:
+        token = await oauth2_scheme(request)
+
+        if token:
+            user = get_full_user(await get_username_from_token(token))
+            if user.already_read:
+                modify_collection(user.already_read, set([id]), user, "extend")
+
+    except HTTPException:
+        pass
 
     article = config_options.es_article_client.query_documents(
         SearchQuery(limit=1, ids=[id], complete=True)
