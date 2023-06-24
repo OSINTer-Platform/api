@@ -264,7 +264,10 @@ def modify_feed(
 
 
 def modify_collection(
-    id: UUID, contents: set[str], user: schemas.UserBase
+    id: UUID,
+    contents: set[str],
+    user: schemas.UserBase,
+    action: Literal["replace", "extend"] = "replace",
 ) -> int | schemas.Collection:
     item: models.Collection | None = models.Collection.load(db_conn, str(id))
 
@@ -273,7 +276,10 @@ def modify_collection(
     elif item.owner != str(user.id):
         return 403
 
-    item.ids = list(contents)
+    if action == "replace":
+        item.ids = list(contents)
+    elif action == "extend":
+        item.ids.extend(list(contents))  # pyright: ignore
 
     item.store(db_conn)
 
