@@ -20,7 +20,6 @@ class ItemBase(ORMBase):
     name: str
     owner: UUID | None = None
     deleteable: bool | None = True
-    type: str
 
 
 class FeedCreate(BaseModel):
@@ -51,10 +50,12 @@ class FeedCreate(BaseModel):
 
 
 class Feed(ItemBase, FeedCreate):
-    pass
+    type: Literal["feed"] = "feed"
 
 
 class Collection(ItemBase):
+    type: Literal["collection"] = "collection"
+
     ids: set[str] = set()
 
     def to_query(self):
