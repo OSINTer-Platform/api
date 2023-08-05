@@ -2,8 +2,7 @@ modules
 profiles
 __pycache__
 secret.key
-osinter_users.db
 logs
 .env
 **/.pytest_cache/
-.hypothesis
+venv
