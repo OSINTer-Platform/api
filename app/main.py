@@ -3,7 +3,7 @@ from urllib.parse import parse_qsl, urlencode
 from fastapi import FastAPI, Request
 
 from .routers import auth, ml
-from .routers.documents import articles, tweets
+from .routers.documents import articles
 from .routers.subscriptions import feeds, collections
 from .routers import user_items
 
@@ -35,8 +35,6 @@ async def filter_blank_query_params(request: Request, call_next: Callable):
 
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
-
-app.include_router(tweets.router, prefix="/tweets", tags=["tweets"])
 
 app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
