@@ -13,8 +13,8 @@ from modules.elastic import SearchQuery
 # Used for mapping the _id field of the DB model to the schemas id field
 class ORMBase(BaseModel):
     class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+        from_attributes = True
+        populate_by_name = True
 
 
 class ItemBase(ORMBase):
