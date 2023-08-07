@@ -1,7 +1,10 @@
 from dotenv import load_dotenv
 
-from modules.config import FrontendConfig, configure_logger
+from modules.config import configure_logger
 from modules.misc import create_folder
+
+from .config import FrontendConfig
+
 
 load_dotenv()
 
