@@ -1,12 +1,15 @@
-from app.users import init_db
 from app import config_options
 from app.config import FrontendConfig
 
+from app.users.models import views
 from app.users.standard import create_standard_items
+
+from couchdb.mapping import ViewDefinition
+
 
 
 def on_starting(_):
-    init_db()
+    ViewDefinition.sync_many(config_options.couch_conn, views)
     create_standard_items()
 
 def post_fork(_, __):
