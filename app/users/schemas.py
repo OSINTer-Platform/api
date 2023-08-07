@@ -34,7 +34,7 @@ class FeedCreate(BaseModel):
     first_date: datetime | None = None
     last_date: datetime | None = None
 
-    source_category: list[str] = []
+    source_category: set[str] = set()
 
     def to_query(self):
         return SearchQuery(
@@ -63,7 +63,7 @@ class Collection(ItemBase):
             limit=10_000 if len(self.ids) < 10_000 else 0,
             sort_by="publish_date",
             sort_order="desc",
-            ids=list(self.ids),
+            ids=self.ids,
         )
 
 

@@ -71,7 +71,7 @@ async def get_list_of_categories():
 )
 def download_single_markdown_file(id: EsID):
     article = config_options.es_article_client.query_documents(
-        SearchQuery(limit=1, ids=[id], complete=True)
+        SearchQuery(limit=1, ids={id}, complete=True)
     )[0]
 
     if article != []:
@@ -113,7 +113,7 @@ async def get_article_content(id: EsID, request: Request):
         pass
 
     article = config_options.es_article_client.query_documents(
-        SearchQuery(limit=1, ids=[id], complete=True)
+        SearchQuery(limit=1, ids={id}, complete=True)
     )[0]
 
     if article != []:
