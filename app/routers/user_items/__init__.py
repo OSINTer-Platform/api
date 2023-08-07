@@ -1,6 +1,6 @@
 from datetime import date
 from io import BytesIO
-from typing import Any, TypeVar, TypedDict, cast
+from typing_extensions import Any, TypeVar, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status

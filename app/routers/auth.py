@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import TypedDict
+from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm

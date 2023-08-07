@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import date
 from io import BytesIO
-from typing import TypedDict
+from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
