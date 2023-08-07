@@ -1,6 +1,8 @@
 import os
 import secrets
 
+from couchdb import Server
+
 from modules.config import BaseConfig
 
 
@@ -39,6 +41,7 @@ class FrontendConfig(BaseConfig):
         )
 
         self.COUCHDB_URL, self.COUCHDB_NAME = self.get_couchdb_details()
+        self.couch_conn = Server(self.COUCHDB_URL)[self.COUCHDB_NAME]
 
     @staticmethod
     def get_couchdb_details() -> tuple[str, str]:

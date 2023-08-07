@@ -7,21 +7,11 @@ from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
+from .. import config_options
 
-from . import models, schemas, get_db_conn
+from . import models, schemas
 
 ph = PasswordHasher()
-
-
-def open_db_conn():
-    global db_conn
-    db_conn = get_db_conn()
-
-
-try:
-    open_db_conn()
-except:
-    pass
 
 
 # Return of db model for user is for use in following crud functions
@@ -30,7 +20,7 @@ def verify_user(
     password: str | None = None,
     email: str | None = None,
 ) -> Literal[False] | models.User:
-    users: ViewResults = models.User.auth_info(db_conn)[username]
+    users: ViewResults = models.User.auth_info(config_options.couch_conn)[username]
     try:
         user: models.User = list(users)[0]
     except IndexError:
@@ -54,7 +44,7 @@ def verify_user(
 
 
 def get_full_user_object(username: str, complete: bool = False) -> None | schemas.User:
-    users: ViewResults = models.User.by_username(db_conn)[username]
+    users: ViewResults = models.User.by_username(config_options.couch_conn)[username]
 
     try:
         user: schemas.User = schemas.User.from_orm(list(users)[0])
@@ -99,7 +89,7 @@ def create_user(
     collection = create_collection("Already Read", id, deleteable=False)
     new_user.already_read = collection.id
 
-    new_user.store(db_conn)
+    new_user.store(config_options.couch_conn)
     modify_user_subscription(id, set([collection.id]), "subscribe", "collection")
 
     return True
@@ -109,7 +99,7 @@ def remove_user(username: str) -> bool:
     user = verify_user(username)
 
     if user:
-        del db_conn[user._id]
+        del config_options.couch_conn[user._id]
 
     return True
 
@@ -121,7 +111,9 @@ def modify_user_subscription(
     item_type: Literal["feed", "collection"],
 ) -> models.User | None:
     try:
-        user: models.User = list(models.User.all(db_conn)[str(user_id)])[0]
+        user: models.User = list(
+            models.User.all(config_options.couch_conn)[str(user_id)]
+        )[0]
     except IndexError:
         return None
 
@@ -146,7 +138,7 @@ def modify_user_subscription(
     elif item_type == "collection":
         user.collection_ids = jsonable_encoder(source)
 
-    user.store(db_conn)
+    user.store(config_options.couch_conn)
 
     return user
 
@@ -171,7 +163,7 @@ def create_feed(
     if owner:
         feed.owner = str(owner)
 
-    feed.store(db_conn)
+    feed.store(config_options.couch_conn)
 
     return schemas.Feed.from_orm(feed)
 
@@ -198,13 +190,13 @@ def create_collection(
     if ids:
         collection.ids = list(ids)
 
-    collection.store(db_conn)
+    collection.store(config_options.couch_conn)
 
     return schemas.Collection.from_orm(collection)
 
 
 def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
-    all_feeds: ViewResults = models.Feed.get_minimal_info(db_conn)
+    all_feeds: ViewResults = models.Feed.get_minimal_info(config_options.couch_conn)
 
     # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
@@ -213,7 +205,7 @@ def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
 
 
 def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
-    all_feeds: ViewResults = models.Feed.all(db_conn)
+    all_feeds: ViewResults = models.Feed.all(config_options.couch_conn)
 
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
@@ -221,7 +213,7 @@ def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
 
 
 def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
-    all_collections: ViewResults = models.Collection.all(db_conn)
+    all_collections: ViewResults = models.Collection.all(config_options.couch_conn)
 
     all_collections.options["keys"] = jsonable_encoder(user.collection_ids)
 
@@ -233,7 +225,7 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
 
 def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
     try:
-        item: Document = db_conn[str(id)]
+        item: Document = config_options.couch_conn[str(id)]
     except ResourceNotFound:
         return 404
 
@@ -248,7 +240,7 @@ def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
 def modify_feed(
     id: UUID, contents: schemas.FeedCreate, user: schemas.UserBase
 ) -> int | schemas.Feed:
-    item: models.Feed | None = models.Feed.load(db_conn, str(id))
+    item: models.Feed | None = models.Feed.load(config_options.couch_conn, str(id))
 
     if item is None or item.type != "feed":
         return 404
@@ -258,7 +250,7 @@ def modify_feed(
     for k, v in contents.dict(exclude_unset=True).items():
         setattr(item, k, v)
 
-    item.store(db_conn)
+    item.store(config_options.couch_conn)
 
     return schemas.Feed.from_orm(item)
 
@@ -269,7 +261,9 @@ def modify_collection(
     user: schemas.UserBase,
     action: Literal["replace", "extend"] = "replace",
 ) -> int | schemas.Collection:
-    item: models.Collection | None = models.Collection.load(db_conn, str(id))
+    item: models.Collection | None = models.Collection.load(
+        config_options.couch_conn, str(id)
+    )
 
     if item is None or item.type != "collection":
         return 404
@@ -281,13 +275,15 @@ def modify_collection(
     elif action == "extend":
         item.ids.extend(list(contents))  # pyright: ignore
 
-    item.store(db_conn)
+    item.store(config_options.couch_conn)
 
     return schemas.Collection.from_orm(item)
 
 
 def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:
-    item: models.UserItem | None = models.UserItem.load(db_conn, str(id))
+    item: models.UserItem | None = models.UserItem.load(
+        config_options.couch_conn, str(id)
+    )
 
     if item is None or not item.type in ["feed", "collection"]:
         return 404
@@ -296,7 +292,7 @@ def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | N
 
     item.name = new_name
 
-    item.store(db_conn)
+    item.store(config_options.couch_conn)
 
 
 # Has to verify the user owns the item before deletion
@@ -305,7 +301,7 @@ def remove_item(
     id: UUID,
 ) -> int | None:
     try:
-        item = db_conn[str(id)]
+        item = config_options.couch_conn[str(id)]
     except ResourceNotFound:
         return
 
@@ -316,6 +312,6 @@ def remove_item(
     elif not item["deleteable"]:
         return 422
 
-    del db_conn[str(id)]
+    del config_options.couch_conn[str(id)]
 
     return
