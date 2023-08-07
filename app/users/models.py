@@ -69,9 +69,6 @@ class UserItem(Document):
 
 
 class Feed(UserItem):
-    _id = TextField()
-    name = TextField()
-
     limit = IntegerField()
 
     sort_by = TextField()
@@ -86,7 +83,6 @@ class Feed(UserItem):
     source_category = ListField(TextField())
 
     type = TextField(default="feed")
-    owner = TextField()
 
     # Views
     all = ViewField(
@@ -111,13 +107,9 @@ class Feed(UserItem):
 
 
 class Collection(UserItem):
-    _id = TextField()
-    name = TextField()
-
     ids = ListField(TextField())
 
     type = TextField(default="collection")
-    owner = TextField()
 
     # Views
     all = ViewField(
