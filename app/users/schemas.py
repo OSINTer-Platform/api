@@ -1,8 +1,10 @@
+from collections.abc import Sequence, Set
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID, uuid4
+from couchdb.mapping import ListField
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from app.dependencies import ArticleSortBy
 
 from modules.elastic import SearchQuery
@@ -48,6 +50,14 @@ class FeedCreate(BaseModel):
             source_category=self.source_category,
         )
 
+    @field_validator("source_category", mode="before")
+    @classmethod
+    def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
+
 
 class Feed(ItemBase, FeedCreate):
     type: Literal["feed"] = "feed"
@@ -82,6 +92,14 @@ class User(UserBase):
 
     feeds: list[Feed] = []
     collections: list[Collection] = []
+
+    @field_validator("feed_ids", "collection_ids", mode="before")
+    @classmethod
+    def convert_proxies(cls, id_list: Sequence) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
 
 
 class UserAuth(UserBase):
