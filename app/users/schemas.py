@@ -1,6 +1,6 @@
 from collections.abc import Sequence, Set
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
@@ -73,6 +73,9 @@ class Collection(ItemBase):
             sort_order="desc",
             ids=self.ids,
         )
+
+
+UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
 
 class UserBase(ORMBase):

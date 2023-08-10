@@ -93,7 +93,7 @@ def get_item_articles(
 
 @router.get(
     "/{item_id}/content",
-    response_model=schemas.Feed | schemas.Collection,
+    response_model=schemas.UserItem,
     response_model_exclude_unset=True,
     response_model_exclude_none=True,
 )
