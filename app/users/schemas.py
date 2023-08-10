@@ -4,7 +4,7 @@ from typing import Any, Literal
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.dependencies import ArticleSortBy
 
 from modules.elastic import SearchQuery
@@ -12,9 +12,7 @@ from modules.elastic import SearchQuery
 
 # Used for mapping the _id field of the DB model to the schemas id field
 class ORMBase(BaseModel):
-    class Config:
-        from_attributes = True
-        populate_by_name = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class ItemBase(ORMBase):
