@@ -14,6 +14,17 @@ from . import models, schemas
 ph = PasswordHasher()
 
 
+def duplicate_document(
+    document: models.DBModels,
+    document_class: type[models.DBModels],
+    contents: schemas.ORMBase,
+) -> models.DBModels:
+    rev = document.rev
+    new_document = document_class(**contents.model_dump(mode="json"))
+    new_document._data["_rev"] = rev
+    return new_document
+
+
 # Return of db model for user is for use in following crud functions
 def verify_user(
     username: str,
@@ -136,9 +147,11 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if item_type == "feed":
-        user.feed_ids = jsonable_encoder(source)
+        user_schema.feed_ids = source
     elif item_type == "collection":
-        user.collection_ids = jsonable_encoder(source)
+        user_schema.collection_ids = source
+
+    user = duplicate_document(user, models.User, user_schema)
 
     user.store(config_options.couch_conn)
 
@@ -155,19 +168,20 @@ def create_feed(
     if not id:
         id = uuid4()
 
-    feed = models.Feed(
+    feed = schemas.Feed(
         name=name,
-        _id=str(id),
+        _id=id,
         deleteable=deleteable,
-        **feed_params.dict(),
+        **feed_params.model_dump(mode="json"),
     )
 
     if owner:
-        feed.owner = str(owner)
+        feed.owner = owner
 
-    feed.store(config_options.couch_conn)
+    feed_model = models.Feed(**feed.model_dump(mode="json"))
+    feed_model.store(config_options.couch_conn)
 
-    return schemas.Feed.from_orm(feed)
+    return feed
 
 
 def create_collection(
@@ -180,21 +194,22 @@ def create_collection(
     if not id:
         id = uuid4()
 
-    collection = models.Collection(
+    collection = schemas.Collection(
         name=name,
-        owner=str(owner),
-        _id=str(id),
+        owner=owner,
+        _id=id,
         deleteable=deleteable,
     )
 
     if owner:
-        collection.owner = str(owner)
+        collection.owner = owner
     if ids:
-        collection.ids = list(ids)
+        collection.ids = ids
 
-    collection.store(config_options.couch_conn)
+    collection_model = models.Collection(**collection.model_dump(mode="json"))
+    collection_model.store(config_options.couch_conn)
 
-    return schemas.Collection.from_orm(collection)
+    return collection
 
 
 def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:

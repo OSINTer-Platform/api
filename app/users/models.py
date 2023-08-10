@@ -1,3 +1,4 @@
+from typing import TypeVar
 from couchdb.mapping import (
     BooleanField,
     DateTimeField,
@@ -132,6 +133,8 @@ class Collection(ItemBase):
         }""",
     )
 
+
+DBModels = TypeVar("DBModels", Feed, Collection, User)
 
 views: list[ViewDefinition] = [
     User.all,
