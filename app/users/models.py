@@ -60,7 +60,7 @@ class User(Document):
     )
 
 
-class UserItem(Document):
+class ItemBase(Document):
     _id = TextField()
     name = TextField()
     owner = TextField()
@@ -68,7 +68,7 @@ class UserItem(Document):
     deleteable = BooleanField(default=True)
 
 
-class Feed(UserItem):
+class Feed(ItemBase):
     limit = IntegerField()
 
     sort_by = TextField()
@@ -106,7 +106,7 @@ class Feed(UserItem):
     )
 
 
-class Collection(UserItem):
+class Collection(ItemBase):
     ids = ListField(TextField())
 
     type = TextField(default="collection")

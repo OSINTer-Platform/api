@@ -281,7 +281,7 @@ def modify_collection(
 
 
 def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:
-    item: models.UserItem | None = models.UserItem.load(
+    item: models.ItemBase | None = models.ItemBase.load(
         config_options.couch_conn, str(id)
     )
 
