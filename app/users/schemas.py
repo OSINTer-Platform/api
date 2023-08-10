@@ -1,8 +1,10 @@
+from collections.abc import Sequence, Set
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
+from couchdb.mapping import ListField
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.dependencies import ArticleSortBy
 
 from modules.elastic import SearchQuery
@@ -10,9 +12,7 @@ from modules.elastic import SearchQuery
 
 # Used for mapping the _id field of the DB model to the schemas id field
 class ORMBase(BaseModel):
-    class Config:
-        orm_mode = True
-        allow_population_by_field_name = True
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
 class ItemBase(ORMBase):
@@ -34,7 +34,7 @@ class FeedCreate(BaseModel):
     first_date: datetime | None = None
     last_date: datetime | None = None
 
-    source_category: list[str] = []
+    source_category: set[str] = set()
 
     def to_query(self):
         return SearchQuery(
@@ -47,6 +47,14 @@ class FeedCreate(BaseModel):
             last_date=self.last_date,
             source_category=self.source_category,
         )
+
+    @field_validator("source_category", mode="before")
+    @classmethod
+    def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
 
 
 class Feed(ItemBase, FeedCreate):
@@ -63,8 +71,11 @@ class Collection(ItemBase):
             limit=10_000 if len(self.ids) < 10_000 else 0,
             sort_by="publish_date",
             sort_order="desc",
-            ids=list(self.ids),
+            ids=self.ids,
         )
+
+
+UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
 
 class UserBase(ORMBase):
@@ -83,7 +94,19 @@ class User(UserBase):
     feeds: list[Feed] = []
     collections: list[Collection] = []
 
+    @field_validator("feed_ids", "collection_ids", mode="before")
+    @classmethod
+    def convert_proxies(cls, id_list: Sequence) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
+
 
 class UserAuth(UserBase):
     hashed_password: str
     hashed_email: str | None
+
+
+class FullUser(User, UserAuth):
+    pass

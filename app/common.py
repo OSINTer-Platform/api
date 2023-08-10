@@ -1,17 +1,12 @@
 from enum import Enum
+from typing import Annotated, Set, TypeAlias
+import annotated_types
 
-from pydantic import BaseModel, ConstrainedList, ConstrainedStr
-
-
-class EsID(ConstrainedStr):
-    strip_whitespace = True
-    min_length = 20
-    max_length = 20
+from pydantic import BaseModel
 
 
-class EsIDList(ConstrainedList):
-    item_type = EsID
-    unique_items = True
+EsID: TypeAlias = Annotated[str, annotated_types.Len(20, 20)]
+EsIDList: TypeAlias = Set[EsID]
 
 
 class DefaultResponseStatus(str, Enum):
@@ -32,6 +27,6 @@ class HTTPError(BaseModel):
     headers: dict[str, str]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {"detail": "HTTPException raised."},
         }

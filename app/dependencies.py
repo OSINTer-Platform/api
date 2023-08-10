@@ -1,11 +1,10 @@
-from typing import Literal, cast
+from typing import Literal
 from fastapi import Query
 
 from datetime import datetime
+from app.common import EsIDList
 
 from modules.elastic import SearchQuery
-
-from pydantic import constr, conlist
 
 ArticleSortBy = Literal[
     "publish_date", "read_times", "source", "author", "inserted_at", ""
@@ -25,11 +24,8 @@ class FastapiSearchQuery(SearchQuery):
         search_term: str | None = Query(None),
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
-        source_category: list[str] | None = Query(None),
-        ids: conlist(
-            constr(strip_whitespace=True, min_length=20, max_length=20)
-        )  # pyright: ignore
-        | None = Query(None),
+        source_category: set[str] | None = Query(None),
+        ids: EsIDList | None = Query(None),
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
         complete: bool = Query(False),
@@ -43,7 +39,7 @@ class FastapiSearchQuery(SearchQuery):
             first_date=first_date,
             last_date=last_date,
             source_category=source_category,
-            ids=cast(list[str], ids),
+            ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             complete=complete,

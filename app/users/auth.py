@@ -54,7 +54,7 @@ def verify_auth_data(
     user_obj = verify_user(username=username, password=password)
 
     if user_obj:
-        return UserBase.from_orm(user_obj)
+        return user_obj
     else:
         if password:
             raise HTTPException(

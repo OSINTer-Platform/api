@@ -14,15 +14,26 @@ from . import models, schemas
 ph = PasswordHasher()
 
 
+def duplicate_document(
+    document: models.DBModels,
+    document_class: type[models.DBModels],
+    contents: schemas.ORMBase,
+) -> models.DBModels:
+    rev = document.rev
+    new_document = document_class(**contents.model_dump(mode="json"))
+    new_document._data["_rev"] = rev
+    return new_document
+
+
 # Return of db model for user is for use in following crud functions
 def verify_user(
     username: str,
     password: str | None = None,
     email: str | None = None,
-) -> Literal[False] | models.User:
+) -> Literal[False] | schemas.UserAuth:
     users: ViewResults = models.User.auth_info(config_options.couch_conn)[username]
     try:
-        user: models.User = list(users)[0]
+        user: schemas.UserAuth = schemas.UserAuth.model_validate(list(users)[0])
     except IndexError:
         return False
 
@@ -47,7 +58,7 @@ def get_full_user_object(username: str, complete: bool = False) -> None | schema
     users: ViewResults = models.User.by_username(config_options.couch_conn)[username]
 
     try:
-        user: schemas.User = schemas.User.from_orm(list(users)[0])
+        user: schemas.User = schemas.User.model_validate(list(users)[0])
     except IndexError:
         return None
 
@@ -99,7 +110,9 @@ def remove_user(username: str) -> bool:
     user = verify_user(username)
 
     if user:
-        del config_options.couch_conn[user._id]
+        del config_options.couch_conn[str(user.id)]
+    else:
+        return False
 
     return True
 
@@ -117,7 +130,7 @@ def modify_user_subscription(
     except IndexError:
         return None
 
-    user_schema = schemas.User.from_orm(user)
+    user_schema = schemas.FullUser.model_validate(user)
 
     if item_type == "feed":
         source = user_schema.feed_ids
@@ -134,9 +147,11 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if item_type == "feed":
-        user.feed_ids = jsonable_encoder(source)
+        user_schema.feed_ids = source
     elif item_type == "collection":
-        user.collection_ids = jsonable_encoder(source)
+        user_schema.collection_ids = source
+
+    user = duplicate_document(user, models.User, user_schema)
 
     user.store(config_options.couch_conn)
 
@@ -153,19 +168,20 @@ def create_feed(
     if not id:
         id = uuid4()
 
-    feed = models.Feed(
+    feed = schemas.Feed(
         name=name,
-        _id=str(id),
+        _id=id,
         deleteable=deleteable,
-        **feed_params.dict(),
+        **feed_params.model_dump(mode="json"),
     )
 
     if owner:
-        feed.owner = str(owner)
+        feed.owner = owner
 
-    feed.store(config_options.couch_conn)
+    feed_model = models.Feed(**feed.model_dump(mode="json"))
+    feed_model.store(config_options.couch_conn)
 
-    return schemas.Feed.from_orm(feed)
+    return feed
 
 
 def create_collection(
@@ -178,21 +194,22 @@ def create_collection(
     if not id:
         id = uuid4()
 
-    collection = models.Collection(
+    collection = schemas.Collection(
         name=name,
-        owner=str(owner),
-        _id=str(id),
+        owner=owner,
+        _id=id,
         deleteable=deleteable,
     )
 
     if owner:
-        collection.owner = str(owner)
+        collection.owner = owner
     if ids:
-        collection.ids = list(ids)
+        collection.ids = ids
 
-    collection.store(config_options.couch_conn)
+    collection_model = models.Collection(**collection.model_dump(mode="json"))
+    collection_model.store(config_options.couch_conn)
 
-    return schemas.Collection.from_orm(collection)
+    return collection
 
 
 def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
@@ -201,7 +218,7 @@ def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
     # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
-    return [schemas.Feed.from_orm(feed) for feed in all_feeds]
+    return [schemas.Feed.model_validate(feed) for feed in all_feeds]
 
 
 def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
@@ -209,7 +226,7 @@ def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
 
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
-    return {feed._id: schemas.Feed.from_orm(feed) for feed in list(all_feeds)}
+    return {feed._id: schemas.Feed.model_validate(feed) for feed in all_feeds}
 
 
 def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
@@ -218,7 +235,7 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
     all_collections.options["keys"] = jsonable_encoder(user.collection_ids)
 
     return {
-        collection._id: schemas.Collection.from_orm(collection)
+        collection._id: schemas.Collection.model_validate(collection)
         for collection in all_collections
     }
 
@@ -230,9 +247,9 @@ def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
         return 404
 
     if item["type"] == "feed":
-        return schemas.Feed(**dict(item))
+        return schemas.Feed.model_validate(item)
     elif item["type"] == "collection":
-        return schemas.Collection(**dict(item))
+        return schemas.Collection.model_validate(item)
     else:
         return 404
 
@@ -247,12 +264,12 @@ def modify_feed(
     elif item.owner != str(user.id):
         return 403
 
-    for k, v in contents.dict(exclude_unset=True).items():
+    for k, v in contents.model_dump(exclude_unset=True, mode="json").items():
         setattr(item, k, v)
 
     item.store(config_options.couch_conn)
 
-    return schemas.Feed.from_orm(item)
+    return schemas.Feed.model_validate(item)
 
 
 def modify_collection(
@@ -277,11 +294,11 @@ def modify_collection(
 
     item.store(config_options.couch_conn)
 
-    return schemas.Collection.from_orm(item)
+    return schemas.Collection.model_validate(item)
 
 
 def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:
-    item: models.UserItem | None = models.UserItem.load(
+    item: models.ItemBase | None = models.ItemBase.load(
         config_options.couch_conn, str(id)
     )
 

@@ -1,11 +1,11 @@
 from datetime import date
 from io import BytesIO
-from typing import Any, TypeVar, TypedDict, cast
+from typing_extensions import Any, TypeVar, TypedDict, cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.common import EsID, HTTPError
+from app.common import EsIDList, HTTPError
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
 from app.utils.documents import convert_query_to_zip, send_file
@@ -93,7 +93,7 @@ def get_item_articles(
 
 @router.get(
     "/{item_id}/content",
-    response_model=schemas.Feed | schemas.Collection,
+    response_model=schemas.UserItem,
     response_model_exclude_unset=True,
     response_model_exclude_none=True,
 )
@@ -143,7 +143,7 @@ def update_feed(
 )
 def update_collection(
     collection_id: UUID,
-    contents: set[EsID],
+    contents: EsIDList,
     current_user: schemas.UserBase = Depends(get_user_from_token),
 ):
     return handle_crud_response(

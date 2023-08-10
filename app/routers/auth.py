@@ -1,5 +1,5 @@
 from datetime import timedelta
-from typing import TypedDict
+from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -82,7 +82,7 @@ async def send_password_recovery_mail(
 async def get_auth_status(
     current_user: User = Depends(get_full_user),
 ):
-    return current_user.dict()
+    return current_user
 
 
 @router.post("/logout")
