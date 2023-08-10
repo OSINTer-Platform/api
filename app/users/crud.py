@@ -117,7 +117,7 @@ def modify_user_subscription(
     except IndexError:
         return None
 
-    user_schema = schemas.User.from_orm(user)
+    user_schema = schemas.FullUser.model_validate(user)
 
     if item_type == "feed":
         source = user_schema.feed_ids

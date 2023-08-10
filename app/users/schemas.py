@@ -105,3 +105,7 @@ class User(UserBase):
 class UserAuth(UserBase):
     hashed_password: str
     hashed_email: str | None
+
+
+class FullUser(User, UserAuth):
+    pass
