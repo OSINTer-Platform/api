@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 
-from app.common import EsID
+from app.common import EsIDList
 from app.users import models
 
 from ...users import crud, schemas
@@ -26,7 +26,7 @@ def get_my_subscribed_collections(
 )
 def create_collection(
     collection_name: str,
-    ids: set[EsID] = Body(set()),
+    ids: EsIDList = Body(set()),
     subscribe: bool = Query(True),
     current_user: schemas.User = Depends(get_full_user),
 ):
