@@ -19,10 +19,10 @@ def verify_user(
     username: str,
     password: str | None = None,
     email: str | None = None,
-) -> Literal[False] | models.User:
+) -> Literal[False] | schemas.UserAuth:
     users: ViewResults = models.User.auth_info(config_options.couch_conn)[username]
     try:
-        user: models.User = list(users)[0]
+        user: schemas.UserAuth = schemas.UserAuth.model_validate(list(users)[0])
     except IndexError:
         return False
 
@@ -99,7 +99,9 @@ def remove_user(username: str) -> bool:
     user = verify_user(username)
 
     if user:
-        del config_options.couch_conn[user._id]
+        del config_options.couch_conn[str(user.id)]
+    else:
+        return False
 
     return True
 
