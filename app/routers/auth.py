@@ -82,7 +82,7 @@ async def send_password_recovery_mail(
 async def get_auth_status(
     current_user: User = Depends(get_full_user),
 ):
-    return current_user.dict()
+    return current_user
 
 
 @router.post("/logout")

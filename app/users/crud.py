@@ -47,7 +47,7 @@ def get_full_user_object(username: str, complete: bool = False) -> None | schema
     users: ViewResults = models.User.by_username(config_options.couch_conn)[username]
 
     try:
-        user: schemas.User = schemas.User.from_orm(list(users)[0])
+        user: schemas.User = schemas.User.model_validate(list(users)[0])
     except IndexError:
         return None
 
@@ -201,7 +201,7 @@ def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
     # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
-    return [schemas.Feed.from_orm(feed) for feed in all_feeds]
+    return [schemas.Feed.model_validate(feed) for feed in all_feeds]
 
 
 def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
@@ -209,7 +209,7 @@ def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
 
     all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
 
-    return {feed._id: schemas.Feed.from_orm(feed) for feed in list(all_feeds)}
+    return {feed._id: schemas.Feed.model_validate(feed) for feed in all_feeds}
 
 
 def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
@@ -218,7 +218,7 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
     all_collections.options["keys"] = jsonable_encoder(user.collection_ids)
 
     return {
-        collection._id: schemas.Collection.from_orm(collection)
+        collection._id: schemas.Collection.model_validate(collection)
         for collection in all_collections
     }
 
@@ -230,9 +230,9 @@ def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
         return 404
 
     if item["type"] == "feed":
-        return schemas.Feed(**dict(item))
+        return schemas.Feed.model_validate(item)
     elif item["type"] == "collection":
-        return schemas.Collection(**dict(item))
+        return schemas.Collection.model_validate(item)
     else:
         return 404
 
@@ -247,12 +247,12 @@ def modify_feed(
     elif item.owner != str(user.id):
         return 403
 
-    for k, v in contents.dict(exclude_unset=True).items():
+    for k, v in contents.model_dump(exclude_unset=True, mode="json").items():
         setattr(item, k, v)
 
     item.store(config_options.couch_conn)
 
-    return schemas.Feed.from_orm(item)
+    return schemas.Feed.model_validate(item)
 
 
 def modify_collection(
@@ -277,7 +277,7 @@ def modify_collection(
 
     item.store(config_options.couch_conn)
 
-    return schemas.Collection.from_orm(item)
+    return schemas.Collection.model_validate(item)
 
 
 def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:
