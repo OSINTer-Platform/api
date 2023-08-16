@@ -1,6 +1,7 @@
 from datetime import date
 from io import BytesIO
-from typing_extensions import Any, TypeVar, TypedDict, cast
+from typing_extensions import Any, TypeVar
+from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -153,22 +154,10 @@ def update_collection(
     )
 
 
-class StandardItems(TypedDict, total=False):
-    feeds: dict[str, schemas.Feed]
-    collections: dict[str, schemas.Collection]
-
-
-standard_user: schemas.User = cast(schemas.User, crud.get_full_user_object("OSINTer"))
-standard_items: StandardItems = {
-    "feeds": crud.get_feeds(standard_user),
-    # "collections" : crud.get_collections(standard_user),
-}
-
-
 @router.get(
     "/standard/feeds",
-    response_model=dict[str, schemas.Feed],
     response_model_exclude_none=True,
 )
-def get_standard_items():
-    return standard_items["feeds"]
+def get_standard_items() -> dict[str, schemas.Feed]:
+    standard_user: schemas.User = cast(schemas.User, crud.get_full_user_object("OSINTer"))
+    return crud.get_feeds(standard_user)
