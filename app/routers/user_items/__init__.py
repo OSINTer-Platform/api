@@ -5,13 +5,14 @@ from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
 from app.common import EsIDList, HTTPError
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
 from app.utils.documents import convert_query_to_zip, send_file
 from modules.elastic import SearchQuery
-from modules.objects import FullArticle
+from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
 
@@ -44,7 +45,7 @@ responses: dict[int | str, dict[str, Any]] = {
 R = TypeVar("R")
 
 
-def handle_crud_response(response: R) -> R:
+def handle_crud_response(response: R | int) -> R:
     if isinstance(response, int):
         raise HTTPException(
             status_code=responses[response]["status_code"],
@@ -59,11 +60,11 @@ def get_query_from_item(item_id: UUID) -> SearchQuery | None:
 
     if isinstance(item, int):
         handle_crud_response(item)
-        return
+        return None
 
     elif not isinstance(item, schemas.Feed | schemas.Collection):
         handle_crud_response(404)
-        return
+        return None
 
     q = item.to_query()
 
@@ -75,39 +76,40 @@ def get_query_from_item(item_id: UUID) -> SearchQuery | None:
 )
 def delete_item(
     item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
-):
+) -> None:
     return handle_crud_response(crud.remove_item(current_user, item_id))
 
 
 @router.get(
     "/{item_id}/articles",
-    response_model=list[FullArticle],
     response_model_exclude_unset=True,
+    response_model=list[FullArticle],
 )
 def get_item_articles(
     search_query: SearchQuery = Depends(get_query_from_item),
     complete: bool = Query(False),
-):
+) -> list[BaseArticle]:
     search_query.complete = complete
     return config_options.es_article_client.query_documents(search_query)
 
 
 @router.get(
     "/{item_id}/content",
-    response_model=schemas.UserItem,
     response_model_exclude_unset=True,
     response_model_exclude_none=True,
+    response_model=schemas.UserItem,
 )
-def get_item_contents(item_id: UUID):
+def get_item_contents(item_id: UUID) -> schemas.ItemBase:
     return handle_crud_response(crud.get_item(item_id))
 
 
 @router.get(
     "/{item_id}/export",
-    response_model=list[FullArticle],
     response_model_exclude_unset=True,
 )
-def export_item_articles(search_query: SearchQuery = Depends(get_query_from_item)):
+def export_item_articles(
+    search_query: SearchQuery = Depends(get_query_from_item),
+) -> StreamingResponse:
     zip_file: BytesIO = convert_query_to_zip(search_query)
 
     return send_file(
@@ -117,21 +119,21 @@ def export_item_articles(search_query: SearchQuery = Depends(get_query_from_item
     )
 
 
-@router.put("/{item_id}/name", responses=responses)  # pyright: ignore
+@router.put("/{item_id}/name", responses=responses)
 def update_item_name(
     item_id: UUID,
     new_name: str,
     current_user: schemas.UserBase = Depends(get_user_from_token),
-):
+) -> None:
     return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
 
 
-@router.put("/feed/{feed_id}", responses=responses, response_model=schemas.Feed)
+@router.put("/feed/{feed_id}", responses=responses)
 def update_feed(
     feed_id: UUID,
     contents: schemas.FeedCreate,
     current_user: schemas.UserBase = Depends(get_user_from_token),
-):
+) -> schemas.Feed:
     return handle_crud_response(
         crud.modify_feed(id=feed_id, contents=contents, user=current_user)
     )
@@ -140,17 +142,14 @@ def update_feed(
 @router.put(
     "/collection/{collection_id}",
     responses=responses,
-    response_model=schemas.Collection,
 )
 def update_collection(
     collection_id: UUID,
     contents: EsIDList,
     current_user: schemas.UserBase = Depends(get_user_from_token),
-):
+) -> schemas.Collection:
     return handle_crud_response(
-        crud.modify_collection(
-            id=collection_id, contents=cast(set[str], contents), user=current_user
-        )
+        crud.modify_collection(id=collection_id, contents=contents, user=current_user)
     )
 
 
@@ -159,5 +158,7 @@ def update_collection(
     response_model_exclude_none=True,
 )
 def get_standard_items() -> dict[str, schemas.Feed]:
-    standard_user: schemas.User = cast(schemas.User, crud.get_full_user_object("OSINTer"))
+    standard_user: schemas.User = cast(
+        schemas.User, crud.get_full_user_object("OSINTer")
+    )
     return crud.get_feeds(standard_user)

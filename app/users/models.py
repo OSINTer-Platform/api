@@ -1,5 +1,5 @@
 from typing import TypeVar
-from couchdb.mapping import (
+from couchdb.mapping import (  # type: ignore[import]
     BooleanField,
     DateTimeField,
     Document,
@@ -11,7 +11,7 @@ from couchdb.mapping import (
 )
 
 
-class User(Document):
+class User(Document):  # type: ignore[misc]
     # UserBase
     _id = TextField()
     username = TextField()
@@ -61,7 +61,7 @@ class User(Document):
     )
 
 
-class ItemBase(Document):
+class ItemBase(Document):  # type: ignore[misc]
     _id = TextField()
     name = TextField()
     owner = TextField()

@@ -1,8 +1,9 @@
 from datetime import date
 from io import BytesIO
-from typing import Dict, List
+from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import StreamingResponse
 from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
 from app.users.crud import modify_collection
 
@@ -21,15 +22,15 @@ from .utils import get_newest_articles
 router = APIRouter()
 router.include_router(rss_router, tags=["rss"])
 
-router.get("/newest", response_model=List[BaseArticle])(get_newest_articles)
+router.get("/newest", response_model=list[BaseArticle])(get_newest_articles)
 
 
 @router.get(
-    "/search",
-    response_model=List[FullArticle],
-    response_model_exclude_unset=True,
+    "/search", response_model_exclude_unset=True, response_model=list[FullArticle]
 )
-async def search_articles(query: FastapiSearchQuery = Depends(FastapiSearchQuery)):
+async def search_articles(
+    query: FastapiSearchQuery = Depends(FastapiSearchQuery),
+) -> list[BaseArticle]:
     articles = config_options.es_article_client.query_documents(query)
     return articles
 
@@ -46,7 +47,7 @@ async def search_articles(query: FastapiSearchQuery = Depends(FastapiSearchQuery
 )
 def download_multiple_markdown_files_using_search(
     zip_file: BytesIO = Depends(convert_query_to_zip),
-):
+) -> StreamingResponse:
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-Search-Download.zip",
         file_content=zip_file,
@@ -54,8 +55,8 @@ def download_multiple_markdown_files_using_search(
     )
 
 
-@router.get("/categories", response_model=Dict[str, Dict[str, str]])
-async def get_list_of_categories():
+@router.get("/categories")
+async def get_list_of_categories() -> dict[str, dict[str, str]]:
     return collect_website_details(config_options.es_article_client)
 
 
@@ -69,23 +70,26 @@ async def get_list_of_categories():
         }
     },
 )
-def download_single_markdown_file(id: EsID):
-    article = config_options.es_article_client.query_documents(
-        SearchQuery(limit=1, ids={id}, complete=True)
-    )[0]
-
-    if article != []:
-        article_file = convert_article_to_md(article)
-
-        return send_file(
-            file_name=f"{article.title.replace(' ', '-')}.md",
-            file_content=article_file,
-            file_type="text/markdown",
+def download_single_markdown_file(id: EsID) -> StreamingResponse:
+    try:
+        article = cast(
+            FullArticle,
+            config_options.es_article_client.query_documents(
+                SearchQuery(limit=1, ids={id}, complete=True)
+            )[0],
         )
-    else:
+    except IndexError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
+
+    article_file = convert_article_to_md(article)
+
+    return send_file(
+        file_name=f"{article.title.replace(' ', '-')}.md",
+        file_content=article_file,
+        file_type="text/markdown",
+    )
 
 
 @router.get(
@@ -96,9 +100,8 @@ def download_single_markdown_file(id: EsID):
             "description": "Returned when requested article doesn't exist",
         }
     },
-    response_model=FullArticle,
 )
-async def get_article_content(id: EsID, request: Request):
+async def get_article_content(id: EsID, request: Request) -> FullArticle:
     config_options.es_article_client.increment_read_counter(id)
 
     try:
@@ -112,9 +115,12 @@ async def get_article_content(id: EsID, request: Request):
     except HTTPException:
         pass
 
-    article = config_options.es_article_client.query_documents(
-        SearchQuery(limit=1, ids={id}, complete=True)
-    )[0]
+    article = cast(
+        FullArticle,
+        config_options.es_article_client.query_documents(
+            SearchQuery(limit=1, ids={id}, complete=True)
+        )[0],
+    )
 
     if article != []:
         return article

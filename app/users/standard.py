@@ -67,7 +67,7 @@ standard_feeds = {
 }
 
 
-def create_standard_items():
+def create_standard_items() -> None:
     crud.remove_user("OSINTer")
     crud.create_user(username="OSINTer", password=token_urlsafe(64), id=UUID(int=0))
 

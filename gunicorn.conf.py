@@ -23,7 +23,7 @@ def on_starting(_):
     create_standard_items()
 
 
-def post_fork(_, __):
+def post_fork(_, __): # pyright: ignore
     global config_options
     config_options = FrontendConfig()
 

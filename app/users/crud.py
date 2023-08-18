@@ -3,8 +3,8 @@ from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from couchdb import Document, ResourceNotFound
-from couchdb.client import ViewResults
+from couchdb import Document, ResourceNotFound  # type: ignore[import]
+from couchdb.client import ViewResults  # type: ignore[import]
 from fastapi.encoders import jsonable_encoder
 
 from .. import config_options
@@ -45,7 +45,7 @@ def verify_user(
         [password, user.hashed_password],
         [email, user.hashed_email],
     ]:
-        if raw_value:
+        if raw_value and hashed_value:
             try:
                 ph.verify(hashed_value, raw_value)
             except VerifyMismatchError:
@@ -163,7 +163,7 @@ def create_feed(
     name: str,
     owner: UUID | None = None,
     id: UUID | None = None,
-    deleteable=True,
+    deleteable: bool = True,
 ) -> schemas.Feed:
     if not id:
         id = uuid4()
@@ -189,7 +189,7 @@ def create_collection(
     owner: UUID | None = None,
     id: UUID | None = None,
     ids: set[str] | None = None,
-    deleteable=True,
+    deleteable: bool = True,
 ) -> schemas.Collection:
     if not id:
         id = uuid4()
@@ -311,6 +311,8 @@ def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | N
 
     item.store(config_options.couch_conn)
 
+    return None
+
 
 # Has to verify the user owns the item before deletion
 def remove_item(
@@ -320,7 +322,7 @@ def remove_item(
     try:
         item = config_options.couch_conn[str(id)]
     except ResourceNotFound:
-        return
+        return None
 
     if item["type"] not in ["feed", "collection"]:
         return 404
@@ -331,4 +333,4 @@ def remove_item(
 
     del config_options.couch_conn[str(id)]
 
-    return
+    return None

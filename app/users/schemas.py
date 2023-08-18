@@ -2,7 +2,7 @@ from collections.abc import Sequence, Set
 from datetime import datetime
 from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
-from couchdb.mapping import ListField
+from couchdb.mapping import ListField  # type: ignore[import]
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.dependencies import ArticleSortBy
@@ -36,7 +36,7 @@ class FeedCreate(BaseModel):
 
     source_category: set[str] = set()
 
-    def to_query(self):
+    def to_query(self) -> SearchQuery:
         return SearchQuery(
             limit=self.limit if self.limit else 0,
             sort_by=self.sort_by,
@@ -66,7 +66,7 @@ class Collection(ItemBase):
 
     ids: set[str] = set()
 
-    def to_query(self):
+    def to_query(self) -> SearchQuery:
         return SearchQuery(
             limit=10_000 if len(self.ids) < 10_000 else 0,
             sort_by="publish_date",
@@ -96,7 +96,7 @@ class User(UserBase):
 
     @field_validator("feed_ids", "collection_ids", mode="before")
     @classmethod
-    def convert_proxies(cls, id_list: Sequence) -> Set[Any] | Sequence[Any]:
+    def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):
             return set(id_list)
 

@@ -12,24 +12,23 @@ from ...users.auth import get_full_user
 router = APIRouter()
 
 
-@router.get("/list", response_model=dict[str, schemas.Collection])
+@router.get("/list")
 def get_my_subscribed_collections(
     current_user: schemas.User = Depends(get_full_user),
-):
+) -> dict[str, schemas.Collection]:
     return crud.get_collections(current_user)
 
 
 @router.post(
     "/{collection_name}",
     status_code=status.HTTP_201_CREATED,
-    response_model=schemas.Collection,
 )
 def create_collection(
     collection_name: str,
     ids: EsIDList = Body(set()),
     subscribe: bool = Query(True),
     current_user: schemas.User = Depends(get_full_user),
-):
+) -> schemas.Collection:
     collection: schemas.Collection = crud.create_collection(
         name=collection_name, owner=current_user.id, ids=cast(set[str], ids)
     )
@@ -57,7 +56,7 @@ def create_collection(
 def subscribe_to_collection(
     collection_id: UUID,
     current_user: schemas.User = Depends(get_full_user),
-):
+) -> None:
     crud.modify_user_subscription(
         user_id=current_user.id,
         ids={collection_id},
@@ -70,7 +69,7 @@ def subscribe_to_collection(
 def unsubscribe_from_collection(
     collection_id: UUID,
     current_user: schemas.User = Depends(get_full_user),
-):
+) -> None:
     crud.modify_user_subscription(
         user_id=current_user.id,
         ids={collection_id},

@@ -1,4 +1,4 @@
-from typing import Dict, Optional, no_type_check
+from typing import Optional
 from urllib.parse import unquote
 
 from fastapi import HTTPException, Request, status
@@ -9,12 +9,11 @@ from fastapi.security.utils import get_authorization_scheme_param
 
 
 class OAuth2PasswordBearerWithCookie(OAuth2):
-    @no_type_check
     def __init__(
         self,
         tokenUrl: str,
         scheme_name: Optional[str] = None,
-        scopes: Optional[Dict[str, str]] = None,
+        scopes: Optional[dict[str, str]] = None,
         auto_error: bool = True,
     ):
         if not scopes:

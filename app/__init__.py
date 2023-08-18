@@ -5,17 +5,19 @@ from modules.misc import create_folder
 
 from .config import FrontendConfig
 
-from couchdb import Server
-from couchdb.http import PreconditionFailed
+from couchdb import Server  # type: ignore[import]
+from couchdb.http import PreconditionFailed  # type: ignore[import]
 
 
-def init_db(url: str, db_name: str):
+def init_db(url: str, db_name: str) -> None:
     couch = Server(url)
 
     try:
         couch.create(db_name)
     except PreconditionFailed:
         pass
+
+    return None
 
 
 load_dotenv()

@@ -1,4 +1,4 @@
-from typing import Callable
+from typing import Any, Callable
 from urllib.parse import parse_qsl, urlencode
 from fastapi import FastAPI, Request
 
@@ -23,7 +23,9 @@ app.add_middleware(
 
 
 @app.middleware("http")
-async def filter_blank_query_params(request: Request, call_next: Callable):
+async def filter_blank_query_params(
+    request: Request, call_next: Callable[..., Any]
+) -> Any:
     scope = request.scope
     if scope and scope.get("query_string"):
         filtered_query_params = parse_qsl(

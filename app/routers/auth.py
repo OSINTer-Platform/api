@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import Literal
 from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -22,14 +23,14 @@ router = APIRouter()
 
 
 # Should also check whether mail server is active and available, once implemented
-async def check_mail_available():
+async def check_mail_available() -> bool:
     return config_options.EMAIL_SERVER_AVAILABLE
 
 
 @router.get("/forgotten-password")
 async def check_password_recovery_availability(
     mail_available: bool = Depends(check_mail_available),
-):
+) -> dict[Literal["available"], bool]:
     return {"available": mail_available}
 
 
@@ -50,7 +51,7 @@ async def check_password_recovery_availability(
 )
 async def send_password_recovery_mail(
     username: str, email: str, mail_available: bool = Depends(check_mail_available)
-):
+) -> DefaultResponse:
     if mail_available:
         current_user = verify_user(username=username)
 
@@ -63,7 +64,7 @@ async def send_password_recovery_mail(
         else:
             if verify_user(username=username, email=email):
                 # This needs to send the recovery email, once implemented
-                pass
+                raise NotImplemented
 
     else:
         raise HTTPException(
@@ -78,18 +79,18 @@ async def send_password_recovery_mail(
     )
 
 
-@router.get("/status", response_model=User)
+@router.get("/status")
 async def get_auth_status(
     current_user: User = Depends(get_full_user),
-):
+) -> User:
     return current_user
 
 
 @router.post("/logout")
 async def logout(
     response: Response,
-    current_user: UserBase = Depends(get_user_from_token),
-):
+    _: UserBase = Depends(get_user_from_token),
+) -> None:
     response.delete_cookie(key="access_token")
     return
 
@@ -139,24 +140,22 @@ async def login(
     response: Response,
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = Query(False),
-):
+) -> None:
     token: TokenWithDetails = get_token_with_details(
         username=form_data.username, password=form_data.password, remember=remember_me
     )
 
-    cookie_options = {
-        "key": "access_token",
-        "value": f"Bearer {token['token']}",
-        "max_age": token["expire"].total_seconds(),
-        "httponly": True,
-        "samesite": "strict",
-        "path": "/",
-        "secure": token["secure"],
-    }
+    response.set_cookie(
+        key="access_token",
+        value=f"Bearer {token['token']}",
+        max_age=int(token["expire"].total_seconds()),
+        httponly=True,
+        samesite="strict",
+        path="/",
+        secure=token["secure"],
+    )
 
-    response.set_cookie(**cookie_options)
-
-    return {}
+    return None
 
 
 @router.post(
@@ -176,7 +175,7 @@ async def login(
 async def get_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
     remember_me: bool = Query(False),
-):
+) -> TokenWithDetails:
     token: TokenWithDetails = get_token_with_details(
         username=form_data.username, password=form_data.password, remember=remember_me
     )
@@ -196,7 +195,9 @@ async def get_token(
         },
     },
 )
-async def signup(form_data: OAuth2PasswordRequestFormWithEmail = Depends()):
+async def signup(
+    form_data: OAuth2PasswordRequestFormWithEmail = Depends(),
+) -> DefaultResponse:
     if create_user(
         username=form_data.username, password=form_data.password, email=form_data.email
     ):

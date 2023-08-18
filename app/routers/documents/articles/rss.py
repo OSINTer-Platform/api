@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from fastapi_rss import RSSResponse
+from fastapi_rss import RSSResponse  # type: ignore[import]
 
 from ....utils.rss import generate_rss_response
 from .utils import get_newest_articles

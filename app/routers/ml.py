@@ -1,12 +1,13 @@
-from collections.abc import Sequence
 from datetime import date
 from io import BytesIO
+from typing import Literal
 from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
 from modules.elastic import SearchQuery
-from modules.objects import FullArticle
+from modules.objects import BaseArticle, FullArticle
 
 from .. import config_options
 from ..common import HTTPError
@@ -16,17 +17,17 @@ router = APIRouter()
 article_router = APIRouter()
 
 
-def mount_routers():
+def mount_routers() -> None:
     if config_options.ML_AVAILABLE:
         router.include_router(article_router, prefix="/articles", tags=["articles"])
 
 
 @router.get("/")
-def check_ml_availability():
+def check_ml_availability() -> dict[Literal["available"], bool]:
     return {"available": config_options.ML_AVAILABLE}
 
 
-def get_article_cluster_query(cluster_id: int):
+def get_article_cluster_query(cluster_id: int) -> SearchQuery:
     return SearchQuery(limit=0, cluster_id=cluster_id)
 
 
@@ -35,8 +36,8 @@ class ClusterListItem(TypedDict):
     content_count: int
 
 
-@article_router.get("/clusters", response_model=list[ClusterListItem])
-def get_article_clusters():
+@article_router.get("/clusters")
+def get_article_clusters() -> list[ClusterListItem]:
     clusters: dict[str, int] = config_options.es_article_client.get_unique_values(
         "ml.cluster"
     )
@@ -51,8 +52,8 @@ def get_article_clusters():
 
 @article_router.get(
     "/cluster/{cluster_id}",
-    response_model=list[FullArticle],
     response_model_exclude_unset=True,
+    response_model=list[FullArticle],
     responses={
         404: {
             "model": HTTPError,
@@ -63,11 +64,11 @@ def get_article_clusters():
 def get_articles_from_cluster(
     query: SearchQuery = Depends(get_article_cluster_query),
     complete: bool = Query(True),
-):
+) -> list[BaseArticle]:
     query.complete = complete
 
-    articles_from_cluster: Sequence[
-        FullArticle
+    articles_from_cluster: list[
+        BaseArticle
     ] = config_options.es_article_client.query_documents(query)
 
     if not articles_from_cluster:
@@ -88,7 +89,7 @@ def get_articles_from_cluster(
         }
     },
 )
-async def download_articles_from_cluster(cluster_id: int):
+async def download_articles_from_cluster(cluster_id: int) -> StreamingResponse:
     query = get_article_cluster_query(cluster_id)
     zip_file: BytesIO = convert_query_to_zip(query)
 

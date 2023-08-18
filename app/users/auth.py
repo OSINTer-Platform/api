@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from typing import Any
 
 from fastapi import Depends, HTTPException, status
 from jose import JWTError, jwt
@@ -11,7 +12,9 @@ from .schemas import User, UserBase
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
+def create_access_token(
+    data: dict[str, Any], expires_delta: timedelta | None = None
+) -> str:
     to_encode = data.copy()
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
@@ -20,7 +23,7 @@ def create_access_token(data: dict, expires_delta: timedelta | None = None):
             hours=config_options.ACCESS_TOKEN_EXPIRE_HOURS
         )
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
+    encoded_jwt: str = jwt.encode(
         to_encode, config_options.SECRET_KEY, algorithm=config_options.JWT_ALGORITHMS[0]
     )
     return encoded_jwt

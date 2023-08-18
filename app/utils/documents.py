@@ -1,5 +1,6 @@
 from collections.abc import Sequence
 from io import BytesIO, StringIO
+from typing import cast
 from zipfile import ZipFile
 
 from fastapi import Depends, HTTPException, Query, status
@@ -14,7 +15,9 @@ from ..common import EsIDList
 from ..dependencies import FastapiSearchQuery
 
 
-def send_file(file_name: str, file_content: StringIO | BytesIO, file_type: str):
+def send_file(
+    file_name: str, file_content: StringIO | BytesIO, file_type: str
+) -> StreamingResponse:
     response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
 
     response.headers[
@@ -24,17 +27,17 @@ def send_file(file_name: str, file_content: StringIO | BytesIO, file_type: str):
     return response
 
 
-def convert_ids_to_zip(ids: EsIDList = Query(...)):
+def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
     return convert_query_to_zip(SearchQuery(ids=ids))
 
 
 def convert_query_to_zip(
     search_q: SearchQuery = Depends(FastapiSearchQuery),
-):
+) -> BytesIO:
     search_q.complete = True
 
-    articles: Sequence[FullArticle] = config_options.es_article_client.query_documents(
-        search_q
+    articles: Sequence[FullArticle] = cast(
+        list[FullArticle], config_options.es_article_client.query_documents(search_q)
     )
 
     if articles:
