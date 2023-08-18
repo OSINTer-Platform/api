@@ -97,7 +97,7 @@ async def logout(
 
 class TokenWithDetails(TypedDict):
     token: str
-    expire: timedelta
+    max_age: int
     secure: bool
 
 
@@ -117,7 +117,7 @@ def get_token_with_details(
 
     return {
         "token": access_token,
-        "expire": expire_date,
+        "max_age": int(expire_date.total_seconds()),
         "secure": config_options.ENABLE_HTTPS,
     }
 
@@ -148,7 +148,7 @@ async def login(
     response.set_cookie(
         key="access_token",
         value=f"Bearer {token['token']}",
-        max_age=int(token["expire"].total_seconds()),
+        max_age=token["max_age"],
         httponly=True,
         samesite="strict",
         path="/",
