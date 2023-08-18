@@ -2,7 +2,7 @@ from collections.abc import Sequence, Set
 from datetime import datetime
 from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
-from couchdb.mapping import ListField  # type: ignore[import]
+from couchdb.mapping import ListField
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.dependencies import ArticleSortBy

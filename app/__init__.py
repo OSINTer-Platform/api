@@ -5,8 +5,8 @@ from modules.misc import create_folder
 
 from .config import FrontendConfig
 
-from couchdb import Server  # type: ignore[import]
-from couchdb.http import PreconditionFailed  # type: ignore[import]
+from couchdb import Server
+from couchdb.http import PreconditionFailed
 
 
 def init_db(url: str, db_name: str) -> None:

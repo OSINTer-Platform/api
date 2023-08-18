@@ -1,7 +1,7 @@
 import os
 import secrets
 
-from couchdb import Server  # type: ignore[import]
+from couchdb import Server
 
 from modules.config import BaseConfig
 

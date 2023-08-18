@@ -1,5 +1,5 @@
 from typing import TypeVar
-from couchdb.mapping import (  # type: ignore[import]
+from couchdb.mapping import (
     BooleanField,
     DateTimeField,
     Document,

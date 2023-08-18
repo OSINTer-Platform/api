@@ -3,8 +3,8 @@ from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
-from couchdb import Document, ResourceNotFound  # type: ignore[import]
-from couchdb.client import ViewResults  # type: ignore[import]
+from couchdb import Document, ResourceNotFound
+from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
 from .. import config_options

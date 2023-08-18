@@ -1,7 +1,7 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from fastapi_rss import (  # type: ignore[import]
+from fastapi_rss import (
     Item as RSSItem,
     RSSFeed,
     RSSResponse,
