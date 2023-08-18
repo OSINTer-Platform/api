@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from io import BytesIO, StringIO
 from typing import cast
 from zipfile import ZipFile
+from pathvalidate import sanitize_filename
 
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -46,7 +47,7 @@ def convert_query_to_zip(
         with ZipFile(zip_file, "w") as zip_archive:
             for article in articles:
                 zip_archive.writestr(
-                    f"OSINTer-MD-articles/{article.source.replace(' ', '-')}/{article.title.replace(' ', '-')}.md",
+                    f"OSINTer-MD-articles/{sanitize_filename(article.source)}/{sanitize_filename(article.title)}.md",
                     convert_article_to_md(article).getvalue(),
                 )
 

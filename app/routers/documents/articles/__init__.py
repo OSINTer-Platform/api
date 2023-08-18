@@ -4,6 +4,7 @@ from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
+from pathvalidate import sanitize_filename
 from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
 from app.users.crud import modify_collection
 
@@ -86,7 +87,7 @@ def download_single_markdown_file(id: EsID) -> StreamingResponse:
     article_file = convert_article_to_md(article)
 
     return send_file(
-        file_name=f"{article.title.replace(' ', '-')}.md",
+        file_name=f"{sanitize_filename(article.title)}.md",
         file_content=article_file,
         file_type="text/markdown",
     )
