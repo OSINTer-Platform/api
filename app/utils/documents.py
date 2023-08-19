@@ -1,4 +1,3 @@
-from collections.abc import Sequence
 from io import BytesIO, StringIO
 from typing import cast
 from zipfile import ZipFile
@@ -37,7 +36,7 @@ def convert_query_to_zip(
 ) -> BytesIO:
     search_q.complete = True
 
-    articles: Sequence[FullArticle] = cast(
+    articles: list[FullArticle] = cast(
         list[FullArticle], config_options.es_article_client.query_documents(search_q)
     )
 
