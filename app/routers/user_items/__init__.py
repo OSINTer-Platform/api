@@ -88,8 +88,7 @@ def get_item_articles(
     search_query: ArticleSearchQuery = Depends(get_query_from_item),
     complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
-    search_query.complete = complete
-    return config_options.es_article_client.query_documents(search_query)
+    return config_options.es_article_client.query_documents(search_query, complete)
 
 
 @router.get(

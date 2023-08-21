@@ -28,7 +28,6 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         ids: EsIDList | None = Query(None),
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
-        complete: bool = Query(False),
         cluster_id: int | None = Query(None),
     ):
         super().__init__(
@@ -42,6 +41,5 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
-            complete=complete,
             cluster_id=cluster_id,
         )

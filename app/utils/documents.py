@@ -1,5 +1,4 @@
 from io import BytesIO, StringIO
-from typing import cast
 from zipfile import ZipFile
 from pathvalidate import sanitize_filename
 
@@ -8,7 +7,6 @@ from fastapi.responses import StreamingResponse
 
 from modules.elastic import ArticleSearchQuery
 from modules.files import convert_article_to_md
-from modules.objects import FullArticle
 
 from .. import config_options
 from ..common import EsIDList
@@ -34,11 +32,7 @@ def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
 def convert_query_to_zip(
     search_q: ArticleSearchQuery = Depends(FastapiArticleSearchQuery),
 ) -> BytesIO:
-    search_q.complete = True
-
-    articles: list[FullArticle] = cast(
-        list[FullArticle], config_options.es_article_client.query_documents(search_q)
-    )
+    articles = config_options.es_article_client.query_documents(search_q, True)
 
     if articles:
         zip_file = BytesIO()

@@ -65,11 +65,9 @@ def get_articles_from_cluster(
     query: ArticleSearchQuery = Depends(get_article_cluster_query),
     complete: bool = Query(True),
 ) -> list[BaseArticle] | list[FullArticle]:
-    query.complete = complete
-
     articles_from_cluster: list[BaseArticle] | list[
         FullArticle
-    ] = config_options.es_article_client.query_documents(query)
+    ] = config_options.es_article_client.query_documents(query, complete)
 
     if not articles_from_cluster:
         raise HTTPException(
@@ -89,12 +87,13 @@ def get_articles_from_cluster(
         }
     },
 )
-async def download_articles_from_cluster(cluster_id: int) -> StreamingResponse:
-    query = get_article_cluster_query(cluster_id)
+async def download_articles_from_cluster(
+    query: ArticleSearchQuery = Depends(get_article_cluster_query),
+) -> StreamingResponse:
     zip_file: BytesIO = convert_query_to_zip(query)
 
     return send_file(
-        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{cluster_id}-Download.zip",
+        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{query.cluster_id}-Download.zip",
         file_content=zip_file,
         file_type="application/zip",
     )

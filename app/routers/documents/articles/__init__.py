@@ -1,8 +1,7 @@
 from datetime import date
 from io import BytesIO
-from typing import cast
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
 from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
@@ -29,8 +28,9 @@ router.get("/newest", response_model=list[BaseArticle])(get_newest_articles)
 @router.get("/search", response_model_exclude_unset=True)
 async def search_articles(
     query: FastapiArticleSearchQuery = Depends(FastapiArticleSearchQuery),
+    complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
-    articles = config_options.es_article_client.query_documents(query)
+    articles = config_options.es_article_client.query_documents(query, complete)
     return articles
 
 
@@ -71,12 +71,9 @@ async def get_list_of_categories() -> dict[str, dict[str, str]]:
 )
 def download_single_markdown_file(id: EsID) -> StreamingResponse:
     try:
-        article = cast(
-            FullArticle,
-            config_options.es_article_client.query_documents(
-                ArticleSearchQuery(limit=1, ids={id}, complete=True)
-            )[0],
-        )
+        article = config_options.es_article_client.query_documents(
+            ArticleSearchQuery(limit=1, ids={id}), True
+        )[0]
     except IndexError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
@@ -114,12 +111,9 @@ async def get_article_content(id: EsID, request: Request) -> FullArticle:
     except HTTPException:
         pass
 
-    article = cast(
-        FullArticle,
-        config_options.es_article_client.query_documents(
-            ArticleSearchQuery(limit=1, ids={id}, complete=True)
-        )[0],
-    )
+    article = config_options.es_article_client.query_documents(
+        ArticleSearchQuery(limit=1, ids={id}), complete=True
+    )[0]
 
     if article != []:
         return article
