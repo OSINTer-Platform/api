@@ -6,7 +6,7 @@ from secrets import token_urlsafe
 
 standard_feeds = {
     "Bitcoin": schemas.FeedCreate(
-        source_category={
+        sources={
             "arstechnica",
             "bleepingcomputer",
             "computerworld",
@@ -31,7 +31,7 @@ standard_feeds = {
         highlight=True,
     ),
     "Log4J": schemas.FeedCreate(
-        source_category={
+        sources={
             "arstechnica",
             "bleepingcomputer",
             "computerworld",
@@ -46,7 +46,7 @@ standard_feeds = {
         highlight=True,
     ),
     "Ransomware": schemas.FeedCreate(
-        source_category={
+        sources={
             "cso",
             "cyberscoop",
             "cybersecuritydive",

@@ -7,7 +7,7 @@ from couchdb.mapping import ListField
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.dependencies import ArticleSortBy
 
-from modules.elastic import SearchQuery
+from modules.elastic import ArticleSearchQuery
 
 
 # Used for mapping the _id field of the DB model to the schemas id field
@@ -34,10 +34,10 @@ class FeedCreate(BaseModel):
     first_date: datetime | None = None
     last_date: datetime | None = None
 
-    source_category: set[str] = set()
+    sources: set[str] = set()
 
-    def to_query(self) -> SearchQuery:
-        return SearchQuery(
+    def to_query(self) -> ArticleSearchQuery:
+        return ArticleSearchQuery(
             limit=self.limit if self.limit else 0,
             sort_by=self.sort_by,
             sort_order=self.sort_order,
@@ -45,10 +45,10 @@ class FeedCreate(BaseModel):
             highlight=True if self.search_term and self.highlight else False,
             first_date=self.first_date,
             last_date=self.last_date,
-            source_category=self.source_category,
+            sources=self.sources,
         )
 
-    @field_validator("source_category", mode="before")
+    @field_validator("sources", mode="before")
     @classmethod
     def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):
@@ -66,8 +66,8 @@ class Collection(ItemBase):
 
     ids: set[str] = set()
 
-    def to_query(self) -> SearchQuery:
-        return SearchQuery(
+    def to_query(self) -> ArticleSearchQuery:
+        return ArticleSearchQuery(
             limit=10_000 if len(self.ids) < 10_000 else 0,
             sort_by="publish_date",
             sort_order="desc",

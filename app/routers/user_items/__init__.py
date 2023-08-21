@@ -11,7 +11,7 @@ from app.common import EsIDList, HTTPError
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
 from app.utils.documents import convert_query_to_zip, send_file
-from modules.elastic import SearchQuery
+from modules.elastic import ArticleSearchQuery
 from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
@@ -55,7 +55,7 @@ def handle_crud_response(response: R | int) -> R:
     return response
 
 
-def get_query_from_item(item_id: UUID) -> SearchQuery | None:
+def get_query_from_item(item_id: UUID) -> ArticleSearchQuery | None:
     item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
 
     if isinstance(item, int):
@@ -83,12 +83,11 @@ def delete_item(
 @router.get(
     "/{item_id}/articles",
     response_model_exclude_unset=True,
-    response_model=list[FullArticle],
 )
 def get_item_articles(
-    search_query: SearchQuery = Depends(get_query_from_item),
+    search_query: ArticleSearchQuery = Depends(get_query_from_item),
     complete: bool = Query(False),
-) -> list[BaseArticle]:
+) -> list[BaseArticle] | list[FullArticle]:
     search_query.complete = complete
     return config_options.es_article_client.query_documents(search_query)
 
@@ -108,7 +107,7 @@ def get_item_contents(item_id: UUID) -> schemas.ItemBase:
     response_model_exclude_unset=True,
 )
 def export_item_articles(
-    search_query: SearchQuery = Depends(get_query_from_item),
+    search_query: ArticleSearchQuery = Depends(get_query_from_item),
 ) -> StreamingResponse:
     zip_file: BytesIO = convert_query_to_zip(search_query)
 

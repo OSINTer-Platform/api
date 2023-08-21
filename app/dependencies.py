@@ -4,14 +4,14 @@ from fastapi import Query
 from datetime import datetime
 from app.common import EsIDList
 
-from modules.elastic import SearchQuery
+from modules.elastic import ArticleSearchQuery
 
 ArticleSortBy = Literal[
     "publish_date", "read_times", "source", "author", "inserted_at", ""
 ]
 
 
-class FastapiSearchQuery(SearchQuery):
+class FastapiArticleSearchQuery(ArticleSearchQuery):
     """
     Wrapper around the searchquery class used by the backend to search in elasticsearch
     """
@@ -24,7 +24,7 @@ class FastapiSearchQuery(SearchQuery):
         search_term: str | None = Query(None),
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
-        source_category: set[str] | None = Query(None),
+        sources: set[str] | None = Query(None),
         ids: EsIDList | None = Query(None),
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
@@ -38,7 +38,7 @@ class FastapiSearchQuery(SearchQuery):
             search_term=search_term,
             first_date=first_date,
             last_date=last_date,
-            source_category=source_category,
+            sources=sources,
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,

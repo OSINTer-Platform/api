@@ -81,7 +81,7 @@ class Feed(ItemBase):
     first_date = DateTimeField()
     last_date = DateTimeField()
 
-    source_category = ListField(TextField())
+    sources = ListField(TextField())
 
     type = TextField(default="feed")
 

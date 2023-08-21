@@ -6,13 +6,13 @@ from pathvalidate import sanitize_filename
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from modules.elastic import SearchQuery
+from modules.elastic import ArticleSearchQuery
 from modules.files import convert_article_to_md
 from modules.objects import FullArticle
 
 from .. import config_options
 from ..common import EsIDList
-from ..dependencies import FastapiSearchQuery
+from ..dependencies import FastapiArticleSearchQuery
 
 
 def send_file(
@@ -28,11 +28,11 @@ def send_file(
 
 
 def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
-    return convert_query_to_zip(SearchQuery(ids=ids))
+    return convert_query_to_zip(ArticleSearchQuery(ids=ids))
 
 
 def convert_query_to_zip(
-    search_q: SearchQuery = Depends(FastapiSearchQuery),
+    search_q: ArticleSearchQuery = Depends(FastapiArticleSearchQuery),
 ) -> BytesIO:
     search_q.complete = True
 

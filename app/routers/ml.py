@@ -6,7 +6,7 @@ from typing_extensions import TypedDict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from modules.elastic import SearchQuery
+from modules.elastic import ArticleSearchQuery
 from modules.objects import BaseArticle, FullArticle
 
 from .. import config_options
@@ -27,8 +27,8 @@ def check_ml_availability() -> dict[Literal["available"], bool]:
     return {"available": config_options.ML_AVAILABLE}
 
 
-def get_article_cluster_query(cluster_id: int) -> SearchQuery:
-    return SearchQuery(limit=0, cluster_id=cluster_id)
+def get_article_cluster_query(cluster_id: int) -> ArticleSearchQuery:
+    return ArticleSearchQuery(limit=0, cluster_id=cluster_id)
 
 
 class ClusterListItem(TypedDict):
@@ -62,13 +62,13 @@ def get_article_clusters() -> list[ClusterListItem]:
     },
 )
 def get_articles_from_cluster(
-    query: SearchQuery = Depends(get_article_cluster_query),
+    query: ArticleSearchQuery = Depends(get_article_cluster_query),
     complete: bool = Query(True),
-) -> list[BaseArticle]:
+) -> list[BaseArticle] | list[FullArticle]:
     query.complete = complete
 
-    articles_from_cluster: list[
-        BaseArticle
+    articles_from_cluster: list[BaseArticle] | list[
+        FullArticle
     ] = config_options.es_article_client.query_documents(query)
 
     if not articles_from_cluster:
