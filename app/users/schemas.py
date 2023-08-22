@@ -74,6 +74,14 @@ class Collection(ItemBase):
             ids=self.ids,
         )
 
+    @field_validator("ids", mode="before")
+    @classmethod
+    def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
+
 
 UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
