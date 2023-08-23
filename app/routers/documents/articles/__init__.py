@@ -8,7 +8,7 @@ from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
 from app.users.crud import modify_collection
 
 from modules.elastic import ArticleSearchQuery
-from modules.files import convert_article_to_md
+from modules.files import article_to_md
 from modules.objects import BaseArticle, FullArticle
 from modules.profiles import collect_website_details
 
@@ -79,7 +79,7 @@ def download_single_markdown_file(id: EsID) -> StreamingResponse:
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
 
-    article_file = convert_article_to_md(article)
+    article_file = article_to_md(article)
 
     return send_file(
         file_name=f"{sanitize_filename(article.title)}.md",

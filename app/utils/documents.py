@@ -6,17 +6,25 @@ from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
 from modules.elastic import ArticleSearchQuery
-from modules.files import convert_article_to_md
+from modules.files import article_to_md
 
 from .. import config_options
 from ..common import EsIDList
 from ..dependencies import FastapiArticleSearchQuery
 
+# TODO:Optimize functions sending files (especially the zip file) as to not save
+# files in memory but on disk
+
 
 def send_file(
-    file_name: str, file_content: StringIO | BytesIO, file_type: str
+    file_name: str, file_content: str | StringIO | BytesIO, file_type: str
 ) -> StreamingResponse:
-    response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
+    if isinstance(file_content, str):
+        response = StreamingResponse(iter([file_content]), media_type=file_type)
+    else:
+        response = StreamingResponse(
+            iter([file_content.getvalue()]), media_type=file_type
+        )
 
     response.headers[
         "Content-Disposition"
@@ -41,7 +49,7 @@ def convert_query_to_zip(
             for article in articles:
                 zip_archive.writestr(
                     f"OSINTer-MD-articles/{sanitize_filename(article.source)}/{sanitize_filename(article.title)}.md",
-                    convert_article_to_md(article).getvalue(),
+                    article_to_md(article),
                 )
 
         return zip_file
