@@ -8,15 +8,13 @@ from fastapi_rss import (
     Source as RSSSource,
     SourceAttrs as RSSSourceAttrs,
 )
+from app.utils.profiles import ProfileDetails, collect_profile_details
 
 from modules.objects import BaseArticle
-from modules.profiles import collect_website_details
-
-from .. import config_options
 
 
 def generate_rss_item(
-    article: BaseArticle, source_details: dict[str, dict[str, str]] | None = None
+    article: BaseArticle, source_details: dict[str, ProfileDetails] | None = None
 ) -> RSSItem:
     item: RSSItem = RSSItem(
         title=article.title,
@@ -43,9 +41,7 @@ def generate_rss_feed(articles: Sequence[BaseArticle]) -> RSSFeed:
         pub_date=datetime.now(),
     )  # pyright: ignore
 
-    source_details: dict[str, dict[str, str]] = collect_website_details(
-        config_options.es_article_client
-    )
+    source_details: dict[str, ProfileDetails] = collect_profile_details()
 
     for article in articles:
         feed.item.append(generate_rss_item(article, source_details))

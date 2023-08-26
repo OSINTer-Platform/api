@@ -6,11 +6,11 @@ from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
 from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
 from app.users.crud import modify_collection
+from app.utils.profiles import ProfileDetails, collect_profile_details
 
 from modules.elastic import ArticleSearchQuery
 from modules.files import article_to_md
 from modules.objects import BaseArticle, FullArticle
-from modules.profiles import collect_website_details
 
 from .... import config_options
 from ....common import EsID, HTTPError
@@ -55,8 +55,8 @@ def download_multiple_markdown_files_using_search(
 
 
 @router.get("/categories")
-async def get_list_of_categories() -> dict[str, dict[str, str]]:
-    return collect_website_details(config_options.es_article_client)
+async def get_list_of_categories() -> dict[str, ProfileDetails]:
+    return collect_profile_details()
 
 
 @router.get(
