@@ -1,10 +1,11 @@
-from typing import Optional, Dict
+from typing import Optional
+from urllib.parse import unquote
 
-from fastapi import Request, HTTPException, status
+from fastapi import HTTPException, Request, status
+from fastapi.openapi.models import OAuthFlowPassword, OAuthFlows as OAuthFlowsModel
+from fastapi.param_functions import Form
 from fastapi.security import OAuth2
 from fastapi.security.utils import get_authorization_scheme_param
-from fastapi.openapi.models import OAuthFlows as OAuthFlowsModel
-from fastapi.param_functions import Form
 
 
 class OAuth2PasswordBearerWithCookie(OAuth2):
@@ -12,18 +13,23 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         self,
         tokenUrl: str,
         scheme_name: Optional[str] = None,
-        scopes: Optional[Dict[str, str]] = None,
+        scopes: Optional[dict[str, str]] = None,
         auto_error: bool = True,
     ):
         if not scopes:
             scopes = {}
-        flows = OAuthFlowsModel(password={"tokenUrl": tokenUrl, "scopes": scopes})
+        flows = OAuthFlowsModel(
+            password=OAuthFlowPassword(tokenUrl=tokenUrl, scopes=scopes)
+        )
         super().__init__(flows=flows, scheme_name=scheme_name, auto_error=auto_error)
 
     async def __call__(self, request: Request) -> Optional[str]:
-        authorization: str = request.cookies.get(
+        authorization: str | None = request.cookies.get(
             "access_token"
         )  # changed to accept access token from httpOnly Cookie
+
+        if authorization:
+            authorization = unquote(authorization)
 
         scheme, param = get_authorization_scheme_param(authorization)
         if not authorization or scheme.lower() != "bearer":

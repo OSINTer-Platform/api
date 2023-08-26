@@ -1,43 +1,48 @@
-from fastapi import APIRouter, Query, HTTPException, Depends
+from datetime import date
+from io import BytesIO
+from typing import Literal
+from typing_extensions import TypedDict
 
-from typing import List, Dict
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 
-from modules.objects import FullArticle
-from modules.elastic import SearchQuery
+from modules.elastic import ArticleSearchQuery
+from modules.objects import BaseArticle, FullArticle
 
 from .. import config_options
 from ..common import HTTPError
-
-# Used for article cluster download endpoint
-from ..utils.documents import send_file, convert_query_to_zip
-from io import BytesIO
-from datetime import date
+from ..utils.documents import convert_query_to_zip, send_file
 
 router = APIRouter()
 article_router = APIRouter()
 
 
-def mount_routers():
+def mount_routers() -> None:
     if config_options.ML_AVAILABLE:
         router.include_router(article_router, prefix="/articles", tags=["articles"])
 
 
 @router.get("/")
-def check_ml_availability():
+def check_ml_availability() -> dict[Literal["available"], bool]:
     return {"available": config_options.ML_AVAILABLE}
 
 
-def get_article_cluster_query(cluster_id: int):
-    return SearchQuery(limit=0, cluster_id=cluster_id)
+def get_article_cluster_query(cluster_id: int) -> ArticleSearchQuery:
+    return ArticleSearchQuery(limit=0, cluster_id=cluster_id)
 
 
-@article_router.get("/clusters", response_model=List[Dict[str, int]])
-def get_article_clusters():
-    clusters: Dict[int, int] = config_options.es_article_client.get_unique_values(
+class ClusterListItem(TypedDict):
+    cluster_id: str
+    content_count: int
+
+
+@article_router.get("/clusters")
+def get_article_clusters() -> list[ClusterListItem]:
+    clusters: dict[str, int] = config_options.es_article_client.get_unique_values(
         "ml.cluster"
     )
 
-    cluster_list: List[Dict[str, int]] = [
+    cluster_list: list[ClusterListItem] = [
         {"cluster_id": cluster_id, "content_count": count}
         for cluster_id, count in clusters.items()
     ]
@@ -47,8 +52,8 @@ def get_article_clusters():
 
 @article_router.get(
     "/cluster/{cluster_id}",
-    response_model=List[FullArticle],
     response_model_exclude_unset=True,
+    response_model=list[FullArticle],
     responses={
         404: {
             "model": HTTPError,
@@ -57,15 +62,12 @@ def get_article_clusters():
     },
 )
 def get_articles_from_cluster(
-    query: SearchQuery = Depends(get_article_cluster_query),
+    query: ArticleSearchQuery = Depends(get_article_cluster_query),
     complete: bool = Query(True),
-):
-
-    query.complete = complete
-
-    articles_from_cluster: List[
+) -> list[BaseArticle] | list[FullArticle]:
+    articles_from_cluster: list[BaseArticle] | list[
         FullArticle
-    ] = config_options.es_article_client.query_documents(query)["documents"]
+    ] = config_options.es_article_client.query_documents(query, complete)
 
     if not articles_from_cluster:
         raise HTTPException(
@@ -85,12 +87,13 @@ def get_articles_from_cluster(
         }
     },
 )
-async def download_articles_from_cluster(cluster_id: int):
-    query = get_article_cluster_query(cluster_id)
-    zip_file: BytesIO = await convert_query_to_zip(query)
+async def download_articles_from_cluster(
+    query: ArticleSearchQuery = Depends(get_article_cluster_query),
+) -> StreamingResponse:
+    zip_file: BytesIO = convert_query_to_zip(query)
 
     return send_file(
-        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{cluster_id}-Download.zip",
+        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{query.cluster_id}-Download.zip",
         file_content=zip_file,
         file_type="application/zip",
     )

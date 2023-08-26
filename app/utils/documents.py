@@ -1,21 +1,30 @@
-from fastapi import Query, HTTPException, status, Depends
+from io import BytesIO, StringIO
+from zipfile import ZipFile
+from pathvalidate import sanitize_filename
+
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
+from modules.elastic import ArticleSearchQuery
+from modules.files import article_to_md
+
 from .. import config_options
+from ..common import EsIDList
+from ..dependencies import FastapiArticleSearchQuery
 
-from modules.elastic import SearchQuery
-from modules.files import convert_article_to_md
-
-from ..dependencies import FastapiSearchQuery
-
-from pydantic import conlist, constr
-
-from zipfile import ZipFile
-from io import BytesIO
+# TODO:Optimize functions sending files (especially the zip file) as to not save
+# files in memory but on disk
 
 
-def send_file(file_name: str, file_content: BytesIO, file_type: str):
-    response = StreamingResponse(iter([file_content.getvalue()]), media_type=file_type)
+def send_file(
+    file_name: str, file_content: str | StringIO | BytesIO, file_type: str
+) -> StreamingResponse:
+    if isinstance(file_content, str):
+        response = StreamingResponse(iter([file_content]), media_type=file_type)
+    else:
+        response = StreamingResponse(
+            iter([file_content.getvalue()]), media_type=file_type
+        )
 
     response.headers[
         "Content-Disposition"
@@ -24,21 +33,14 @@ def send_file(file_name: str, file_content: BytesIO, file_type: str):
     return response
 
 
-async def convert_ids_to_zip(
-    ids: conlist(
-        constr(strip_whitespace=True, min_length=20, max_length=20), unique_items=True
-    ) = Query(...)
-):
-    return await convert_query_to_zip(SearchQuery(ids=ids))
+def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
+    return convert_query_to_zip(ArticleSearchQuery(ids=ids))
 
 
-async def convert_query_to_zip(
-    search_q: FastapiSearchQuery = Depends(FastapiSearchQuery),
-):
-
-    search_q.complete = True
-
-    articles = config_options.es_article_client.query_documents(search_q)["documents"]
+def convert_query_to_zip(
+    search_q: ArticleSearchQuery = Depends(FastapiArticleSearchQuery),
+) -> BytesIO:
+    articles = config_options.es_article_client.query_documents(search_q, True)
 
     if articles:
         zip_file = BytesIO()
@@ -46,8 +48,8 @@ async def convert_query_to_zip(
         with ZipFile(zip_file, "w") as zip_archive:
             for article in articles:
                 zip_archive.writestr(
-                    f"OSINTer-MD-articles/{article.source.replace(' ', '-')}/{article.title.replace(' ', '-')}.md",
-                    convert_article_to_md(article).getvalue(),
+                    f"OSINTer-MD-articles/{sanitize_filename(article.source)}/{sanitize_filename(article.title)}.md",
+                    article_to_md(article),
                 )
 
         return zip_file

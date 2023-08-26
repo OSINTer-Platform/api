@@ -1,35 +1,45 @@
-from modules.elastic import SearchQuery
+from typing import Literal
+from fastapi import Query
 
-from fastapi import Query, Path
 from datetime import datetime
-from typing import Optional
-from pydantic import conlist, constr
-from dataclasses import dataclass
+from app.common import EsIDList
 
-from fastapi import Depends, HTTPException, status
-from .routers.auth import get_user_from_token
-from .users import User
-from .common import HTTPError
+from modules.elastic import ArticleSearchQuery
 
-
-# Using wrapper around searchQuery class, to force fastapi to make all arguments query (and not body), by using Query([defaultArgument]) and not just [defaultargument]
-@dataclass
-class FastapiSearchQuery(SearchQuery):
-    source_category: Optional[conlist(constr(strip_whitespace=True))] = Query(None)
-    ids: Optional[
-        conlist(constr(strip_whitespace=True, min_length=20, max_length=20))
-    ] = Query(None)
+ArticleSortBy = Literal[
+    "publish_date", "read_times", "source", "author", "inserted_at", ""
+]
 
 
-def get_collection_ids(
-    collection_name: str = Path(...), current_user: User = Depends(get_user_from_token)
-):
-    try:
-        collection_ids = current_user.get_collections()[collection_name]
-    except KeyError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Found no collection with given name",
+class FastapiArticleSearchQuery(ArticleSearchQuery):
+    """
+    Wrapper around the searchquery class used by the backend to search in elasticsearch
+    """
+
+    def __init__(
+        self,
+        limit: int = Query(0),
+        sort_by: ArticleSortBy | None = Query(""),
+        sort_order: Literal["desc", "asc"] = Query("desc"),
+        search_term: str | None = Query(None),
+        first_date: datetime | None = Query(None),
+        last_date: datetime | None = Query(None),
+        sources: set[str] | None = Query(None),
+        ids: EsIDList | None = Query(None),
+        highlight: bool = Query(False),
+        highlight_symbol: str = Query("**"),
+        cluster_id: int | None = Query(None),
+    ):
+        super().__init__(
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search_term=search_term,
+            first_date=first_date,
+            last_date=last_date,
+            sources=sources,
+            ids=ids,
+            highlight=highlight,
+            highlight_symbol=highlight_symbol,
+            cluster_id=cluster_id,
         )
-
-    return collection_ids

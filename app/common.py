@@ -1,7 +1,12 @@
-from pydantic import BaseModel
-from typing import List, Dict, Union, Optional
-
 from enum import Enum
+from typing import Annotated, Set, TypeAlias
+import annotated_types
+
+from pydantic import BaseModel
+
+
+EsID: TypeAlias = Annotated[str, annotated_types.Len(20, 20)]
+EsIDList: TypeAlias = Set[EsID]
 
 
 class DefaultResponseStatus(str, Enum):
@@ -19,9 +24,9 @@ class DefaultResponse(BaseModel):
 
 class HTTPError(BaseModel):
     detail: str
-    headers: Dict[str, str]
+    headers: dict[str, str]
 
     class Config:
-        schema_extra = {
+        json_schema_extra = {
             "example": {"detail": "HTTPException raised."},
         }

@@ -1,7 +1,8 @@
 modules
 profiles
 __pycache__
-info.log
-error.log
 secret.key
-osinter_users.db
+logs
+.env
+**/.pytest_cache/
+venv
