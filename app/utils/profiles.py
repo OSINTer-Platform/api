@@ -10,8 +10,11 @@ class ProfileDetails(TypedDict):
     image: str
     url: str
 
+
 def collect_profile_details() -> dict[str, ProfileDetails]:
-    db_stored_profiles = list(config_options.es_article_client.get_unique_values(field_name="profile").keys())
+    db_stored_profiles = list(
+        config_options.es_article_client.get_unique_values(field_name="profile").keys()
+    )
 
     profiles = sorted(
         get_profiles(), key=lambda profile: profile["source"]["profile_name"]
