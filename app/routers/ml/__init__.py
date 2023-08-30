@@ -9,9 +9,9 @@ from fastapi.responses import StreamingResponse
 from modules.elastic import ArticleSearchQuery
 from modules.objects import BaseArticle, FullArticle
 
-from .. import config_options
-from ..common import HTTPError
-from ..utils.documents import convert_query_to_zip, send_file
+from ... import config_options
+from ...common import HTTPError
+from ...utils.documents import convert_query_to_zip, send_file
 
 router = APIRouter()
 article_router = APIRouter()
