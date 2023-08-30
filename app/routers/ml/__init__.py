@@ -32,7 +32,7 @@ def get_article_cluster_query(cluster_id: int) -> ArticleSearchQuery:
 
 
 class ClusterListItem(TypedDict):
-    cluster_id: str
+    cluster_id: int
     content_count: int
 
 
@@ -43,7 +43,7 @@ def get_article_clusters() -> list[ClusterListItem]:
     )
 
     cluster_list: list[ClusterListItem] = [
-        {"cluster_id": cluster_id, "content_count": count}
+        {"cluster_id": int(cluster_id), "content_count": count}
         for cluster_id, count in clusters.items()
     ]
 
