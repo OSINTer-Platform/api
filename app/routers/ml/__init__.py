@@ -6,8 +6,8 @@ from typing_extensions import TypedDict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from modules.elastic import ArticleSearchQuery
-from modules.objects import BaseArticle, FullArticle
+from modules.elastic import ArticleSearchQuery, MLArticleSearchQuery
+from modules.objects import BaseArticle, FullArticle, MLArticle
 
 from ... import config_options
 from ...common import HTTPError
@@ -97,3 +97,15 @@ async def download_articles_from_cluster(
         file_content=zip_file,
         file_type="application/zip",
     )
+
+
+@article_router.get("/map/partial")
+async def query_partial_article_map() -> list[MLArticle]:
+    return config_options.es_ml_article_conn.query_documents(
+        MLArticleSearchQuery(limit=0), False
+    )
+
+
+@article_router.get("/map/full")
+async def query_full_article_map() -> list[FullArticle]:
+    return config_options.es_article_client.query_all_documents()
