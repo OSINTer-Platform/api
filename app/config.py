@@ -4,6 +4,8 @@ import secrets
 from couchdb import Server
 
 from modules.config import BaseConfig
+from modules.elastic import ElasticDB, MLArticleSearchQuery
+from modules.objects import FullArticle, MLArticle
 
 
 def load_secret_key() -> str:
@@ -45,6 +47,19 @@ class FrontendConfig(BaseConfig):
 
         self.ARTICLE_RENDER_URL = (
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
+        )
+
+        self.es_ml_article_conn = ElasticDB[
+            MLArticle, FullArticle, MLArticleSearchQuery
+        ](
+            es_conn=self.es_conn,
+            index_name=self.ELASTICSEARCH_ARTICLE_INDEX,
+            unique_field="url",
+            document_object_classes={
+                "base": MLArticle,
+                "full": FullArticle,
+                "search_query": MLArticleSearchQuery,
+            },
         )
 
     @staticmethod
