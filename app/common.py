@@ -5,7 +5,7 @@ import annotated_types
 from pydantic import BaseModel
 
 
-EsID: TypeAlias = Annotated[str, annotated_types.Len(20, 20)]
+EsID: TypeAlias = Annotated[str, annotated_types.Len(32, 32)]
 EsIDList: TypeAlias = Set[EsID]
 
 
