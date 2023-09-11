@@ -17,12 +17,16 @@ from ....common import EsID, HTTPError
 from ....dependencies import FastapiArticleSearchQuery
 from ....utils.documents import convert_query_to_zip, send_file
 from .rss import router as rss_router
-from .utils import get_newest_articles
 
 router = APIRouter()
 router.include_router(rss_router, tags=["rss"])
 
-router.get("/newest", response_model=list[BaseArticle])(get_newest_articles)
+
+@router.get("/newest")
+async def get_newest_articles() -> list[BaseArticle]:
+    return config_options.es_article_client.query_documents(
+        ArticleSearchQuery(limit=50, sort_by="publish_date", sort_order="desc")
+    )
 
 
 @router.get("/search", response_model_exclude_unset=True)

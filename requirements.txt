@@ -1,7 +1,7 @@
 python-multipart
 python-jose[cryptography]
 fastapi
-fastapi-rss
+jinja2 # Used to generate RSS feeds
 pydantic
 uvicorn[standard]
 gunicorn  # Used as process manager for uvicorn processes

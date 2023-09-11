@@ -43,6 +43,10 @@ class FrontendConfig(BaseConfig):
         self.COUCHDB_URL, self.COUCHDB_NAME = self.get_couchdb_details()
         self.couch_conn = Server(self.COUCHDB_URL)[self.COUCHDB_NAME]
 
+        self.ARTICLE_RENDER_URL = (
+            os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
+        )
+
     @staticmethod
     def get_couchdb_details() -> tuple[str, str]:
         """

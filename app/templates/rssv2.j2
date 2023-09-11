@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>{{ feed.title }}</title>
+    <description>{{ feed.description }}</description>
+    <link>{{ feed.link }}</link>
+    <language>{{ feed.language }}</language>
+    <pubDate>{{ feed.pub_date.strftime("%a, %d %b %Y %X %z") }}</pubDate>
+    <lastBuildDate>{{ feed.pub_date.strftime("%a, %d %b %Y %X %z") }}</lastBuildDate>
+    <docs>https://www.rssboard.org/rss-specification</docs>
+    <generator>OSINTer</generator>
+
+    <image>
+      <url>{{ feed.image_url }}</url>
+      <title>{{ feed.title }}</title>
+      <description>{{ feed.description }}</description>
+      <link>{{ feed.link }}</link>
+    </image>
+
+    {% if feed.managing_editor %}
+    <managingEditor>{{ feed.managing_editor }}</managingEditor>
+    {% endif %}
+
+    {% if feed.webmaster %}
+    <webMaster>{{ feed.webmaster }}</webMaster>
+    {% endif %}
+
+    {% if feed.copyright %}
+    <copyright>{{ feed.copyright }}</copyright>
+    {% endif %}
+
+    {% for item in feed.items %}
+    <item>
+      <title>{{ item.title }}</title>
+      <description>{{ item.description }}</description>
+      <enclosure url="{{ item.image }}"/>
+      <link>{{ item.link }}</link>
+      <pubDate>{{ item.pub_date.strftime("%a, %d %b %Y %X %z") }}</pubDate>
+      <guid isPermaLink="{{ 'true' if item.guid.is_permalink else 'false' }}">{{ item.guid.content }}</guid>
+
+      {% if item.source %}
+      <source url="{{ item.source.url }}">{{ item.source.name}}</source>
+      {% endif %}
+    </item>
+    {% endfor %}
+  </channel>
+</rss>
