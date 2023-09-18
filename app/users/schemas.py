@@ -29,6 +29,7 @@ class FeedCreate(BaseModel):
     sort_order: Literal["desc", "asc"] = "desc"
 
     search_term: str | None = None
+    semantic_search: str | None = None
     highlight: bool | None = False
 
     first_date: datetime | None = None
@@ -42,6 +43,7 @@ class FeedCreate(BaseModel):
             sort_by=self.sort_by,
             sort_order=self.sort_order,
             search_term=self.search_term,
+            semantic_search=self.semantic_search,
             highlight=True if self.search_term and self.highlight else False,
             first_date=self.first_date,
             last_date=self.last_date,

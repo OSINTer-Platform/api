@@ -56,6 +56,8 @@ class FrontendConfig(BaseConfig):
         ](
             es_conn=self.es_conn,
             index_name=self.ELASTICSEARCH_ARTICLE_INDEX,
+            ingest_pipeline=self.ELASTICSEARCH_ELSER_PIPELINE,
+            elser_model_id=self.ELASTICSEARCH_ELSER_ID,
             unique_field="url",
             document_object_classes={
                 "base": MLArticle,
