@@ -37,7 +37,9 @@ class FrontendConfig(BaseConfig):
         self.JWT_ALGORITHMS = (os.environ.get("JWT_ALGORITHMS") or "HS256").split(" ")
 
         self.ENABLE_HTTPS = bool(os.environ.get("ENABLE_HTTPS")) or False
-        self.ML_AVAILABLE = bool(os.environ.get("ML_AVAILABLE")) or False
+        self.ML_CLUSTERING_AVAILABLE = (
+            bool(os.environ.get("ML_CLUSTERING_AVAILABLE")) or False
+        )
         self.EMAIL_SERVER_AVAILABLE = (
             bool(os.environ.get("EMAIL_SERVER_AVAILABLE")) or False
         )

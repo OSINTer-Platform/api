@@ -14,17 +14,22 @@ from ...common import HTTPError
 from ...utils.documents import convert_query_to_zip, send_file
 
 router = APIRouter()
-article_router = APIRouter()
+article_cluster_router = APIRouter()
 
 
 def mount_routers() -> None:
-    if config_options.ML_AVAILABLE:
-        router.include_router(article_router, prefix="/articles", tags=["articles"])
+    if config_options.ML_CLUSTERING_AVAILABLE:
+        router.include_router(
+            article_cluster_router, prefix="/articles", tags=["articles"]
+        )
 
 
 @router.get("/")
-def check_ml_availability() -> dict[Literal["available"], bool]:
-    return {"available": config_options.ML_AVAILABLE}
+def check_ml_availability() -> dict[Literal["clustering"] | Literal["elser"], bool]:
+    return {
+        "clustering": config_options.ML_CLUSTERING_AVAILABLE,
+        "elser": bool(config_options.ELASTICSEARCH_ELSER_PIPELINE),
+    }
 
 
 def get_article_cluster_query(cluster_id: int) -> ArticleSearchQuery:
@@ -36,7 +41,7 @@ class ClusterListItem(TypedDict):
     content_count: int
 
 
-@article_router.get("/clusters")
+@article_cluster_router.get("/clusters")
 def get_article_clusters() -> list[ClusterListItem]:
     clusters: dict[str, int] = config_options.es_article_client.get_unique_values(
         "ml.cluster"
@@ -50,7 +55,7 @@ def get_article_clusters() -> list[ClusterListItem]:
     return cluster_list
 
 
-@article_router.get(
+@article_cluster_router.get(
     "/cluster/{cluster_id}",
     response_model_exclude_unset=True,
     response_model=list[FullArticle],
@@ -77,7 +82,7 @@ def get_articles_from_cluster(
     return articles_from_cluster
 
 
-@article_router.get(
+@article_cluster_router.get(
     "/cluster/{cluster_id}/export",
     tags=["download"],
     responses={
@@ -99,13 +104,13 @@ async def download_articles_from_cluster(
     )
 
 
-@article_router.get("/map/partial")
+@article_cluster_router.get("/map/partial")
 async def query_partial_article_map() -> list[MLArticle]:
     return config_options.es_ml_article_conn.query_documents(
         MLArticleSearchQuery(limit=0), False
     )
 
 
-@article_router.get("/map/full")
+@article_cluster_router.get("/map/full")
 async def query_full_article_map() -> list[FullArticle]:
     return config_options.es_article_client.query_all_documents()
