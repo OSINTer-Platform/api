@@ -21,7 +21,8 @@ def get_newest_rss(
 ) -> Response:
     articles = config_options.es_article_client.query_documents(
         ArticleSearchQuery(limit=limit, sort_by="publish_date", sort_order="desc"), True
-    )
+    )[0]
+
     return jinja_templates.TemplateResponse(
         "rssv2.j2",
         {"request": request, "feed": generate_rss_feed(articles, original_url)},

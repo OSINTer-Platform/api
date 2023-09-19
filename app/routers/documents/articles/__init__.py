@@ -25,8 +25,8 @@ router.include_router(rss_router, tags=["rss"])
 @router.get("/newest")
 async def get_newest_articles() -> list[BaseArticle]:
     return config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=50, sort_by="publish_date", sort_order="desc")
-    )
+        ArticleSearchQuery(limit=50, sort_by="publish_date", sort_order="desc"), False
+    )[0]
 
 
 @router.get("/search", response_model_exclude_unset=True)
@@ -34,7 +34,7 @@ async def search_articles(
     query: FastapiArticleSearchQuery = Depends(FastapiArticleSearchQuery),
     complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
-    articles = config_options.es_article_client.query_documents(query, complete)
+    articles = config_options.es_article_client.query_documents(query, complete)[0]
     return articles
 
 
@@ -77,7 +77,7 @@ def download_single_markdown_file(id: EsID) -> StreamingResponse:
     try:
         article = config_options.es_article_client.query_documents(
             ArticleSearchQuery(limit=1, ids={id}), True
-        )[0]
+        )[0][0]
     except IndexError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
@@ -116,8 +116,8 @@ async def get_article_content(id: EsID, request: Request) -> FullArticle:
         pass
 
     article = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=1, ids={id}), complete=True
-    )[0]
+        ArticleSearchQuery(limit=1, ids={id}), True
+    )[0][0]
 
     if article != []:
         return article

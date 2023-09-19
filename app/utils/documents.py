@@ -40,7 +40,7 @@ def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
 def convert_query_to_zip(
     search_q: ArticleSearchQuery = Depends(FastapiArticleSearchQuery),
 ) -> BytesIO:
-    articles = config_options.es_article_client.query_documents(search_q, True)
+    articles = config_options.es_article_client.query_documents(search_q, True)[0]
 
     if articles:
         zip_file = BytesIO()

@@ -6,8 +6,8 @@ from typing_extensions import TypedDict
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from modules.elastic import ArticleSearchQuery, MLArticleSearchQuery
-from modules.objects import BaseArticle, FullArticle, MLArticle
+from modules.elastic import ArticleSearchQuery
+from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
 from ...common import HTTPError
@@ -72,7 +72,7 @@ def get_articles_from_cluster(
 ) -> list[BaseArticle] | list[FullArticle]:
     articles_from_cluster: list[BaseArticle] | list[
         FullArticle
-    ] = config_options.es_article_client.query_documents(query, complete)
+    ] = config_options.es_article_client.query_documents(query, complete)[0]
 
     if not articles_from_cluster:
         raise HTTPException(
@@ -105,10 +105,10 @@ async def download_articles_from_cluster(
 
 
 @article_cluster_router.get("/map/partial")
-async def query_partial_article_map() -> list[MLArticle]:
-    return config_options.es_ml_article_conn.query_documents(
-        MLArticleSearchQuery(limit=0), False
-    )
+async def query_partial_article_map() -> list[BaseArticle]:
+    return config_options.es_article_client.query_documents(
+        ArticleSearchQuery(limit=0), False
+    )[0]
 
 
 @article_cluster_router.get("/map/full")
