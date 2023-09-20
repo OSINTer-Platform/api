@@ -1,13 +1,20 @@
-from datetime import date
+from datetime import date, datetime
 from io import BytesIO
-from typing import Literal
+from typing import Annotated, Literal
 from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from pydantic import AwareDatetime
 
 from modules.elastic import ArticleSearchQuery
-from modules.objects import BaseArticle, FullArticle
+from modules.objects import (
+    AbstractDocument,
+    BaseArticle,
+    FullArticle,
+    MLAttributes,
+    PartialArticle,
+)
 
 from ... import config_options
 from ...common import HTTPError
@@ -104,11 +111,27 @@ async def download_articles_from_cluster(
     )
 
 
-@article_cluster_router.get("/map/partial")
-async def query_partial_article_map() -> list[BaseArticle]:
-    return config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0), False
+class PartialMLArticle(AbstractDocument):
+    title: str
+    description: str
+    source: str
+    profile: str
+    publish_date: Annotated[datetime, AwareDatetime]
+    ml: MLAttributes
+
+
+@article_cluster_router.get(
+    "/map/partial",
+    response_model=list[PartialMLArticle],
+    response_model_exclude_none=True,
+)
+async def query_partial_article_map() -> list[PartialArticle]:
+    articles = config_options.es_article_client.query_documents(
+        ArticleSearchQuery(limit=0),
+        ["title", "description", "source", "profile", "publish_date", "ml"],
     )[0]
+
+    return articles
 
 
 @article_cluster_router.get("/map/full")
