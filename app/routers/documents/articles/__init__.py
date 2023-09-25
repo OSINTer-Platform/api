@@ -1,5 +1,6 @@
 from datetime import date
 from io import BytesIO
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
@@ -63,19 +64,17 @@ async def get_list_of_categories() -> dict[str, ProfileDetails]:
     return collect_profile_details()
 
 
-@router.get(
-    "/{id}/export",
-    tags=["download"],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when requested article doesn't exist",
-        }
-    },
-)
-def download_single_markdown_file(id: EsID) -> StreamingResponse:
+articleNotFound: dict[str | int, dict[str, Any]] = {
+    404: {
+        "model": HTTPError,
+        "description": "Returned when the requested article doesn't exist",
+    }
+}
+
+
+def get_single_article(id: EsID) -> FullArticle:
     try:
-        article = config_options.es_article_client.query_documents(
+        return config_options.es_article_client.query_documents(
             ArticleSearchQuery(limit=1, ids={id}), True
         )[0][0]
     except IndexError:
@@ -83,6 +82,11 @@ def download_single_markdown_file(id: EsID) -> StreamingResponse:
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
 
+
+@router.get("/{id}/export", tags=["download"], responses=articleNotFound)
+def download_single_markdown_file(
+    article: FullArticle = Depends(get_single_article),
+) -> StreamingResponse:
     article_file = article_to_md(article)
 
     return send_file(
@@ -102,6 +106,8 @@ def download_single_markdown_file(id: EsID) -> StreamingResponse:
     },
 )
 async def get_article_content(id: EsID, request: Request) -> FullArticle:
+    article = get_single_article(id)
+
     config_options.es_article_client.increment_read_counter(id)
 
     try:
@@ -115,13 +121,24 @@ async def get_article_content(id: EsID, request: Request) -> FullArticle:
     except HTTPException:
         pass
 
-    article = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=1, ids={id}), True
-    )[0][0]
+    return article
 
-    if article != []:
-        return article
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
-        )
+
+@router.get("/{id}/similar")
+async def get_similar_articles(
+    article: FullArticle = Depends(get_single_article),
+) -> list[BaseArticle]:
+    if len(article.similar) == 0:
+        return []
+
+    articles = config_options.es_article_client.query_documents(
+        ArticleSearchQuery(
+            limit=10_000,
+            ids=set(article.similar),
+        ),
+        False,
+    )[0]
+
+    # The similar articles id list is sorted so that the closest is the first
+    # So the list has to be manually sorted as Elasticsearch will scramble it
+    return sorted(articles, key=lambda a: article.similar.index(a.id))
