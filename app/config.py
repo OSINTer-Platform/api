@@ -36,6 +36,7 @@ class FrontendConfig(BaseConfig):
 
         self.ENABLE_HTTPS = self.get_env_bool("ENABLE_HTTPS")
         self.ML_CLUSTERING_AVAILABLE = self.get_env_bool("ML_CLUSTERING_AVAILABLE")
+        self.LIVE_INFERENCE_AVAILABLE = self.ELSER_AVAILABLE and bool(self.OPENAI_KEY)
 
         self.EMAIL_SERVER_AVAILABLE = self.get_env_bool("EMAIL_SERVER_AVAILABLE")
 
