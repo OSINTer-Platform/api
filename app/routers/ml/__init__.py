@@ -17,5 +17,5 @@ def mount_routers() -> None:
 def check_ml_availability() -> dict[Literal["clustering"] | Literal["elser"], bool]:
     return {
         "clustering": config_options.ML_CLUSTERING_AVAILABLE,
-        "elser": bool(config_options.ELASTICSEARCH_ELSER_PIPELINE),
+        "elser": config_options.ELSER_AVAILABLE,
     }
