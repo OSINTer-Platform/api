@@ -1,5 +1,6 @@
 from typing import Any, Literal, cast
 from pydantic import BaseModel
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter
 import openai
@@ -16,6 +17,7 @@ class Chat(BaseModel):
     role: Literal["user", "assistant", "system"]
     content: str
     visible: bool = True
+    id: UUID = Field(default_factory=uuid4)
 
 
 class ChatList(BaseModel):
