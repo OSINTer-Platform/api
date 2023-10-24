@@ -1,8 +1,8 @@
 from typing import Any, Literal, cast
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 import openai
 
 from modules.elastic import ArticleSearchQuery
@@ -29,8 +29,18 @@ class ChatList(BaseModel):
         return [{"role": chat.role, "content": chat.content} for chat in self.chats]
 
 
-@router.get("/chat/continue")
-def continue_chat(current_chats: ChatList) -> ChatList:
+@router.post("/chat/continue")
+def continue_chat(
+    current_chats: ChatList,
+    question: str | None = Query(None),
+    visible: bool = Query(True),
+    id: UUID = Query(default_factory=uuid4),
+) -> ChatList:
+    if question:
+        current_chats.chats.append(
+            Chat(role="user", content=question, visible=visible, id=id)
+        )
+
     answer = cast(
         dict[str, Any],
         openai.ChatCompletion.create(  # type: ignore[no-untyped-call]
@@ -52,7 +62,9 @@ def continue_chat(current_chats: ChatList) -> ChatList:
 
 
 @router.get("/chat/ask")
-def generate_answer_to_question(question: str) -> ChatList:
+def generate_answer_to_question(
+    question: str, visible: bool = Query(True), id: UUID = Query(default_factory=uuid4)
+) -> ChatList:
     q = ArticleSearchQuery(limit=3, semantic_search=question)
     articles = config_options.es_article_client.query_documents(q, True)[0]
 
@@ -82,6 +94,4 @@ def generate_answer_to_question(question: str) -> ChatList:
             Chat(role="user", content=f'"""\n{content}\n"""', visible=False)
         )
 
-    new_chats.chats.append(Chat(role="user", content=question))
-
-    return continue_chat(new_chats)
+    return continue_chat(new_chats, question, visible, id)
