@@ -34,13 +34,11 @@ class FrontendConfig(BaseConfig):
 
         self.JWT_ALGORITHMS = (os.environ.get("JWT_ALGORITHMS") or "HS256").split(" ")
 
-        self.ENABLE_HTTPS = bool(os.environ.get("ENABLE_HTTPS")) or False
-        self.ML_CLUSTERING_AVAILABLE = (
-            bool(os.environ.get("ML_CLUSTERING_AVAILABLE")) or False
-        )
-        self.EMAIL_SERVER_AVAILABLE = (
-            bool(os.environ.get("EMAIL_SERVER_AVAILABLE")) or False
-        )
+        self.ENABLE_HTTPS = self.get_env_bool("ENABLE_HTTPS")
+        self.ML_CLUSTERING_AVAILABLE = self.get_env_bool("ML_CLUSTERING_AVAILABLE")
+        self.LIVE_INFERENCE_AVAILABLE = self.ELSER_AVAILABLE and bool(self.OPENAI_KEY)
+
+        self.EMAIL_SERVER_AVAILABLE = self.get_env_bool("EMAIL_SERVER_AVAILABLE")
 
         self.COUCHDB_URL, self.COUCHDB_NAME = self.get_couchdb_details()
         self.couch_conn = Server(self.COUCHDB_URL)[self.COUCHDB_NAME]
@@ -48,6 +46,10 @@ class FrontendConfig(BaseConfig):
         self.ARTICLE_RENDER_URL = (
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
+
+    @staticmethod
+    def get_env_bool(key: str) -> bool:
+        return bool(os.environ.get(key)) or False
 
     @staticmethod
     def get_couchdb_details() -> tuple[str, str]:
