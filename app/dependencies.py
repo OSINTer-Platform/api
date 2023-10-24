@@ -30,7 +30,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         ids: EsIDList | None = Query(None),
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
-        cluster_id: int | None = Query(None),
+        cluster_nr: int | None = Query(None),
     ):
         if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
             raise HTTPException(
@@ -50,5 +50,5 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
-            cluster_id=cluster_id,
+            cluster_nr=cluster_nr,
         )
