@@ -32,7 +32,7 @@ def continue_chat(current_chats: ChatList) -> ChatList:
     answer = cast(
         dict[str, Any],
         openai.ChatCompletion.create(  # type: ignore[no-untyped-call]
-            model="gpt-3.5-turbo",
+            model=config_options.OPENAI_MODEL,
             messages=current_chats.serialize(),
             n=1,
             temperature=1,
