@@ -18,7 +18,7 @@ from modules.objects import (
 )
 
 from ... import config_options
-from ...common import HTTPError
+from ...common import EsID, HTTPError
 from ...utils.documents import convert_query_to_zip, send_file
 
 router = APIRouter()
@@ -34,7 +34,7 @@ def get_article_clusters(
 
 
 @router.get(
-    "/cluster/{cluster_nr}",
+    "/cluster/{cluster_id}",
     responses={
         404: {
             "model": HTTPError,
@@ -42,21 +42,21 @@ def get_article_clusters(
         }
     },
 )
-def get_cluster(cluster_nr: int) -> FullCluster:
-    cluster = config_options.es_cluster_client.query_documents(
-        ClusterSearchQuery(cluster_nr=cluster_nr), True
-    )[0]
-
-    if not cluster:
+def get_cluster(cluster_id: EsID) -> FullCluster:
+    try:
+        cluster = config_options.es_cluster_client.query_documents(
+            ClusterSearchQuery(ids={cluster_id}), True
+        )[0][0]
+    except IndexError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
         )
 
-    return cluster[0]
+    return cluster
 
 
 @router.get(
-    "/cluster/{cluster_nr}/content",
+    "/cluster/{cluster_id}/content",
     response_model_exclude_unset=True,
     responses={
         404: {
@@ -66,11 +66,15 @@ def get_cluster(cluster_nr: int) -> FullCluster:
     },
 )
 def get_articles_from_cluster(
-    cluster_nr: int,
+    cluster_id: EsID,
     complete: bool = Query(True),
 ) -> list[BaseArticle] | list[FullArticle]:
+    cluster = config_options.es_cluster_client.query_documents(
+        ClusterSearchQuery(ids={cluster_id}), True
+    )[0][0]
+
     articles_from_cluster = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0, cluster_nr=cluster_nr), complete
+        ArticleSearchQuery(limit=0, cluster_nr=cluster.nr, sort_by="publish_date"), complete
     )[0]
 
     if not articles_from_cluster:
@@ -82,7 +86,7 @@ def get_articles_from_cluster(
 
 
 @router.get(
-    "/cluster/{cluster_nr}/export",
+    "/cluster/{cluster_id}/export",
     tags=["download"],
     responses={
         404: {
@@ -91,13 +95,17 @@ def get_articles_from_cluster(
         }
     },
 )
-async def download_articles_from_cluster(cluster_nr: int) -> StreamingResponse:
+async def download_articles_from_cluster(cluster_id: EsID) -> StreamingResponse:
+    cluster = config_options.es_cluster_client.query_documents(
+        ClusterSearchQuery(ids={cluster_id}), True
+    )[0][0]
+
     zip_file: BytesIO = convert_query_to_zip(
-        ArticleSearchQuery(limit=0, cluster_nr=cluster_nr)
+        ArticleSearchQuery(limit=0, cluster_nr=cluster.nr)
     )
 
     return send_file(
-        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{cluster_nr}-Download.zip",
+        file_name=f"OSINTer-MD-articles-{date.today()}-Cluster-{cluster.nr}-Download.zip",
         file_content=zip_file,
         file_type="application/zip",
     )
