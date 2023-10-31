@@ -2,7 +2,7 @@ from datetime import date, datetime
 from io import BytesIO
 from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pydantic import AwareDatetime
 
@@ -20,8 +20,9 @@ from modules.objects import (
 from ... import config_options
 from ...common import EsID, HTTPError
 from ...utils.documents import convert_query_to_zip, send_file
+from app.users.auth import require_premium
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_premium)])
 
 
 @router.get("/clusters", response_model_exclude_unset=True)
@@ -74,7 +75,8 @@ def get_articles_from_cluster(
     )[0][0]
 
     articles_from_cluster = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0, cluster_nr=cluster.nr, sort_by="publish_date"), complete
+        ArticleSearchQuery(limit=0, cluster_nr=cluster.nr, sort_by="publish_date"),
+        complete,
     )[0]
 
     if not articles_from_cluster:

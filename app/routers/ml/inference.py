@@ -2,14 +2,15 @@ from typing import Any, Literal, cast
 from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Depends, Query
 import openai
 
-from modules.elastic import ArticleSearchQuery
 from app import config_options
+from app.users.auth import require_premium
 from modules.objects import BaseArticle
+from modules.elastic import ArticleSearchQuery
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_premium)])
 openai.api_key = config_options.OPENAI_KEY
 
 

@@ -77,6 +77,14 @@ def get_user_from_token(username: str = Depends(get_username_from_token)) -> Use
     return verify_auth_data(username)
 
 
+def require_premium(user: UserBase = Depends(get_user_from_token)) -> None:
+    if not user.premium > 0:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User is not a premium user",
+        )
+
+
 def get_full_user(username: str = Depends(get_username_from_token)) -> User:
     user_obj = get_full_user_object(username)
 

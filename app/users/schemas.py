@@ -93,6 +93,7 @@ class UserBase(ORMBase):
     username: str
 
     active: bool = True
+    premium: int = 0
 
 
 class User(UserBase):
