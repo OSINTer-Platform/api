@@ -1,5 +1,6 @@
 from datetime import date
 from io import BytesIO
+from typing import TypeAlias, Union
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -18,6 +19,25 @@ from ...utils.documents import convert_query_to_zip, send_file
 from app.users.auth import require_premium
 
 router = APIRouter(dependencies=[Depends(require_premium)])
+
+ClusterID: TypeAlias = Union[int, EsID]
+
+def query_cluster(cluster_id: ClusterID):
+    try:
+        if isinstance(cluster_id, int):
+            return config_options.es_cluster_client.query_documents(
+                ClusterSearchQuery(cluster_nr=cluster_id), True
+            )[0][0]
+        elif isinstance(cluster_id, str):
+            return config_options.es_cluster_client.query_documents(
+                ClusterSearchQuery(ids={cluster_id}), True
+            )[0][0]
+        else:
+            raise NotImplemented
+    except IndexError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
+        )
 
 
 @router.get("/clusters", response_model_exclude_unset=True)
@@ -38,16 +58,7 @@ def get_article_clusters(
         }
     },
 )
-def get_cluster(cluster_id: EsID) -> FullCluster:
-    try:
-        cluster = config_options.es_cluster_client.query_documents(
-            ClusterSearchQuery(ids={cluster_id}), True
-        )[0][0]
-    except IndexError:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Cluster not found"
-        )
-
+def get_cluster(cluster: FullCluster = Depends(query_cluster)) -> FullCluster:
     return cluster
 
 
@@ -62,13 +73,9 @@ def get_cluster(cluster_id: EsID) -> FullCluster:
     },
 )
 def get_articles_from_cluster(
-    cluster_id: EsID,
+    cluster: FullCluster = Depends(query_cluster),
     complete: bool = Query(True),
 ) -> list[BaseArticle] | list[FullArticle]:
-    cluster = config_options.es_cluster_client.query_documents(
-        ClusterSearchQuery(ids={cluster_id}), True
-    )[0][0]
-
     articles_from_cluster = config_options.es_article_client.query_documents(
         ArticleSearchQuery(limit=0, ids=cluster.documents, sort_by="publish_date"),
         complete,
@@ -92,10 +99,7 @@ def get_articles_from_cluster(
         }
     },
 )
-async def download_articles_from_cluster(cluster_id: EsID) -> StreamingResponse:
-    cluster = config_options.es_cluster_client.query_documents(
-        ClusterSearchQuery(ids={cluster_id}), True
-    )[0][0]
+async def download_articles_from_cluster(cluster: FullCluster = Depends(query_cluster)) -> StreamingResponse:
 
     zip_file: BytesIO = convert_query_to_zip(
         ArticleSearchQuery(limit=0, cluster_nr=cluster.nr)
