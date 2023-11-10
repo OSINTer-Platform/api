@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends, Query
 import openai
 
 from app import config_options
+from app.dependencies import FastapiArticleSearchQuery
 from app.users.auth import require_premium
 from modules.objects import BaseArticle
-from modules.elastic import ArticleSearchQuery
 
 router = APIRouter(dependencies=[Depends(require_premium)])
 openai.api_key = config_options.OPENAI_KEY
@@ -66,7 +66,7 @@ def continue_chat(
 def generate_answer_to_question(
     question: str, visible: bool = Query(True), id: UUID = Query(default_factory=uuid4)
 ) -> ChatList:
-    q = ArticleSearchQuery(limit=3, semantic_search=question)
+    q = FastapiArticleSearchQuery(limit=3, semantic_search=question, premium=True)
     articles = config_options.es_article_client.query_documents(q, True)[0]
 
     # Truncates at 3200 characthers as each 4'th characther ~ 1 token

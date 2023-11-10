@@ -5,7 +5,7 @@ from typing import TypeAlias, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from modules.elastic import ArticleSearchQuery, ClusterSearchQuery
+from modules.elastic import ClusterSearchQuery
 from modules.objects import (
     BaseArticle,
     BaseCluster,
@@ -16,6 +16,7 @@ from modules.objects import (
 from ... import config_options
 from ...common import EsID, HTTPError
 from ...utils.documents import convert_query_to_zip, send_file
+from app.dependencies import FastapiArticleSearchQuery
 from app.users.auth import require_premium
 
 router = APIRouter(dependencies=[Depends(require_premium)])
@@ -77,7 +78,9 @@ def get_articles_from_cluster(
     complete: bool = Query(True),
 ) -> list[BaseArticle] | list[FullArticle]:
     articles_from_cluster = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0, ids=cluster.documents, sort_by="publish_date"),
+        FastapiArticleSearchQuery(
+            limit=0, ids=cluster.documents, sort_by="publish_date", premium=True
+        ),
         complete,
     )[0]
 
@@ -102,7 +105,7 @@ def get_articles_from_cluster(
 async def download_articles_from_cluster(cluster: FullCluster = Depends(query_cluster)) -> StreamingResponse:
 
     zip_file: BytesIO = convert_query_to_zip(
-        ArticleSearchQuery(limit=0, cluster_nr=cluster.nr)
+        FastapiArticleSearchQuery(limit=0, cluster_nr=cluster.nr, premium=True)
     )
 
     return send_file(

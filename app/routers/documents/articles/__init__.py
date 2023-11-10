@@ -2,14 +2,19 @@ from datetime import date
 from io import BytesIO
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
-from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
+
+from app.users.auth import (
+    check_premium,
+    get_full_user,
+    get_username_from_token,
+    require_premium,
+)
 from app.users.crud import modify_collection
 from app.utils.profiles import ProfileDetails, collect_profile_details
 
-from modules.elastic import ArticleSearchQuery
 from modules.files import article_to_md
 from modules.objects import BaseArticle, FullArticle
 
@@ -27,9 +32,14 @@ router.include_router(rss_router, tags=["rss"])
 
 
 @router.get("/newest")
-async def get_newest_articles() -> list[BaseArticle]:
+async def get_newest_articles(
+    premium: bool = Depends(check_premium),
+) -> list[BaseArticle]:
     return config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=50, sort_by="publish_date", sort_order="desc"), False
+        FastapiArticleSearchQuery(
+            limit=50, sort_by="publish_date", sort_order="desc", premium=premium
+        ),
+        False,
     )[0]
 
 
@@ -77,10 +87,10 @@ articleNotFound: dict[str | int, dict[str, Any]] = {
 }
 
 
-def get_single_article(id: EsID) -> FullArticle:
+def get_single_article(id: EsID, premium: bool = Depends(check_premium)) -> FullArticle:
     try:
         return config_options.es_article_client.query_documents(
-            ArticleSearchQuery(limit=1, ids={id}), True
+            FastapiArticleSearchQuery(limit=1, ids={id}, premium=premium), True
         )[0][0]
     except IndexError:
         raise HTTPException(
@@ -129,7 +139,7 @@ async def get_article_content(
     return article
 
 
-@router.get("/{id}/similar")
+@router.get("/{id}/similar", dependencies=[Depends(require_premium)])
 async def get_similar_articles(
     article: FullArticle = Depends(get_single_article),
 ) -> list[BaseArticle]:
@@ -137,10 +147,7 @@ async def get_similar_articles(
         return []
 
     articles = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(
-            limit=10_000,
-            ids=set(article.similar),
-        ),
+        FastapiArticleSearchQuery(limit=10_000, ids=set(article.similar), premium=True),
         False,
     )[0]
 

@@ -4,7 +4,6 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import AwareDatetime
 
-from modules.elastic import ArticleSearchQuery
 from modules.objects import (
     AbstractDocument,
     FullArticle,
@@ -13,9 +12,11 @@ from modules.objects import (
 )
 
 from ... import config_options
+from app.dependencies import FastapiArticleSearchQuery
 from app.users.auth import require_premium
 
 router = APIRouter(prefix="/map", dependencies=[Depends(require_premium)])
+
 
 class PartialMLArticle(AbstractDocument):
     title: str
@@ -33,7 +34,7 @@ class PartialMLArticle(AbstractDocument):
 )
 async def query_partial_article_map() -> list[PartialArticle]:
     articles = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0),
+        FastapiArticleSearchQuery(limit=0, premium=True),
         ["title", "description", "source", "profile", "publish_date", "ml"],
     )[0]
 

@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Query, Request, Response
 from fastapi.templating import Jinja2Templates
 
-from modules.elastic import ArticleSearchQuery
-
 from app import config_options
+from app.dependencies import FastapiArticleSearchQuery
 from app.utils.rss import generate_rss_feed
 
 router = APIRouter()
@@ -20,7 +19,10 @@ def get_newest_rss(
     request: Request, original_url: bool = Query(False), limit: int = Query(50)
 ) -> Response:
     articles = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=limit, sort_by="publish_date", sort_order="desc"), True
+        FastapiArticleSearchQuery(
+            limit=limit, sort_by="publish_date", sort_order="desc", premium=False
+        ),
+        True,
     )[0]
 
     return jinja_templates.TemplateResponse(
