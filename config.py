@@ -6,7 +6,7 @@ from couchdb import Server
 from modules.config import BaseConfig
 
 
-from uuid import UUID, uuid4
+from uuid import uuid4
 
 
 def load_secret_key() -> str:
@@ -45,20 +45,13 @@ class FrontendConfig(BaseConfig):
         self.EMAIL_SERVER_AVAILABLE = self.get_env_bool("EMAIL_SERVER_AVAILABLE")
 
         self.COUCHDB_URL, self.COUCHDB_NAME = self.get_couchdb_details()
-        self._couch_conn = Server(self.COUCHDB_URL)[self.COUCHDB_NAME]
+        self.couch_conn = Server(self.COUCHDB_URL)[self.COUCHDB_NAME]
 
         self.id = uuid4()
 
         self.ARTICLE_RENDER_URL = (
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
-
-        print(self.id)
-
-    @property
-    def couch_conn(self):
-        print(self.id)
-        return self._couch_conn
 
     @staticmethod
     def get_env_bool(key: str) -> bool:
