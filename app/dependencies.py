@@ -29,6 +29,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         highlight: bool = False,
         highlight_symbol: str = "**",
         cluster_nr: int | None = None,
+        premium: bool = Depends(check_premium),
     ):
         if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
             raise HTTPException(
@@ -94,6 +95,7 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
         cluster_nr: int | None = Query(None),
+        premium: bool = Depends(check_premium),
     ):
         super().__init__(
             limit=limit,
@@ -108,4 +110,5 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_nr=cluster_nr,
+            premium=premium,
         )

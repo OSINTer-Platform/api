@@ -87,6 +87,17 @@ def get_user_from_token(
     return verify_auth_data(username)
 
 
+def check_premium(username: str | None = Depends(get_username_from_token)) -> bool:
+    if not username:
+        return False
+
+    user = verify_user(username)
+    if not user:
+        return False
+
+    return user.premium > 0
+
+
 def require_premium(user: UserBase = Depends(get_user_from_token)) -> None:
     if not user.premium > 0:
         raise HTTPException(
