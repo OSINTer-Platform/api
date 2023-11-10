@@ -15,7 +15,10 @@ from modules.objects import BaseArticle, FullArticle
 
 from .... import config_options
 from ....common import EsID, HTTPError
-from ....dependencies import FastapiArticleSearchQuery
+from ....dependencies import (
+    FastapiArticleSearchQuery,
+    FastapiQueryParamsArticleSearchQuery,
+)
 from ....utils.documents import convert_query_to_zip, send_file
 from .rss import router as rss_router
 
@@ -32,7 +35,9 @@ async def get_newest_articles() -> list[BaseArticle]:
 
 @router.get("/search", response_model_exclude_unset=True)
 async def search_articles(
-    query: FastapiArticleSearchQuery = Depends(FastapiArticleSearchQuery),
+    query: FastapiQueryParamsArticleSearchQuery = Depends(
+        FastapiQueryParamsArticleSearchQuery
+    ),
     complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
     articles = config_options.es_article_client.query_documents(query, complete)[0]
