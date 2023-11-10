@@ -1,6 +1,7 @@
 from typing import Literal
 from fastapi import Depends, HTTPException, Query, status
 from datetime import datetime
+from app.users.schemas import Collection, FeedCreate
 
 from modules.elastic import ArticleSearchQuery
 
@@ -50,6 +51,32 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             cluster_nr=cluster_nr,
             custom_exclude_fields=None if premium else ["summary", "similar", "ml"],
         )
+
+    @classmethod
+    def from_item(cls, item: FeedCreate | Collection, premium: bool):
+        if isinstance(item, FeedCreate):
+            return cls(
+                limit=item.limit if item.limit else 0,
+                sort_by=item.sort_by,
+                sort_order=item.sort_order,
+                search_term=item.search_term,
+                semantic_search=item.semantic_search,
+                highlight=True if item.search_term and item.highlight else False,
+                first_date=item.first_date,
+                last_date=item.last_date,
+                sources=item.sources,
+                premium=premium,
+            )
+        elif isinstance(item, Collection):
+            return cls(
+                limit=10_000 if len(item.ids) < 10_000 else 0,
+                sort_by="publish_date",
+                sort_order="desc",
+                ids=item.ids,
+                premium=premium,
+            )
+        else:
+            raise NotImplemented
 
 
 class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):

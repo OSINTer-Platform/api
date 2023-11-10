@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
 from app.common import EsIDList, HTTPError
+from app.dependencies import FastapiArticleSearchQuery
 from app.users import crud, schemas
 from app.users.auth import get_user_from_token
 from app.utils.documents import convert_query_to_zip, send_file
@@ -66,7 +67,7 @@ def get_query_from_item(item_id: UUID) -> ArticleSearchQuery | None:
         handle_crud_response(404)
         return None
 
-    q = item.to_query()
+    q = FastapiArticleSearchQuery.from_item(item, premium)
 
     return q
 
