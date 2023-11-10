@@ -35,10 +35,6 @@ def send_file(
     return response
 
 
-def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
-    return convert_query_to_zip(ArticleSearchQuery(ids=ids))
-
-
 def convert_query_to_zip(
     search_q: FastapiArticleSearchQuery = Depends(FastapiQueryParamsArticleSearchQuery),
 ) -> BytesIO:

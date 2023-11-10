@@ -7,9 +7,8 @@ from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
-from .. import config_options
-
-from . import models, schemas
+from app import config_options
+from app.users import models, schemas
 
 ph = PasswordHasher()
 

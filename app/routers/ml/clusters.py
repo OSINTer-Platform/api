@@ -23,7 +23,8 @@ router = APIRouter(dependencies=[Depends(require_premium)])
 
 ClusterID: TypeAlias = Union[int, EsID]
 
-def query_cluster(cluster_id: ClusterID):
+
+def query_cluster(cluster_id: ClusterID) -> FullCluster:
     try:
         if isinstance(cluster_id, int):
             return config_options.es_cluster_client.query_documents(
@@ -102,8 +103,9 @@ def get_articles_from_cluster(
         }
     },
 )
-async def download_articles_from_cluster(cluster: FullCluster = Depends(query_cluster)) -> StreamingResponse:
-
+async def download_articles_from_cluster(
+    cluster: FullCluster = Depends(query_cluster),
+) -> StreamingResponse:
     zip_file: BytesIO = convert_query_to_zip(
         FastapiArticleSearchQuery(limit=0, cluster_nr=cluster.nr, premium=True)
     )
@@ -113,5 +115,3 @@ async def download_articles_from_cluster(cluster: FullCluster = Depends(query_cl
         file_content=zip_file,
         file_type="application/zip",
     )
-
-

@@ -27,7 +27,7 @@ def check_ml_availability() -> (
 ):
     return {
         "clustering": config_options.ML_CLUSTERING_AVAILABLE,
-        "map" : config_options.ML_MAP_AVAILABLE,
+        "map": config_options.ML_MAP_AVAILABLE,
         "elser": config_options.ELSER_AVAILABLE,
         "inference": config_options.LIVE_INFERENCE_AVAILABLE,
     }

@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self
 from fastapi import Depends, HTTPException, Query, status
 from datetime import datetime
 from app.users.schemas import Collection, FeedCreate
@@ -54,7 +54,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         )
 
     @classmethod
-    def from_item(cls, item: FeedCreate | Collection, premium: bool):
+    def from_item(cls, item: FeedCreate | Collection, premium: bool) -> Self:
         if isinstance(item, FeedCreate):
             return cls(
                 limit=item.limit if item.limit else 0,
