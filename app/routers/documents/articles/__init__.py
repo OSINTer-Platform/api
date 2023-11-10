@@ -110,16 +110,16 @@ def download_single_markdown_file(
         }
     },
 )
-async def get_article_content(id: EsID, request: Request) -> FullArticle:
+async def get_article_content(
+    id: EsID, username: str | None = Depends(get_username_from_token)
+) -> FullArticle:
     article = get_single_article(id)
 
     config_options.es_article_client.increment_read_counter(id)
 
     try:
-        token = await oauth2_scheme(request)
-
-        if token:
-            user = get_full_user(await get_username_from_token(token))
+        if username:
+            user = get_full_user(username)
             if user.already_read:
                 modify_collection(user.already_read, set([id]), user, "extend")
 
