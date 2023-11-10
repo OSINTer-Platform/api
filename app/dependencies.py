@@ -7,9 +7,6 @@ from app.common import EsIDList
 from modules.elastic import ArticleSearchQuery
 from app import config_options
 
-ArticleSortBy = Literal[
-    "publish_date", "read_times", "source", "author", "inserted_at", ""
-]
 
 
 class FastapiArticleSearchQuery(ArticleSearchQuery):
