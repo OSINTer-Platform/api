@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
 from app.common import EsIDList, HTTPError
+from app.dependencies import FastapiArticleSearchQuery
 from app.users import crud, schemas
-from app.users.auth import get_user_from_token
+from app.users.auth import check_premium, get_user_from_token
 from app.utils.documents import convert_query_to_zip, send_file
-from modules.elastic import ArticleSearchQuery
 from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
@@ -55,7 +55,9 @@ def handle_crud_response(response: R | int) -> R:
     return response
 
 
-def get_query_from_item(item_id: UUID) -> ArticleSearchQuery | None:
+def get_query_from_item(
+    item_id: UUID, premium: bool = Depends(check_premium)
+) -> FastapiArticleSearchQuery | None:
     item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
 
     if isinstance(item, int):
@@ -66,7 +68,7 @@ def get_query_from_item(item_id: UUID) -> ArticleSearchQuery | None:
         handle_crud_response(404)
         return None
 
-    q = item.to_query()
+    q = FastapiArticleSearchQuery.from_item(item, premium)
 
     return q
 
@@ -85,10 +87,10 @@ def delete_item(
     response_model_exclude_unset=True,
 )
 def get_item_articles(
-    search_query: ArticleSearchQuery = Depends(get_query_from_item),
+    search_query: FastapiArticleSearchQuery = Depends(get_query_from_item),
     complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
-    return config_options.es_article_client.query_documents(search_query, complete)
+    return config_options.es_article_client.query_documents(search_query, complete)[0]
 
 
 @router.get(
@@ -106,7 +108,7 @@ def get_item_contents(item_id: UUID) -> schemas.ItemBase:
     response_model_exclude_unset=True,
 )
 def export_item_articles(
-    search_query: ArticleSearchQuery = Depends(get_query_from_item),
+    search_query: FastapiArticleSearchQuery = Depends(get_query_from_item),
 ) -> StreamingResponse:
     zip_file: BytesIO = convert_query_to_zip(search_query)
 

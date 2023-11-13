@@ -1,13 +1,13 @@
 from datetime import datetime, timedelta
 from typing import Any
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 
-from .. import config_options
-from ..utils.auth import OAuth2PasswordBearerWithCookie
-from .crud import get_full_user_object, verify_user
-from .schemas import User, UserBase
+from app import config_options
+from app.utils.auth import OAuth2PasswordBearerWithCookie
+from app.users.crud import get_full_user_object, verify_user
+from app.users.schemas import User, UserBase
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
@@ -29,12 +29,11 @@ def create_access_token(
     return encoded_jwt
 
 
-async def get_username_from_token(token: str = Depends(oauth2_scheme)) -> str:
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
+async def get_username_from_token(request: Request) -> str | None:
+    token = await oauth2_scheme(request)
+
+    if not token:
+        return None
 
     try:
         payload = jwt.decode(
@@ -42,17 +41,26 @@ async def get_username_from_token(token: str = Depends(oauth2_scheme)) -> str:
         )
         username: str | None = payload.get("sub")
 
-        if username is None:
-            raise credentials_exception
-
+        return username
     except JWTError:
-        raise credentials_exception
+        return None
+
+
+def ensure_username_from_token(
+    username: None | str = Depends(get_username_from_token),
+) -> str:
+    if username is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     return username
 
 
 def verify_auth_data(
-    username: str = Depends(get_username_from_token), password: str | None = None
+    username: str = Depends(ensure_username_from_token), password: str | None = None
 ) -> UserBase:
     user_obj = verify_user(username=username, password=password)
 
@@ -73,11 +81,32 @@ def verify_auth_data(
             )
 
 
-def get_user_from_token(username: str = Depends(get_username_from_token)) -> UserBase:
+def get_user_from_token(
+    username: str = Depends(ensure_username_from_token),
+) -> UserBase:
     return verify_auth_data(username)
 
 
-def get_full_user(username: str = Depends(get_username_from_token)) -> User:
+def check_premium(username: str | None = Depends(get_username_from_token)) -> bool:
+    if not username:
+        return False
+
+    user = verify_user(username)
+    if not user:
+        return False
+
+    return user.premium > 0
+
+
+def require_premium(user: UserBase = Depends(get_user_from_token)) -> None:
+    if not user.premium > 0:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User is not a premium user",
+        )
+
+
+def get_full_user(username: str = Depends(ensure_username_from_token)) -> User:
     user_obj = get_full_user_object(username)
 
     if user_obj:

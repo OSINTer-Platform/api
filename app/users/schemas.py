@@ -5,9 +5,7 @@ from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
-from app.dependencies import ArticleSortBy
-
-from modules.elastic import ArticleSearchQuery
+from app.common import ArticleSortBy
 
 
 # Used for mapping the _id field of the DB model to the schemas id field
@@ -29,24 +27,13 @@ class FeedCreate(BaseModel):
     sort_order: Literal["desc", "asc"] = "desc"
 
     search_term: str | None = None
+    semantic_search: str | None = None
     highlight: bool | None = False
 
     first_date: datetime | None = None
     last_date: datetime | None = None
 
     sources: set[str] = set()
-
-    def to_query(self) -> ArticleSearchQuery:
-        return ArticleSearchQuery(
-            limit=self.limit if self.limit else 0,
-            sort_by=self.sort_by,
-            sort_order=self.sort_order,
-            search_term=self.search_term,
-            highlight=True if self.search_term and self.highlight else False,
-            first_date=self.first_date,
-            last_date=self.last_date,
-            sources=self.sources,
-        )
 
     @field_validator("sources", mode="before")
     @classmethod
@@ -66,14 +53,6 @@ class Collection(ItemBase):
 
     ids: set[str] = set()
 
-    def to_query(self) -> ArticleSearchQuery:
-        return ArticleSearchQuery(
-            limit=10_000 if len(self.ids) < 10_000 else 0,
-            sort_by="publish_date",
-            sort_order="desc",
-            ids=self.ids,
-        )
-
     @field_validator("ids", mode="before")
     @classmethod
     def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
@@ -91,6 +70,7 @@ class UserBase(ORMBase):
     username: str
 
     active: bool = True
+    premium: int = 0
 
 
 class User(UserBase):

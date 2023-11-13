@@ -16,6 +16,7 @@ class User(Document):  # type: ignore[misc]
     _id = TextField()
     username = TextField()
     active = BooleanField()
+    premium = IntegerField(default=0)
 
     already_read = TextField()
 
@@ -45,7 +46,7 @@ class User(Document):  # type: ignore[misc]
         """
         function(doc) {
             if(doc.type == "user") {
-                emit(doc.username, { username : doc.username, active: doc.active, already_read : doc.already_read, feed_ids: doc.feed_ids, collection_ids: doc.collection_ids });
+                emit(doc.username, { username : doc.username, active: doc.active, premium: doc.premium, already_read : doc.already_read, feed_ids: doc.feed_ids, collection_ids: doc.collection_ids });
             }
         }""",
     )
@@ -55,7 +56,7 @@ class User(Document):  # type: ignore[misc]
         """
         function(doc) {
             if(doc.type == "user") {
-                emit(doc.username, { username : doc.username, hashed_password : doc.hashed_password, hashed_email : doc.hashed_email, active : doc.active });
+                emit(doc.username, { username : doc.username, hashed_password : doc.hashed_password, hashed_email : doc.hashed_email, active : doc.active, premium: doc.premium });
             }
         }""",
     )

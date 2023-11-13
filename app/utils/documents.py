@@ -2,15 +2,17 @@ from io import BytesIO, StringIO
 from zipfile import ZipFile
 from pathvalidate import sanitize_filename
 
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
-from modules.elastic import ArticleSearchQuery
 from modules.files import article_to_md
 
 from .. import config_options
 from ..common import EsIDList
-from ..dependencies import FastapiArticleSearchQuery
+from ..dependencies import (
+    FastapiArticleSearchQuery,
+    FastapiQueryParamsArticleSearchQuery,
+)
 
 # TODO:Optimize functions sending files (especially the zip file) as to not save
 # files in memory but on disk
@@ -33,14 +35,10 @@ def send_file(
     return response
 
 
-def convert_ids_to_zip(ids: EsIDList = Query(...)) -> BytesIO:
-    return convert_query_to_zip(ArticleSearchQuery(ids=ids))
-
-
 def convert_query_to_zip(
-    search_q: ArticleSearchQuery = Depends(FastapiArticleSearchQuery),
+    search_q: FastapiArticleSearchQuery = Depends(FastapiQueryParamsArticleSearchQuery),
 ) -> BytesIO:
-    articles = config_options.es_article_client.query_documents(search_q, True)
+    articles = config_options.es_article_client.query_documents(search_q, True)[0]
 
     if articles:
         zip_file = BytesIO()

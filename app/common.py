@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, Set, TypeAlias
+from typing import Annotated, Literal, Set, TypeAlias
 import annotated_types
 
 from pydantic import BaseModel
@@ -7,6 +7,10 @@ from pydantic import BaseModel
 
 EsID: TypeAlias = Annotated[str, annotated_types.Len(32, 32)]
 EsIDList: TypeAlias = Set[EsID]
+
+ArticleSortBy = Literal[
+    "publish_date", "read_times", "source", "author", "inserted_at", ""
+]
 
 
 class DefaultResponseStatus(str, Enum):

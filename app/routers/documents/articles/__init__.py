@@ -1,20 +1,29 @@
 from datetime import date
 from io import BytesIO
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
-from app.users.auth import get_full_user, get_username_from_token, oauth2_scheme
+
+from app.users.auth import (
+    check_premium,
+    get_full_user,
+    get_username_from_token,
+    require_premium,
+)
 from app.users.crud import modify_collection
 from app.utils.profiles import ProfileDetails, collect_profile_details
 
-from modules.elastic import ArticleSearchQuery
 from modules.files import article_to_md
 from modules.objects import BaseArticle, FullArticle
 
 from .... import config_options
 from ....common import EsID, HTTPError
-from ....dependencies import FastapiArticleSearchQuery
+from ....dependencies import (
+    FastapiArticleSearchQuery,
+    FastapiQueryParamsArticleSearchQuery,
+)
 from ....utils.documents import convert_query_to_zip, send_file
 from .rss import router as rss_router
 
@@ -23,18 +32,25 @@ router.include_router(rss_router, tags=["rss"])
 
 
 @router.get("/newest")
-async def get_newest_articles() -> list[BaseArticle]:
+async def get_newest_articles(
+    premium: bool = Depends(check_premium),
+) -> list[BaseArticle]:
     return config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=50, sort_by="publish_date", sort_order="desc")
-    )
+        FastapiArticleSearchQuery(
+            limit=50, sort_by="publish_date", sort_order="desc", premium=premium
+        ),
+        False,
+    )[0]
 
 
 @router.get("/search", response_model_exclude_unset=True)
 async def search_articles(
-    query: FastapiArticleSearchQuery = Depends(FastapiArticleSearchQuery),
+    query: FastapiQueryParamsArticleSearchQuery = Depends(
+        FastapiQueryParamsArticleSearchQuery
+    ),
     complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
-    articles = config_options.es_article_client.query_documents(query, complete)
+    articles = config_options.es_article_client.query_documents(query, complete)[0]
     return articles
 
 
@@ -63,26 +79,29 @@ async def get_list_of_categories() -> dict[str, ProfileDetails]:
     return collect_profile_details()
 
 
-@router.get(
-    "/{id}/export",
-    tags=["download"],
-    responses={
-        404: {
-            "model": HTTPError,
-            "description": "Returned when requested article doesn't exist",
-        }
-    },
-)
-def download_single_markdown_file(id: EsID) -> StreamingResponse:
+articleNotFound: dict[str | int, dict[str, Any]] = {
+    404: {
+        "model": HTTPError,
+        "description": "Returned when the requested article doesn't exist",
+    }
+}
+
+
+def get_single_article(id: EsID, premium: bool = Depends(check_premium)) -> FullArticle:
     try:
-        article = config_options.es_article_client.query_documents(
-            ArticleSearchQuery(limit=1, ids={id}), True
-        )[0]
+        return config_options.es_article_client.query_documents(
+            FastapiArticleSearchQuery(limit=1, ids={id}, premium=premium), True
+        )[0][0]
     except IndexError:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
         )
 
+
+@router.get("/{id}/export", tags=["download"], responses=articleNotFound)
+def download_single_markdown_file(
+    article: FullArticle = Depends(get_single_article),
+) -> StreamingResponse:
     article_file = article_to_md(article)
 
     return send_file(
@@ -101,27 +120,37 @@ def download_single_markdown_file(id: EsID) -> StreamingResponse:
         }
     },
 )
-async def get_article_content(id: EsID, request: Request) -> FullArticle:
+async def get_article_content(
+    id: EsID, username: str | None = Depends(get_username_from_token)
+) -> FullArticle:
+    article = get_single_article(id)
+
     config_options.es_article_client.increment_read_counter(id)
 
     try:
-        token = await oauth2_scheme(request)
-
-        if token:
-            user = get_full_user(await get_username_from_token(token))
+        if username:
+            user = get_full_user(username)
             if user.already_read:
                 modify_collection(user.already_read, set([id]), user, "extend")
 
     except HTTPException:
         pass
 
-    article = config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=1, ids={id}), complete=True
+    return article
+
+
+@router.get("/{id}/similar", dependencies=[Depends(require_premium)])
+async def get_similar_articles(
+    article: FullArticle = Depends(get_single_article),
+) -> list[BaseArticle]:
+    if len(article.similar) == 0:
+        return []
+
+    articles = config_options.es_article_client.query_documents(
+        FastapiArticleSearchQuery(limit=10_000, ids=set(article.similar), premium=True),
+        False,
     )[0]
 
-    if article != []:
-        return article
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Article not found"
-        )
+    # The similar articles id list is sorted so that the closest is the first
+    # So the list has to be manually sorted as Elasticsearch will scramble it
+    return sorted(articles, key=lambda a: article.similar.index(a.id))
