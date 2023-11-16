@@ -1,9 +1,12 @@
 from typing import Any, Literal, cast
+from openai.resources.beta.threads import messages
 from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, Depends, Query
-import openai
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+
+from openai import OpenAIError, OpenAI
+from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
 
 from app import config_options
 from app.dependencies import FastapiArticleSearchQuery
@@ -11,7 +14,8 @@ from app.users.auth import require_premium
 from modules.objects import BaseArticle
 
 router = APIRouter(dependencies=[Depends(require_premium)])
-openai.api_key = config_options.OPENAI_KEY
+
+openai_client = OpenAI(api_key=config_options.OPENAI_KEY)
 
 
 class Chat(BaseModel):
@@ -26,8 +30,11 @@ class ChatList(BaseModel):
     article_base: list[BaseArticle] = []
     reached_max: bool = False
 
-    def serialize(self) -> list[dict[str, str]]:
-        return [{"role": chat.role, "content": chat.content} for chat in self.chats]
+    def serialize(self) -> list[ChatCompletionMessageParam]:
+        return cast(
+            list[ChatCompletionMessageParam],
+            [{"role": chat.role, "content": chat.content} for chat in self.chats],
+        )
 
 
 @router.post("/chat/continue")
@@ -42,22 +49,26 @@ def continue_chat(
             Chat(role="user", content=question, visible=visible, id=id)
         )
 
-    answer = cast(
-        dict[str, Any],
-        openai.ChatCompletion.create(  # type: ignore[no-untyped-call]
-            model=config_options.OPENAI_MODEL,
-            messages=current_chats.serialize(),
-            n=1,
-            temperature=1,
-            frequency_penalty=0,
-            presence_penalty=0,
-        ),
+    answer = openai_client.chat.completions.create(
+        model=config_options.OPENAI_MODEL,
+        messages=current_chats.serialize(),
+        n=1,
+        temperature=1,
+        frequency_penalty=0,
+        presence_penalty=0,
+    ).choices[0]
+
+    if answer.message.content is None:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, "OpenAI returned empty answer")
+
+    current_chats.chats.append(
+        Chat(
+            role=answer.message.role,
+            content=answer.message.content,
+        )
     )
 
-    new_chat = Chat.model_validate(answer["choices"][0]["message"])
-    current_chats.chats.append(new_chat)
-
-    current_chats.reached_max = answer["choices"][0]["finish_reason"] == "length"
+    current_chats.reached_max = answer.finish_reason == "length"
 
     return current_chats
 
