@@ -107,7 +107,7 @@ async def download_articles_from_cluster(
     cluster: FullCluster = Depends(query_cluster),
 ) -> StreamingResponse:
     zip_file: BytesIO = convert_query_to_zip(
-        FastapiArticleSearchQuery(limit=0, cluster_nr=cluster.nr, premium=True)
+        FastapiArticleSearchQuery(limit=0, cluster_id=cluster.id, premium=True)
     )
 
     return send_file(

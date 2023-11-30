@@ -28,7 +28,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         ids: EsIDList | None = None,
         highlight: bool = False,
         highlight_symbol: str = "**",
-        cluster_nr: int | None = None,
+        cluster_id: str | None = None,
         premium: bool = Depends(check_premium),
     ):
         if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
@@ -49,7 +49,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
-            cluster_nr=cluster_nr,
+            cluster_id=cluster_id,
             custom_exclude_fields=None if premium else ["summary", "similar", "ml"],
         )
 
@@ -94,7 +94,7 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         ids: EsIDList | None = Query(None),
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
-        cluster_nr: int | None = Query(None),
+        cluster_id: str | None = Query(None),
         premium: bool = Depends(check_premium),
     ):
         super().__init__(
@@ -109,6 +109,6 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
-            cluster_nr=cluster_nr,
+            cluster_id=cluster_id,
             premium=premium,
         )
