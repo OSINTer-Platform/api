@@ -74,6 +74,7 @@ def create_user(
     password: str,
     email: str | None = "",
     id: UUID | None = None,
+    premium: int = 0,
 ) -> bool:
     if verify_user(username):
         return False
@@ -94,6 +95,7 @@ def create_user(
         active=True,
         hashed_password=password_hash,
         hashed_email=email_hash,
+        premium=premium,
     )
 
     collection = create_collection("Already Read", id, deleteable=False)

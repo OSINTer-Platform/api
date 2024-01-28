@@ -53,6 +53,8 @@ class FrontendConfig(BaseConfig):
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
 
+        self.SIGNUP_CODE = os.environ.get("SIGNUP_KEY", None)
+
     @staticmethod
     def get_env_bool(key: str) -> bool:
         return bool(os.environ.get(key)) or False

@@ -37,13 +37,14 @@ class OAuth2PasswordBearerWithCookie(OAuth2):
         return param
 
 
-class OAuth2PasswordRequestFormWithEmail:
+class SignupForm:
     def __init__(
         self,
         grant_type: str = Form(default=None, regex="password"),
         username: str = Form(default=...),
         password: str = Form(default=...),
         email: str = Form(default=""),
+        signup_code: str = Form(default=""),
         scope: str = Form(default=""),
         client_id: Optional[str] = Form(default=None),
         client_secret: Optional[str] = Form(default=None),
@@ -52,6 +53,7 @@ class OAuth2PasswordRequestFormWithEmail:
         self.username = username
         self.password = password
         self.email = email
+        self.signup_code = signup_code
         self.scopes = scope.split()
         self.client_id = client_id
         self.client_secret = client_secret

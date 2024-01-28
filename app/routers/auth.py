@@ -4,6 +4,7 @@ from typing_extensions import TypedDict
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from starlette.status import HTTP_422_UNPROCESSABLE_ENTITY
 
 from app.users.auth import (
     create_access_token,
@@ -16,7 +17,7 @@ from app.users.schemas import User, UserBase
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
-from ..utils.auth import OAuth2PasswordRequestFormWithEmail
+from ..utils.auth import SignupForm
 
 
 router = APIRouter()
@@ -196,10 +197,22 @@ async def get_token(
     },
 )
 async def signup(
-    form_data: OAuth2PasswordRequestFormWithEmail = Depends(),
+    form_data: SignupForm = Depends(),
 ) -> DefaultResponse:
+    if form_data.signup_code and config_options.SIGNUP_CODE != form_data.signup_code:
+        raise HTTPException(
+            status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A wrong signup code was entered",
+        )
+    premium = (
+        bool(config_options.SIGNUP_CODE)
+        and config_options.SIGNUP_CODE == form_data.signup_code
+    )
     if create_user(
-        username=form_data.username, password=form_data.password, email=form_data.email
+        username=form_data.username,
+        password=form_data.password,
+        email=form_data.email,
+        premium=1 if premium else 0,
     ):
         return DefaultResponse(status=DefaultResponseStatus.SUCCESS, msg="User created")
     else:
