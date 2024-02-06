@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 from argon2 import PasswordHasher
@@ -116,6 +116,39 @@ def remove_user(username: str) -> bool:
         return False
 
     return True
+
+
+def update_user(
+    username: str,
+    new_username: str | None = None,
+    new_password: str | None = None,
+    new_email: str | None = None,
+) -> schemas.User | tuple[int, str]:
+    try:
+        users: ViewResults = models.User.full_by_username(config_options.couch_conn)[
+            username
+        ]
+        user = cast(models.User, list(users)[0])
+    except IndexError:
+        return (401, "User was not found")
+
+    user_schema = schemas.FullUser.model_validate(user)
+
+    if new_username:
+        if verify_user(new_username):
+            return (409, "Username is already taken")
+        user_schema.username = new_username
+
+    if new_password:
+        user_schema.hashed_password = ph.hash(new_password)
+
+    if new_email:
+        user_schema.hashed_email = ph.hash(new_email)
+
+    user = duplicate_document(user, models.User, user_schema)
+    user.store(config_options.couch_conn)
+
+    return user_schema
 
 
 def modify_user_subscription(

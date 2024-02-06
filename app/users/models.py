@@ -51,6 +51,16 @@ class User(Document):  # type: ignore[misc]
         }""",
     )
 
+    full_by_username = ViewField(
+        "users",
+        """
+        function(doc) {
+            if(doc.type == "user") {
+                emit(doc.username, doc);
+            }
+        }""",
+    )
+
     auth_info = ViewField(
         "users",
         """
@@ -141,6 +151,7 @@ views: list[ViewDefinition] = [
     User.all,
     User.auth_info,
     User.by_username,
+    User.full_by_username,
     Feed.all,
     Feed.get_minimal_info,
     Collection.all,
