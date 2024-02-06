@@ -6,11 +6,12 @@ from .routers import auth, ml
 from .routers.documents import articles
 from .routers.subscriptions import feeds, collections
 from .routers import user_items
+from .routers import user
 
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    root_path="/api/",
+    root_path="/",
 )
 
 app.add_middleware(
@@ -43,6 +44,8 @@ app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 app.include_router(feeds.router, prefix="/my/feeds", tags=["feed"])
 
 app.include_router(collections.router, prefix="/my/collections", tags=["collections"])
+
+app.include_router(user.router, prefix="/my/user", tags=["user"])
 
 app.include_router(user_items.router, prefix="/user-items", tags=["user-items"])
 
