@@ -8,13 +8,6 @@ from ...users import crud, schemas
 router = APIRouter()
 
 
-@router.get("/base-list")
-def get_base_of_my_subscribed_feeds(
-    current_user: schemas.User = Depends(get_user_from_token),
-) -> list[schemas.ItemBase]:
-    return crud.get_feed_list(current_user)
-
-
 @router.get("/list")
 def get_my_subscribed_feeds(
     current_user: schemas.User = Depends(get_user_from_token),

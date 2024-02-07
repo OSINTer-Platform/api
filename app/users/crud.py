@@ -253,15 +253,6 @@ def create_collection(
     return collection
 
 
-def get_feed_list(user: schemas.User) -> list[schemas.ItemBase]:
-    all_feeds: ViewResults = models.Feed.get_minimal_info(config_options.couch_conn)
-
-    # Manually setting a list of keys to retrieve, as the library itself doesn't expose this functionallity
-    all_feeds.options["keys"] = jsonable_encoder(user.feed_ids)
-
-    return [schemas.Feed.model_validate(feed) for feed in all_feeds]
-
-
 def get_feeds(user: schemas.User) -> dict[str, schemas.Feed]:
     all_feeds: ViewResults = models.Feed.all(config_options.couch_conn)
 
