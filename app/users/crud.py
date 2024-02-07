@@ -141,7 +141,7 @@ def update_user(
     if not user:
         return (401, "User was not found")
 
-    user_schema = schemas.FullUser.model_validate(user)
+    user_schema = schemas.AuthUser.model_validate(user)
 
     if new_username:
         if check_username(new_username):
@@ -171,7 +171,7 @@ def modify_user_subscription(
     if not user:
         return None
 
-    user_schema = schemas.FullUser.model_validate(user)
+    user_schema = schemas.AuthUser.model_validate(user)
 
     if item_type == "feed":
         source = user_schema.feed_ids
@@ -287,7 +287,7 @@ def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
 
 
 def modify_feed(
-    id: UUID, contents: schemas.FeedCreate, user: schemas.UserBase
+    id: UUID, contents: schemas.FeedCreate, user: schemas.User
 ) -> int | schemas.Feed:
     item: models.Feed | None = models.Feed.load(config_options.couch_conn, str(id))
 
@@ -307,7 +307,7 @@ def modify_feed(
 def modify_collection(
     id: UUID,
     contents: set[str],
-    user: schemas.UserBase,
+    user: schemas.User,
     action: Literal["replace", "extend"] = "replace",
 ) -> int | schemas.Collection:
     item: models.Collection | None = models.Collection.load(
@@ -329,7 +329,7 @@ def modify_collection(
     return schemas.Collection.model_validate(item)
 
 
-def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | None:
+def change_item_name(id: UUID, new_name: str, user: schemas.User) -> int | None:
     item: models.ItemBase | None = models.ItemBase.load(
         config_options.couch_conn, str(id)
     )
@@ -348,7 +348,7 @@ def change_item_name(id: UUID, new_name: str, user: schemas.UserBase) -> int | N
 
 # Has to verify the user owns the item before deletion
 def remove_item(
-    user: schemas.UserBase,
+    user: schemas.User,
     id: UUID,
 ) -> int | None:
     try:

@@ -77,7 +77,7 @@ def get_query_from_item(
     "/{item_id}", status_code=status.HTTP_204_NO_CONTENT, responses=responses
 )
 def delete_item(
-    item_id: UUID, current_user: schemas.UserBase = Depends(get_user_from_token)
+    item_id: UUID, current_user: schemas.User = Depends(get_user_from_token)
 ) -> None:
     return handle_crud_response(crud.remove_item(current_user, item_id))
 
@@ -123,7 +123,7 @@ def export_item_articles(
 def update_item_name(
     item_id: UUID,
     new_name: str,
-    current_user: schemas.UserBase = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(get_user_from_token),
 ) -> None:
     return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
 
@@ -132,7 +132,7 @@ def update_item_name(
 def update_feed(
     feed_id: UUID,
     contents: schemas.FeedCreate,
-    current_user: schemas.UserBase = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(get_user_from_token),
 ) -> schemas.Feed:
     return handle_crud_response(
         crud.modify_feed(id=feed_id, contents=contents, user=current_user)
@@ -146,7 +146,7 @@ def update_feed(
 def update_collection(
     collection_id: UUID,
     contents: EsIDList,
-    current_user: schemas.UserBase = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(get_user_from_token),
 ) -> schemas.Collection:
     return handle_crud_response(
         crud.modify_collection(id=collection_id, contents=contents, user=current_user)

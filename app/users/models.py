@@ -12,7 +12,6 @@ from couchdb.mapping import (
 
 
 class User(Document):  # type: ignore[misc]
-    # UserBase
     _id = TextField()
     username = TextField()
     active = BooleanField()
@@ -20,11 +19,10 @@ class User(Document):  # type: ignore[misc]
 
     already_read = TextField()
 
-    # User
     feed_ids = ListField(TextField())
     collection_ids = ListField(TextField())
 
-    # UserAuth
+    # AuthUser
     hashed_password = TextField()
     hashed_email = TextField()
 

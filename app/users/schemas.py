@@ -65,15 +65,13 @@ class Collection(ItemBase):
 UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
 
-class UserBase(ORMBase):
+class User(ORMBase):
     id: UUID = Field(alias="_id")
     username: str
 
     active: bool = True
     premium: int = 0
 
-
-class User(UserBase):
     already_read: UUID | None = None
 
     feed_ids: set[UUID] = set()
@@ -91,10 +89,6 @@ class User(UserBase):
         return id_list
 
 
-class UserAuth(UserBase):
+class AuthUser(User):
     hashed_password: str
     hashed_email: str | None
-
-
-class FullUser(User, UserAuth):
-    pass

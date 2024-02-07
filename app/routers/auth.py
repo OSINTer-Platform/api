@@ -13,7 +13,7 @@ from app.users.auth import (
     get_user_from_token,
 )
 from app.users.crud import check_username, create_user, verify_user
-from app.users.schemas import User, UserBase
+from app.users.schemas import User
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -54,9 +54,7 @@ async def send_password_recovery_mail(
     username: str, email: str, mail_available: bool = Depends(check_mail_available)
 ) -> DefaultResponse:
     if mail_available:
-        current_user = schemas.UserBase.model_validate(
-            check_username(username=username)
-        )
+        current_user = schemas.User.model_validate(check_username(username=username))
 
         if not current_user:
             raise HTTPException(
@@ -92,7 +90,7 @@ async def get_auth_status(
 @router.post("/logout")
 async def logout(
     response: Response,
-    _: UserBase = Depends(get_user_from_token),
+    _: User = Depends(get_user_from_token),
 ) -> None:
     response.delete_cookie(key="access_token")
     return
