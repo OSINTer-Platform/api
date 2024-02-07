@@ -2,6 +2,7 @@ import os
 import secrets
 
 from couchdb import Server
+from argon2 import PasswordHasher
 
 from modules.config import BaseConfig
 
@@ -54,6 +55,8 @@ class FrontendConfig(BaseConfig):
         )
 
         self.SIGNUP_CODE = os.environ.get("SIGNUP_KEY", None)
+
+        self.hasher = PasswordHasher()
 
     @staticmethod
     def get_env_bool(key: str) -> bool:

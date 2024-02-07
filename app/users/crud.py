@@ -1,7 +1,6 @@
 from typing import Literal, cast
 from uuid import UUID, uuid4
 
-from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
 from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
@@ -9,8 +8,6 @@ from fastapi.encoders import jsonable_encoder
 
 from app import config_options
 from app.users import models, schemas
-
-ph = PasswordHasher()
 
 
 def duplicate_document(
@@ -58,7 +55,7 @@ def verify_user(
     ]:
         if raw_value and hashed_value:
             try:
-                ph.verify(hashed_value, raw_value)
+                config_options.hasher.verify(hashed_value, raw_value)
             except VerifyMismatchError:
                 return False
 
@@ -92,14 +89,14 @@ def create_user(
         return False
 
     if email:
-        email_hash = ph.hash(email)
+        email_hash = config_options.hasher.hash(email)
     else:
         email_hash = None
 
     if not id:
         id = uuid4()
 
-    password_hash = ph.hash(password)
+    password_hash = config_options.hasher.hash(password)
 
     new_user = models.User(
         _id=str(id),
