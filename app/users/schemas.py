@@ -1,6 +1,6 @@
 from collections.abc import Sequence, Set
 from datetime import datetime
-from typing import Annotated, Any, Literal, TypeAlias, Union
+from typing import Annotated, Any, Literal, Optional, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
@@ -65,6 +65,18 @@ class Collection(ItemBase):
 UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
 
+class UserSettings(ORMBase):
+    dark_mode: bool = True
+    render_external: bool = False
+    list_render_mode: Literal["large"] | Literal["title"] = "large"
+
+
+class PartialUserSettings(ORMBase):
+    dark_mode: bool | None = None
+    render_external: bool | None = None
+    list_render_mode: Literal["large"] | Literal["title"] | None = None
+
+
 class User(ORMBase):
     id: UUID = Field(alias="_id")
     username: str
@@ -79,6 +91,8 @@ class User(ORMBase):
 
     feeds: list[Feed] = []
     collections: list[Collection] = []
+
+    settings: UserSettings
 
     @field_validator("feed_ids", "collection_ids", mode="before")
     @classmethod

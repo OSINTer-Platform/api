@@ -4,7 +4,11 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_409_CONFLICT
 from app.users import schemas
 
-from app.users.auth import ensure_id_from_token, get_user_from_token
+from app.users.auth import (
+    ensure_id_from_token,
+    get_auth_user_from_token,
+    get_user_from_token,
+)
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
 
@@ -52,3 +56,15 @@ def change_credentials(
     update_user(user_schema, rev)
 
     return user_schema
+
+
+@router.post("/settings")
+def change_settings(
+    settings: schemas.PartialUserSettings,
+    user: schemas.User = Depends(get_auth_user_from_token),
+) -> schemas.User:
+    user.settings = user.settings.model_copy(
+        update=settings.model_dump(exclude_unset=True)
+    )
+    update_user(user)
+    return user

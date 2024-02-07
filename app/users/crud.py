@@ -62,13 +62,19 @@ def verify_user(
     return user
 
 
-def get_full_user_object(id: UUID, complete: bool = False) -> None | schemas.User:
+def get_full_user_object(
+    id: UUID, complete: bool = False, auth: bool = False
+) -> None | schemas.User | schemas.AuthUser:
     user: models.User | None = models.User.load(config_options.couch_conn, str(id))
 
     if not user:
         return None
 
-    user_schema = schemas.User.model_validate(user)
+    user_schema: schemas.AuthUser | schemas.User
+    if auth:
+        user_schema = schemas.AuthUser.model_validate(user)
+    else:
+        user_schema = schemas.User.model_validate(user)
 
     if complete:
         user_schema.feeds = list(get_feeds(user_schema).values())

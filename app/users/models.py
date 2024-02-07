@@ -2,9 +2,11 @@ from typing import TypeVar
 from couchdb.mapping import (
     BooleanField,
     DateTimeField,
+    DictField,
     Document,
     IntegerField,
     ListField,
+    Mapping,
     TextField,
     ViewDefinition,
     ViewField,
@@ -21,6 +23,14 @@ class User(Document):  # type: ignore[misc]
 
     feed_ids = ListField(TextField())
     collection_ids = ListField(TextField())
+
+    settings = DictField(
+        Mapping.build(
+            dark_mode=BooleanField(default=True),
+            render_external=BooleanField(default=False),
+            list_render_mode=TextField(default="large"),
+        )
+    )
 
     # AuthUser
     hashed_password = TextField()

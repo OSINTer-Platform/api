@@ -78,6 +78,20 @@ def get_user_from_token(
     return user
 
 
+def get_auth_user_from_token(
+    id: UUID = Depends(ensure_id_from_token),
+) -> User:
+    user = get_full_user_object(id, auth=True)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
+
 def check_premium(id: UUID | None = Depends(get_id_from_token)) -> bool:
     if not id:
         return False
