@@ -130,34 +130,19 @@ def remove_user(username: str) -> bool:
     return True
 
 
-def update_user(
-    id: UUID,
-    new_username: str | None = None,
-    new_password: str | None = None,
-    new_email: str | None = None,
-) -> schemas.User | tuple[int, str]:
-    user = models.User.load(config_options.couch_conn, str(id))
+def update_user(user: schemas.User, rev: str | None = None) -> None:
+    if not rev:
+        rev = cast(
+            str,
+            cast(
+                models.User, models.User.load(config_options.couch_conn, str(user.id))
+            ).rev,
+        )
 
-    if not user:
-        return (401, "User was not found")
-
-    user_schema = schemas.AuthUser.model_validate(user)
-
-    if new_username:
-        if check_username(new_username):
-            return (409, "Username is already taken")
-        user_schema.username = new_username
-
-    if new_password:
-        user_schema.hashed_password = ph.hash(new_password)
-
-    if new_email:
-        user_schema.hashed_email = ph.hash(new_email)
-
-    user = duplicate_document(user, models.User, user_schema)
-    user.store(config_options.couch_conn)
-
-    return user_schema
+    config_options.couch_conn[str(user.id)] = {
+        **user.model_dump(mode="json", exclude={"id"}),
+        "_rev": rev,
+    }
 
 
 def modify_user_subscription(
