@@ -1,7 +1,7 @@
 from typing import Optional
 from urllib.parse import unquote
 
-from fastapi import HTTPException, Request, status
+from fastapi import Request
 from fastapi.openapi.models import OAuthFlowPassword, OAuthFlows as OAuthFlowsModel
 from fastapi.param_functions import Form
 from fastapi.security import OAuth2

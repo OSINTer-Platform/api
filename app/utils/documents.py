@@ -8,7 +8,6 @@ from fastapi.responses import StreamingResponse
 from modules.files import article_to_md
 
 from .. import config_options
-from ..common import EsIDList
 from ..dependencies import (
     FastapiArticleSearchQuery,
     FastapiQueryParamsArticleSearchQuery,

@@ -1,12 +1,11 @@
-from typing import Any, Literal, cast
-from openai.resources.beta.threads import messages
+from typing import Literal, cast
 from pydantic import BaseModel, Field
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from openai import OpenAIError, OpenAI
-from openai.types.chat import ChatCompletion, ChatCompletionMessageParam
+from openai import OpenAI
+from openai.types.chat import ChatCompletionMessageParam
 
 from app import config_options
 from app.dependencies import FastapiArticleSearchQuery
