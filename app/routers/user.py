@@ -3,10 +3,17 @@ from fastapi import APIRouter, Body, Depends, HTTPException
 from starlette.status import HTTP_401_UNAUTHORIZED
 from app.users import schemas
 
-from app.users.auth import ensure_id_from_token
+from app.users.auth import ensure_id_from_token, get_user_from_token
 from app.users.crud import update_user, verify_user
 
 router = APIRouter()
+
+
+@router.get("/")
+async def get_auth_status(
+    current_user: schemas.User = Depends(get_user_from_token),
+) -> schemas.User:
+    return current_user
 
 
 @router.post("/credentials")
