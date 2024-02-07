@@ -24,19 +24,31 @@ def duplicate_document(
     return new_document
 
 
-# Return of db model for user is for use in following crud functions
-def verify_user(
-    username: str,
-    password: str | None = None,
-    email: str | None = None,
-) -> Literal[False] | schemas.UserAuth:
-    users: ViewResults = models.User.auth_info(config_options.couch_conn)[username]
+def check_username(username: str) -> Literal[False] | models.User:
     try:
-        user: schemas.UserAuth = schemas.UserAuth.model_validate(list(users)[0])
+        return cast(
+            models.User,
+            list(models.User.by_username(config_options.couch_conn)[username])[0],
+        )
     except IndexError:
         return False
 
-    if user.username != username:
+
+# Return of db model for user is for use in following crud functions
+def verify_user(
+    id: UUID,
+    user: models.User | None = None,
+    username: str | None = None,
+    password: str | None = None,
+    email: str | None = None,
+) -> Literal[False] | models.User:
+    if not user:
+        user = models.User.load(config_options.couch_conn, str(id))
+
+    if not user:
+        return False
+
+    if username and user.username != username:
         return False
 
     # TODO: Implement rehashing
@@ -53,19 +65,19 @@ def verify_user(
     return user
 
 
-def get_full_user_object(username: str, complete: bool = False) -> None | schemas.User:
-    users: ViewResults = models.User.by_username(config_options.couch_conn)[username]
+def get_full_user_object(id: UUID, complete: bool = False) -> None | schemas.User:
+    user: models.User | None = models.User.load(config_options.couch_conn, str(id))
 
-    try:
-        user: schemas.User = schemas.User.model_validate(list(users)[0])
-    except IndexError:
+    if not user:
         return None
 
-    if complete:
-        user.feeds = list(get_feeds(user).values())
-        user.collections = list(get_collections(user).values())
+    user_schema = schemas.User.model_validate(user)
 
-    return user
+    if complete:
+        user_schema.feeds = list(get_feeds(user_schema).values())
+        user_schema.collections = list(get_collections(user_schema).values())
+
+    return user_schema
 
 
 # Ensures that usernames are unique
@@ -76,7 +88,7 @@ def create_user(
     id: UUID | None = None,
     premium: int = 0,
 ) -> bool:
-    if verify_user(username):
+    if check_username(username):
         return False
 
     if email:
@@ -108,7 +120,7 @@ def create_user(
 
 
 def remove_user(username: str) -> bool:
-    user = verify_user(username)
+    user = check_username(username)
 
     if user:
         del config_options.couch_conn[str(user.id)]
@@ -119,23 +131,20 @@ def remove_user(username: str) -> bool:
 
 
 def update_user(
-    username: str,
+    id: UUID,
     new_username: str | None = None,
     new_password: str | None = None,
     new_email: str | None = None,
 ) -> schemas.User | tuple[int, str]:
-    try:
-        users: ViewResults = models.User.full_by_username(config_options.couch_conn)[
-            username
-        ]
-        user = cast(models.User, list(users)[0])
-    except IndexError:
+    user = models.User.load(config_options.couch_conn, str(id))
+
+    if not user:
         return (401, "User was not found")
 
     user_schema = schemas.FullUser.model_validate(user)
 
     if new_username:
-        if verify_user(new_username):
+        if check_username(new_username):
             return (409, "Username is already taken")
         user_schema.username = new_username
 
@@ -156,12 +165,10 @@ def modify_user_subscription(
     ids: set[UUID],
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
-) -> models.User | None:
-    try:
-        user: models.User = list(
-            models.User.all(config_options.couch_conn)[str(user_id)]
-        )[0]
-    except IndexError:
+) -> schemas.User | None:
+    user = models.User.load(config_options.couch_conn, str(user_id))
+
+    if not user:
         return None
 
     user_schema = schemas.FullUser.model_validate(user)
@@ -189,7 +196,7 @@ def modify_user_subscription(
 
     user.store(config_options.couch_conn)
 
-    return user
+    return user_schema
 
 
 def create_feed(

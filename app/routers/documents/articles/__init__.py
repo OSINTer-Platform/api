@@ -1,6 +1,7 @@
 from datetime import date
 from io import BytesIO
 from typing import Any
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
@@ -8,8 +9,8 @@ from pathvalidate import sanitize_filename
 
 from app.users.auth import (
     check_premium,
-    get_full_user,
-    get_username_from_token,
+    get_id_from_token,
+    get_user_from_token,
     require_premium,
 )
 from app.users.crud import modify_collection
@@ -121,15 +122,15 @@ def download_single_markdown_file(
     },
 )
 async def get_article_content(
-    id: EsID, username: str | None = Depends(get_username_from_token)
+    id: EsID, user_id: UUID | None = Depends(get_id_from_token)
 ) -> FullArticle:
     article = get_single_article(id)
 
     config_options.es_article_client.increment_read_counter(id)
 
     try:
-        if username:
-            user = get_full_user(username)
+        if user_id:
+            user = get_user_from_token(user_id)
             if user.already_read:
                 modify_collection(user.already_read, set([id]), user, "extend")
 

@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta
 from typing import Any
+from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request, status
 from jose import JWTError, jwt
 
 from app import config_options
 from app.utils.auth import OAuth2PasswordBearerWithCookie
-from app.users.crud import get_full_user_object, verify_user
-from app.users.schemas import User, UserBase
+from app.users.crud import get_full_user_object
+from app.users.schemas import User
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
@@ -29,7 +30,7 @@ def create_access_token(
     return encoded_jwt
 
 
-async def get_username_from_token(request: Request) -> str | None:
+async def get_id_from_token(request: Request) -> UUID | None:
     token = await oauth2_scheme(request)
 
     if not token:
@@ -39,81 +40,58 @@ async def get_username_from_token(request: Request) -> str | None:
         payload = jwt.decode(
             token, config_options.SECRET_KEY, algorithms=config_options.JWT_ALGORITHMS
         )
-        username: str | None = payload.get("sub")
+        id: str | None = payload.get("sub")
 
-        return username
+        if id:
+            return UUID(id)
+        else:
+            return None
+
     except JWTError:
         return None
 
 
-def ensure_username_from_token(
-    username: None | str = Depends(get_username_from_token),
-) -> str:
-    if username is None:
+def ensure_id_from_token(
+    id: None | UUID = Depends(get_id_from_token),
+) -> UUID:
+    if id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    return username
-
-
-def verify_auth_data(
-    username: str = Depends(ensure_username_from_token), password: str | None = None
-) -> UserBase:
-    user_obj = verify_user(username=username, password=password)
-
-    if user_obj:
-        return user_obj
-    else:
-        if password:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    return id
 
 
 def get_user_from_token(
-    username: str = Depends(ensure_username_from_token),
-) -> UserBase:
-    return verify_auth_data(username)
+    id: UUID = Depends(ensure_id_from_token),
+) -> User:
+    user = get_full_user_object(id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
 
 
-def check_premium(username: str | None = Depends(get_username_from_token)) -> bool:
-    if not username:
+def check_premium(id: UUID | None = Depends(get_id_from_token)) -> bool:
+    if not id:
         return False
 
-    user = verify_user(username)
+    user = get_full_user_object(id)
     if not user:
         return False
 
     return user.premium > 0
 
 
-def require_premium(user: UserBase = Depends(get_user_from_token)) -> None:
-    if not user.premium > 0:
+def require_premium(premium: bool = Depends(check_premium)) -> None:
+    if not premium:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User is not a premium user",
-        )
-
-
-def get_full_user(username: str = Depends(ensure_username_from_token)) -> User:
-    user_obj = get_full_user_object(username)
-
-    if user_obj:
-        return user_obj
-    else:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found",
-            headers={"WWW-Authenticate": "Bearer"},
         )

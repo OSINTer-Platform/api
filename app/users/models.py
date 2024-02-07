@@ -46,27 +46,7 @@ class User(Document):  # type: ignore[misc]
         """
         function(doc) {
             if(doc.type == "user") {
-                emit(doc.username, { username : doc.username, active: doc.active, premium: doc.premium, already_read : doc.already_read, feed_ids: doc.feed_ids, collection_ids: doc.collection_ids });
-            }
-        }""",
-    )
-
-    full_by_username = ViewField(
-        "users",
-        """
-        function(doc) {
-            if(doc.type == "user") {
-                emit(doc.username, doc);
-            }
-        }""",
-    )
-
-    auth_info = ViewField(
-        "users",
-        """
-        function(doc) {
-            if(doc.type == "user") {
-                emit(doc.username, { username : doc.username, hashed_password : doc.hashed_password, hashed_email : doc.hashed_email, active : doc.active, premium: doc.premium });
+                emit(doc.username, doc)
             }
         }""",
     )
@@ -149,9 +129,7 @@ DBModels = TypeVar("DBModels", Feed, Collection, User)
 
 views: list[ViewDefinition] = [
     User.all,
-    User.auth_info,
     User.by_username,
-    User.full_by_username,
     Feed.all,
     Feed.get_minimal_info,
     Collection.all,

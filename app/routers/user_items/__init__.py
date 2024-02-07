@@ -1,11 +1,11 @@
 from datetime import date
 from io import BytesIO
 from typing_extensions import Any, TypeVar
-from typing import cast
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.common import EsIDList, HTTPError
 from app.dependencies import FastapiArticleSearchQuery
@@ -158,7 +158,11 @@ def update_collection(
     response_model_exclude_none=True,
 )
 def get_standard_items() -> dict[str, schemas.Feed]:
-    standard_user: schemas.User = cast(
-        schemas.User, crud.get_full_user_object("OSINTer")
-    )
+    standard_user = crud.get_full_user_object(UUID(int=0))
+
+    if not standard_user:
+        raise HTTPException(
+            status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Backend setup missing"
+        )
+
     return crud.get_feeds(standard_user)
