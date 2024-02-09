@@ -16,7 +16,7 @@ def duplicate_document(
     contents: schemas.ORMBase,
 ) -> models.DBModels:
     rev = document.rev
-    new_document = document_class(**contents.model_dump(mode="json"))
+    new_document = document_class(**contents.db_serialize())
     new_document._data["_rev"] = rev
     return new_document
 
@@ -143,7 +143,7 @@ def update_user(user: schemas.User, rev: str | None = None) -> None:
         )
 
     config_options.couch_conn[str(user.id)] = {
-        **user.model_dump(mode="json", exclude={"id"}),
+        **user.db_serialize(),
         "_rev": rev,
     }
 
@@ -201,13 +201,13 @@ def create_feed(
         name=name,
         _id=id,
         deleteable=deleteable,
-        **feed_params.model_dump(mode="json"),
+        **feed_params.db_serialize(),
     )
 
     if owner:
         feed.owner = owner
 
-    feed_model = models.Feed(**feed.model_dump(mode="json"))
+    feed_model = models.Feed(**feed.db_serialize())
     feed_model.store(config_options.couch_conn)
 
     return feed
@@ -235,7 +235,7 @@ def create_collection(
     if ids:
         collection.ids = ids
 
-    collection_model = models.Collection(**collection.model_dump(mode="json"))
+    collection_model = models.Collection(**collection.db_serialize())
     collection_model.store(config_options.couch_conn)
 
     return collection
@@ -284,7 +284,7 @@ def modify_feed(
     elif item.owner != str(user.id):
         return 403
 
-    for k, v in contents.model_dump(exclude_unset=True, mode="json").items():
+    for k, v in contents.db_serialize(exclude_unset=True).items():
         setattr(item, k, v)
 
     item.store(config_options.couch_conn)

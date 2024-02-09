@@ -8,8 +8,13 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from app.common import ArticleSortBy
 
 
+class Base(BaseModel):
+    def db_serialize(self, **options):
+        return self.model_dump(mode="json", **options)
+
+
 # Used for mapping the _id field of the DB model to the schemas id field
-class ORMBase(BaseModel):
+class ORMBase(Base):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
@@ -20,7 +25,7 @@ class ItemBase(ORMBase):
     deleteable: bool | None = True
 
 
-class FeedCreate(BaseModel):
+class FeedCreate(Base):
     limit: int | None = 100
 
     sort_by: ArticleSortBy | None = "publish_date"
@@ -103,6 +108,9 @@ class User(ORMBase):
             return set(id_list)
 
         return id_list
+
+    def db_serialize(self, **options):
+        return self.model_dump(mode="json", exclude={"feeds", "collections"}, **options)
 
 
 class AuthUser(User):
