@@ -1,6 +1,6 @@
 from collections.abc import Sequence, Set
 from datetime import datetime
-from typing import Annotated, Any, Literal, Optional, TypeAlias, Union
+from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
@@ -93,6 +93,8 @@ class User(ORMBase):
     collections: list[Collection] = []
 
     settings: UserSettings
+
+    type: Literal["user"] = "user"
 
     @field_validator("feed_ids", "collection_ids", mode="before")
     @classmethod
