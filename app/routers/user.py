@@ -1,7 +1,11 @@
-from typing import cast
+from typing import Literal, cast
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_409_CONFLICT
+from starlette.status import (
+    HTTP_401_UNAUTHORIZED,
+    HTTP_409_CONFLICT,
+    HTTP_422_UNPROCESSABLE_ENTITY,
+)
 from app.users import schemas
 
 from app.users.auth import (
@@ -66,5 +70,29 @@ def change_settings(
     user.settings = user.settings.model_copy(
         update=settings.model_dump(exclude_unset=True)
     )
+    update_user(user)
+    return user
+
+
+@router.post("/signup-code")
+def submit_signup_code(
+    code: dict[Literal["code"], str] = Body(),
+    user: schemas.User = Depends(get_auth_user_from_token),
+) -> schemas.User:
+    if user.premium > 0:
+        return user
+
+    premium = (
+        bool(config_options.SIGNUP_CODE) and config_options.SIGNUP_CODE == code["code"]
+    )
+
+    if premium:
+        user.premium = 1
+    else:
+        raise HTTPException(
+            status_code=HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A wrong signup code was entered",
+        )
+
     update_user(user)
     return user
