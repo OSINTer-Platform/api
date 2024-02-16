@@ -11,7 +11,7 @@ from .routers import user
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
-    root_path="/",
+    root_path="",
 )
 
 app.add_middleware(
