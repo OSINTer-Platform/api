@@ -45,7 +45,6 @@ class FrontendConfig(BaseConfig):
 
         self.EMAIL_SERVER_AVAILABLE = self.get_env_bool("EMAIL_SERVER_AVAILABLE")
 
-        self.COUCHDB_URL, self.COUCHDB_NAME = self.get_couchdb_details()
         self.couch_conn = Server(self.COUCHDB_URL)[self.COUCHDB_NAME]
 
         self.id = uuid4()
@@ -61,16 +60,3 @@ class FrontendConfig(BaseConfig):
     @staticmethod
     def get_env_bool(key: str) -> bool:
         return bool(os.environ.get(key)) or False
-
-    @staticmethod
-    def get_couchdb_details() -> tuple[str, str]:
-        """
-        Returns tuble[COUCHDB_URL, COUCHDB_NAME]
-        """
-        COUCHDB_URL = (
-            os.environ.get("COUCHDB_URL") or "http://admin:admin@localhost:5984/"
-        )
-
-        COUCHDB_NAME = os.environ.get("USER_DB_NAME") or "osinter_users"
-
-        return COUCHDB_URL, COUCHDB_NAME
