@@ -8,18 +8,8 @@ from .routers.subscriptions import feeds, collections
 from .routers import user_items
 from .routers import user
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app = FastAPI(
     root_path="",
-)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
 )
 
 
