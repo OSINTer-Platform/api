@@ -9,8 +9,29 @@ from app.common import ArticleSortBy
 
 
 class Base(BaseModel):
-    def db_serialize(self, **options):
-        return self.model_dump(mode="json", **options)
+    def db_serialize(
+        self,
+        *,
+        include: set[str] | None = None,
+        exclude: set[str] | None = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        round_trip: bool = False,
+        warnings: bool = True
+    ) -> dict[str, Any]:
+        return self.model_dump(
+            mode="json",
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            round_trip=round_trip,
+            warnings=warnings,
+        )
 
 
 # Used for mapping the _id field of the DB model to the schemas id field
@@ -109,8 +130,32 @@ class User(ORMBase):
 
         return id_list
 
-    def db_serialize(self, **options):
-        return self.model_dump(mode="json", exclude={"feeds", "collections"}, **options)
+    def db_serialize(
+        self,
+        *,
+        include: set[str] | None = None,
+        exclude: set[str] | None = None,
+        by_alias: bool = False,
+        exclude_unset: bool = False,
+        exclude_defaults: bool = False,
+        exclude_none: bool = False,
+        round_trip: bool = False,
+        warnings: bool = True
+    ) -> dict[str, Any]:
+        if exclude:
+            exclude = exclude.union({"feeds", "collections"})
+
+        return self.model_dump(
+            mode="json",
+            include=include,
+            exclude=exclude,
+            by_alias=by_alias,
+            exclude_unset=exclude_unset,
+            exclude_defaults=exclude_defaults,
+            exclude_none=exclude_none,
+            round_trip=round_trip,
+            warnings=warnings,
+        )
 
 
 class AuthUser(User):
