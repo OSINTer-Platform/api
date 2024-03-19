@@ -1,6 +1,7 @@
 from typing import Any, Callable
 from urllib.parse import parse_qsl, urlencode
 from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from .routers import auth, ml
 from .routers.documents import articles
@@ -25,6 +26,11 @@ async def filter_blank_query_params(
         )
         scope["query_string"] = urlencode(filtered_query_params).encode("latin-1")
     return await call_next(request)
+
+
+@app.exception_handler(Exception)
+async def custom_internal_error_handler(_: Any, __: Any) -> JSONResponse:
+    return JSONResponse({"detail": "Internal server error"}, 500)
 
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
