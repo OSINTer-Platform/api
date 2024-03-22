@@ -16,7 +16,10 @@ from app.users.auth import (
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
 
+from .payment import router as payment_router
+
 router = APIRouter()
+router.include_router(payment_router, tags=["payment"])
 
 
 @router.get("/")

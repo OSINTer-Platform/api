@@ -8,6 +8,7 @@ from .routers.documents import articles
 from .routers.subscriptions import feeds, collections
 from .routers import user_items
 from .routers import user
+from .routers import payment
 
 app = FastAPI(
     root_path="",
@@ -44,6 +45,8 @@ app.include_router(collections.router, prefix="/my/collections", tags=["collecti
 app.include_router(user.router, prefix="/my/user", tags=["user"])
 
 app.include_router(user_items.router, prefix="/user-items", tags=["user-items"])
+
+app.include_router(payment.router, prefix="/payment", tags=["payment"])
 
 ml.mount_routers()
 app.include_router(ml.router, prefix="/ml", tags=["ml"])
