@@ -74,6 +74,7 @@ class Feed(ItemBase):
     sort_by = TextField()
     sort_order = TextField()
 
+    semantic_search = TextField()
     search_term = TextField()
     highlight = BooleanField()
 
