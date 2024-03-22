@@ -32,6 +32,29 @@ class User(Document):  # type: ignore[misc]
         )
     )
 
+    payment = DictField(
+        Mapping.build(
+            stripe_id=TextField(default=""),
+            action=DictField(
+                Mapping.build(
+                    last_updated=IntegerField(default=0),
+                    required=BooleanField(default=False),
+                    payment_intent=TextField(default=""),
+                    invoice_url=TextField(default=""),
+                )
+            ),
+            subscription=DictField(
+                Mapping.build(
+                    last_updated=IntegerField(default=0),
+                    stripe_product_id=TextField(default=""),
+                    stripe_subscription_id=TextField(default=""),
+                    state=TextField(default=""),
+                    level=TextField(default=""),
+                )
+            ),
+        )
+    )
+
     # AuthUser
     hashed_password = TextField()
     hashed_email = TextField()
@@ -55,6 +78,16 @@ class User(Document):  # type: ignore[misc]
         function(doc) {
             if(doc.type == "user") {
                 emit(doc.username, doc)
+            }
+        }""",
+    )
+
+    by_stripe_id = ViewField(
+        "users",
+        """
+        function(doc) {
+            if(doc.type == "user" && doc.payment.stripe_id.length > 0) {
+                emit(doc.payment.stripe_id, doc)
             }
         }""",
     )
@@ -182,6 +215,7 @@ DBModels = TypeVar("DBModels", Feed, Collection, User)
 views: list[ViewDefinition] = [
     User.all,
     User.by_username,
+    User.by_stripe_id,
     Survey.all,
     Survey.by_user_id,
     Feed.all,

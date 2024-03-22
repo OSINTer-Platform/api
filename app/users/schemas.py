@@ -103,6 +103,25 @@ class PartialUserSettings(ORMBase):
     list_render_mode: Literal["large"] | Literal["title"] | None = None
 
 
+class UserPayment(ORMBase):
+    class Action(ORMBase):
+        last_updated: int = 0
+        required: bool = False
+        payment_intent: str = ""
+        invoice_url: str = ""
+
+    class Subscription(ORMBase):
+        last_updated: int = 0
+        stripe_product_id: str = ""
+        stripe_subscription_id: str = ""
+        level: Literal["", "pro"] = ""
+        state: Literal["", "active", "past_due", "closed"] = ""
+
+    stripe_id: str = ""
+    action: Action = Action()
+    subscription: Subscription = Subscription()
+
+
 class User(ORMBase):
     id: UUID = Field(alias="_id")
     username: str
@@ -118,6 +137,7 @@ class User(ORMBase):
     feeds: list[Feed] = []
     collections: list[Collection] = []
 
+    payment: UserPayment
     settings: UserSettings
 
     type: Literal["user"] = "user"
