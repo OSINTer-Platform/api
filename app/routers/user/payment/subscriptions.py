@@ -84,3 +84,15 @@ def cancel_subscription(user: User = Depends(get_user_from_token)) -> None:
         raise HTTPException(
             HTTP_404_NOT_FOUND, "User doesn't have any active subscriptions"
         )
+
+
+@router.post("/subscription/acknowledge-close")
+def acknowledge_subscription_closing(user: User = Depends(get_user_from_token)) -> None:
+    if (
+        user.payment.subscription.state != "closed"
+        and user.payment.subscription.state != ""
+    ):
+        raise HTTPException(HTTP_400_BAD_REQUEST, "User subscription isn't closed")
+
+    user.payment.subscription.state = ""
+    update_user(user)
