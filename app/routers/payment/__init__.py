@@ -16,6 +16,8 @@ products: dict[str, stripe.Product] = {
     obj["id"]: obj for obj in stripe.Product.list().data
 }
 
+prices: dict[str, stripe.Price] = {obj["id"]: obj for obj in stripe.Price.list().data}
+
 
 def get_user_from_stripe_id(id: str) -> tuple[schemas.User, str | None]:
     user_obj: models.User = list(
@@ -87,10 +89,8 @@ def handle_subscription_change(e: stripe.Event) -> None:
 
 
 @router.get("/prices", response_model=None)
-def get_prices() -> list[stripe.Price]:
-    prices = stripe.Price.list(lookup_keys=["pro-month"])
-
-    return prices.data
+def get_prices() -> dict[str, stripe.Price]:
+    return prices
 
 
 @router.get("/products", response_model=None)
