@@ -35,10 +35,11 @@ class User(Document):  # type: ignore[misc]
     payment = DictField(
         Mapping.build(
             stripe_id=TextField(default=""),
-            action=DictField(
+            invoice=DictField(
                 Mapping.build(
                     last_updated=IntegerField(default=0),
-                    required=BooleanField(default=False),
+                    action_required=BooleanField(default=False),
+                    action_type=TextField(default=""),
                     payment_intent=TextField(default=""),
                     invoice_url=TextField(default=""),
                 )

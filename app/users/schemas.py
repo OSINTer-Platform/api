@@ -104,9 +104,10 @@ class PartialUserSettings(ORMBase):
 
 
 class UserPayment(ORMBase):
-    class Action(ORMBase):
+    class Invoice(ORMBase):
         last_updated: int = 0
-        required: bool = False
+        action_required: bool = False
+        action_type: Literal["", "authenticate", "update"] = ""
         payment_intent: str = ""
         invoice_url: str = ""
 
@@ -118,7 +119,7 @@ class UserPayment(ORMBase):
         state: Literal["", "active", "past_due", "closed"] = ""
 
     stripe_id: str = ""
-    action: Action = Action()
+    invoice: Invoice = Invoice()
     subscription: Subscription = Subscription()
 
 

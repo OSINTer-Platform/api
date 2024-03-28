@@ -30,15 +30,16 @@ def handle_subscription_change(e: stripe.Event) -> None:
     data = e.data["object"]
     user, rev = get_user_from_stripe_id(data["customer"])
 
-    root_obj: schemas.UserPayment.Subscription | schemas.UserPayment.Action
+    if e.type.startswith("invoice"):
+        if user.payment.invoice.last_updated > data["created"]:
+            return
+        elif data["billing_reason"] == "subscription_create":
+            if e.type in ["invoice.payment_action_required", "invoice.payment_failed"]:
+                return
 
-    if e.type in ["invoice.paid", "invoice.payment_action_required"]:
-        root_obj = user.payment.action
-    else:
-        root_obj = user.payment.subscription
-
-    if root_obj.last_updated > data["created"]:
-        return
+    elif e.type.startswith("customer.subscriptions"):
+        if user.payment.subscription.last_updated > data["created"]:
+            return
 
     match e.type:
         case "customer.subscription.updated":
@@ -64,26 +65,31 @@ def handle_subscription_change(e: stripe.Event) -> None:
 
         case "customer.subscription.deleted":
             user.payment.subscription = schemas.UserPayment.Subscription(state="closed")
-            user.payment.action = schemas.UserPayment.Action()
+            user.payment.invoice = schemas.UserPayment.Invoice()
+
+        case "invoice.payment_failed":
+            user.payment.invoice.action_required = True
+            user.payment.invoice.action_type = "update"
+            user.payment.invoice.payment_intent = data["payment_intent"]
 
         case "invoice.payment_action_required":
-            user.payment.action = schemas.UserPayment.Action(
-                required=True,
-                payment_intent=data["payment_intent"],
-                invoice_url=data["hosted_invoice_url"],
-            )
+            user.payment.invoice.action_required = True
+            user.payment.invoice.action_type = "authenticate"
+            user.payment.invoice.payment_intent = data["payment_intent"]
 
         case "invoice.paid":
-            user.payment.action = schemas.UserPayment.Action(
-                last_updated=data["created"],
-                required=False,
-            )
+            user.payment.invoice.action_required = False
+            user.payment.invoice.action_type = ""
+            user.payment.invoice.payment_intent = ""
 
     if e.type.startswith("customer.subscription"):
         user.payment.subscription.stripe_subscription_id = data["id"]
         user.payment.subscription.stripe_product_id = data["plan"]["product"]
+        user.payment.subscription.last_updated = data["created"]
 
-    root_obj.last_updated = data["created"]
+    elif e.type.startswith("invoice"):
+        user.payment.invoice.invoice_url = data["hosted_invoice_url"]
+        user.payment.invoice.last_updated = data["created"]
 
     update_user(user, rev)
 
@@ -118,7 +124,9 @@ async def handle_stripe_webhook(
         "customer.subscription.created",
         "customer.subscription.updated",
         "customer.subscription.deleted",
+        "invoice.created",
         "invoice.payment_action_required",
+        "invoice.payment_failed",
         "invoice.paid",
     ]:
         handle_subscription_change(event)
