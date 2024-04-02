@@ -56,6 +56,8 @@ def handle_subscription_change(e: stripe.Event) -> None:
                 "incomplete_expired",
                 "incomplete",
             ]:
+                user.payment.subscription.stripe_product_id = ""
+                user.payment.subscription.stripe_subscription_id = ""
                 user.payment.subscription.level = ""
                 user.payment.subscription.state = "closed"
             elif data["status"] in ["past_due"]:
