@@ -11,7 +11,7 @@ from starlette.status import (
 import stripe
 
 from app.users.auth import (
-    get_user_from_token,
+    ensure_user_from_token,
 )
 from app.users.crud import update_user
 from app.users.schemas import User
@@ -31,7 +31,7 @@ class SubscriptionCreation(TypedDict):
 
 @router.post("/subscription")
 def create_subscription(
-    user: User = Depends(get_user_from_token),
+    user: User = Depends(ensure_user_from_token),
     email: str | None = Body(None),
     price_id: str = Body(...),
 ) -> SubscriptionCreation:
@@ -77,7 +77,7 @@ def create_subscription(
 
 
 @router.delete("/subscription")
-def cancel_subscription(user: User = Depends(get_user_from_token)) -> None:
+def cancel_subscription(user: User = Depends(ensure_user_from_token)) -> None:
     if user.payment.subscription.stripe_subscription_id:
         stripe.Subscription.cancel(user.payment.subscription.stripe_subscription_id)
     else:
@@ -87,7 +87,9 @@ def cancel_subscription(user: User = Depends(get_user_from_token)) -> None:
 
 
 @router.post("/subscription/acknowledge-close")
-def acknowledge_subscription_closing(user: User = Depends(get_user_from_token)) -> None:
+def acknowledge_subscription_closing(
+    user: User = Depends(ensure_user_from_token),
+) -> None:
     if (
         user.payment.subscription.state != "closed"
         and user.payment.subscription.state != ""

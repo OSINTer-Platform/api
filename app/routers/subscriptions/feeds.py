@@ -1,7 +1,7 @@
 from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
-from app.users.auth import get_user_from_token
+from app.users.auth import ensure_user_from_token
 
 from ...users import crud, schemas
 
@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/list")
 def get_my_subscribed_feeds(
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> dict[str, schemas.Feed]:
     return crud.get_feeds(current_user)
 
@@ -23,7 +23,7 @@ def create_feed(
     feed_name: str,
     feed_params: schemas.FeedCreate,
     subscribe: bool = Query(True),
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> schemas.Feed:
     feed: schemas.Feed = crud.create_feed(
         feed_params=feed_params, name=feed_name, owner=current_user.id
@@ -51,7 +51,7 @@ def create_feed(
 @router.put("/subscription/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
 def subscribe_to_collection(
     feed_id: UUID,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> None:
     crud.modify_user_subscription(
         user_id=current_user.id, ids={feed_id}, action="subscribe", item_type="feed"
@@ -61,7 +61,7 @@ def subscribe_to_collection(
 @router.delete("/subscription/{feed_id}", status_code=status.HTTP_204_NO_CONTENT)
 def unsubscribe_from_collection(
     feed_id: UUID,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> None:
     crud.modify_user_subscription(
         user_id=current_user.id, ids={feed_id}, action="unsubscribe", item_type="feed"
