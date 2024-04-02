@@ -8,11 +8,13 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from app import config_options
-from app.dependencies import FastapiArticleSearchQuery
-from app.users.auth import require_premium
+from app.authorization import UserAuthorizer
+from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
 from modules.objects import BaseArticle
 
-router = APIRouter(dependencies=[Depends(require_premium)])
+AssistantAuthorizer = UserAuthorizer(["assitant"])
+
+router = APIRouter(dependencies=[Depends(AssistantAuthorizer)])
 
 openai_client = OpenAI(api_key=config_options.OPENAI_KEY)
 
@@ -74,9 +76,11 @@ def continue_chat(
 
 @router.get("/chat/ask")
 def generate_answer_to_question(
-    question: str, visible: bool = Query(True), id: UUID = Query(default_factory=uuid4)
+    question: str,
+    visible: bool = Query(True),
+    id: UUID = Query(default_factory=uuid4),
 ) -> ChatList:
-    q = FastapiArticleSearchQuery(limit=3, semantic_search=question, premium=True)
+    q = FastapiArticleSearchQuery([], limit=3, semantic_search=question)
     articles = config_options.es_article_client.query_documents(q, True)[0]
 
     # Truncates at 3200 characthers as each 4'th characther ~ 1 token

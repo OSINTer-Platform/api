@@ -1,19 +1,17 @@
 from datetime import date
 from io import BytesIO
-from typing import Any
-from uuid import UUID
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
 
+from app.authorization import UserAuthorizer, get_allowed_areas
 from app.users.auth import (
-    check_premium,
-    get_id_from_token,
     get_user_from_token,
-    require_premium,
 )
 from app.users.crud import modify_collection
+from app.users.schemas import User
 from app.utils.profiles import ProfileDetails, collect_profile_details
 
 from modules.files import article_to_md
@@ -24,6 +22,8 @@ from ....common import EsID, HTTPError
 from ....dependencies import (
     FastapiArticleSearchQuery,
     FastapiQueryParamsArticleSearchQuery,
+    SourceExclusions,
+    get_source_exclusions,
 )
 from ....utils.documents import convert_query_to_zip, send_file
 from .rss import router as rss_router
@@ -33,12 +33,10 @@ router.include_router(rss_router, tags=["rss"])
 
 
 @router.get("/newest")
-async def get_newest_articles(
-    premium: bool = Depends(check_premium),
-) -> list[BaseArticle]:
+async def get_newest_articles(source_exclusions: SourceExclusions) -> list[BaseArticle]:
     return config_options.es_article_client.query_documents(
         FastapiArticleSearchQuery(
-            limit=50, sort_by="publish_date", sort_order="desc", premium=premium
+            source_exclusions, limit=50, sort_by="publish_date", sort_order="desc"
         ),
         False,
     )[0]
@@ -88,10 +86,10 @@ articleNotFound: dict[str | int, dict[str, Any]] = {
 }
 
 
-def get_single_article(id: EsID, premium: bool = Depends(check_premium)) -> FullArticle:
+def get_single_article(id: EsID, source_exclusions: SourceExclusions) -> FullArticle:
     try:
         return config_options.es_article_client.query_documents(
-            FastapiArticleSearchQuery(limit=1, ids={id}, premium=premium), True
+            FastapiArticleSearchQuery(source_exclusions, limit=1, ids={id}), True
         )[0][0]
     except IndexError:
         raise HTTPException(
@@ -122,17 +120,16 @@ def download_single_markdown_file(
     },
 )
 async def get_article_content(
-    id: EsID, user_id: UUID | None = Depends(get_id_from_token)
+    id: EsID,
+    user: User | None = Depends(get_user_from_token),
 ) -> FullArticle:
-    article = get_single_article(id)
-
-    config_options.es_article_client.increment_read_counter(id)
+    source_exclusions = get_source_exclusions(get_allowed_areas(user))
+    article = get_single_article(id, source_exclusions)
+    config_options.es_article_client.increment_read_counter(article.id)
 
     try:
-        if user_id:
-            user = get_user_from_token(user_id)
-            if user.already_read:
-                modify_collection(user.already_read, set([id]), user, "extend")
+        if user and user.already_read:
+            modify_collection(user.already_read, set([article.id]), user, "extend")
 
     except HTTPException:
         pass
@@ -140,15 +137,20 @@ async def get_article_content(
     return article
 
 
-@router.get("/{id}/similar", dependencies=[Depends(require_premium)])
+@router.get("/{id}/similar")
 async def get_similar_articles(
-    article: FullArticle = Depends(get_single_article),
+    id: EsID, user: Annotated[User, Depends(UserAuthorizer(["similar"]))]
 ) -> list[BaseArticle]:
+    source_exclusions = get_source_exclusions(get_allowed_areas(user))
+    article = get_single_article(id, source_exclusions)
+
     if len(article.similar) == 0:
         return []
 
     articles = config_options.es_article_client.query_documents(
-        FastapiArticleSearchQuery(limit=10_000, ids=set(article.similar), premium=True),
+        FastapiArticleSearchQuery(
+            source_exclusions, limit=10_000, ids=set(article.similar)
+        ),
         False,
     )[0]
 

@@ -64,7 +64,14 @@ def ensure_id_from_token(
     return id
 
 
-def get_user_from_token(
+def get_user_from_token(id: None | UUID = Depends(get_id_from_token)) -> User | None:
+    if not id:
+        return None
+
+    return get_full_user_object(id)
+
+
+def ensure_user_from_token(
     id: UUID = Depends(ensure_id_from_token),
 ) -> User:
     user = get_full_user_object(id)
@@ -78,7 +85,7 @@ def get_user_from_token(
     return user
 
 
-def get_auth_user_from_token(
+def ensure_auth_user_from_token(
     id: UUID = Depends(ensure_id_from_token),
 ) -> User:
     user = get_full_user_object(id, auth=True)
@@ -90,22 +97,3 @@ def get_auth_user_from_token(
         )
 
     return user
-
-
-def check_premium(id: UUID | None = Depends(get_id_from_token)) -> bool:
-    if not id:
-        return False
-
-    user = get_full_user_object(id)
-    if not user:
-        return False
-
-    return user.premium > 0
-
-
-def require_premium(premium: bool = Depends(check_premium)) -> None:
-    if not premium:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User is not a premium user",
-        )

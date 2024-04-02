@@ -10,10 +10,11 @@ from app.users import schemas
 
 from app.users.auth import (
     create_access_token,
-    get_user_from_token,
+    ensure_user_from_token,
 )
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
+from app.authorization import Area, levels_access
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -26,6 +27,11 @@ router = APIRouter()
 # Should also check whether mail server is active and available, once implemented
 async def check_mail_available() -> bool:
     return config_options.EMAIL_SERVER_AVAILABLE
+
+
+@router.get("/allowed-areas")
+def get_allowed_areas() -> dict[str, list[Area]]:
+    return levels_access
 
 
 @router.get("/forgotten-password")
@@ -82,7 +88,7 @@ async def send_password_recovery_mail(
 
 @router.get("/status")
 async def get_auth_status(
-    current_user: User = Depends(get_user_from_token),
+    current_user: User = Depends(ensure_user_from_token),
 ) -> User:
     return current_user
 
@@ -90,7 +96,7 @@ async def get_auth_status(
 @router.post("/logout")
 async def logout(
     response: Response,
-    _: User = Depends(get_user_from_token),
+    _: User = Depends(ensure_user_from_token),
 ) -> None:
     response.delete_cookie(key="access_token")
     return

@@ -1,13 +1,29 @@
-from typing import Annotated, Literal, Self, Set
+from typing import Annotated, Literal, Self, Set, TypeAlias
 from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
+from app.authorization import Area, get_allowed_areas
 from app.users.schemas import Collection, FeedCreate
 
 from modules.elastic import ArticleSearchQuery, CVESearchQuery
 
 from app import config_options
 from app.common import CVESortBy, EsIDList, ArticleSortBy
-from app.users.auth import check_premium
+
+
+def get_source_exclusions(
+    allowed_areas: Annotated[list[Area], Depends(get_allowed_areas)]
+) -> list[str]:
+    areas_to_fields: dict[Area, str] = {
+        "map": "ml.coordinates",
+        "cluster": "ml.cluster",
+        "similar": "similar",
+        "summary": "summary",
+    }
+
+    return [v for k, v in areas_to_fields.items() if not k in allowed_areas]
+
+
+SourceExclusions: TypeAlias = Annotated[list[str], Depends(get_source_exclusions)]
 
 
 class FastapiArticleSearchQuery(ArticleSearchQuery):
@@ -17,6 +33,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
 
     def __init__(
         self,
+        exclusions: SourceExclusions,
         limit: int = 0,
         sort_by: ArticleSortBy | None = "",
         sort_order: Literal["desc", "asc"] = "desc",
@@ -29,7 +46,6 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         highlight: bool = False,
         highlight_symbol: str = "**",
         cluster_id: str | None = None,
-        premium: bool = Depends(check_premium),
     ):
         if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
             raise HTTPException(
@@ -50,13 +66,14 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
-            custom_exclude_fields=None if premium else ["summary", "similar", "ml"],
+            custom_exclude_fields=exclusions,
         )
 
     @classmethod
-    def from_item(cls, item: FeedCreate | Collection, premium: bool) -> Self:
+    def from_item(cls, item: FeedCreate | Collection, exclusions: list[str]) -> Self:
         if isinstance(item, FeedCreate):
             return cls(
+                exclusions=exclusions,
                 limit=item.limit if item.limit else 0,
                 sort_by=item.sort_by,
                 sort_order=item.sort_order,
@@ -66,15 +83,14 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
                 first_date=item.first_date,
                 last_date=item.last_date,
                 sources=item.sources,
-                premium=premium,
             )
         elif isinstance(item, Collection):
             return cls(
+                exclusions=exclusions,
                 limit=10_000 if len(item.ids) < 10_000 else 0,
                 sort_by="publish_date",
                 sort_order="desc",
                 ids=item.ids,
-                premium=premium,
             )
         else:
             raise NotImplemented
@@ -83,6 +99,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
 class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
     def __init__(
         self,
+        exclusions: SourceExclusions,
         limit: int = Query(0),
         sort_by: ArticleSortBy | None = Query(""),
         sort_order: Literal["desc", "asc"] = Query("desc"),
@@ -95,9 +112,9 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
         cluster_id: str | None = Query(None),
-        premium: bool = Depends(check_premium),
     ):
         super().__init__(
+            exclusions=exclusions,
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
@@ -110,7 +127,6 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
-            premium=premium,
         )
 
 

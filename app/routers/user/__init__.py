@@ -10,8 +10,8 @@ from app.users import schemas
 
 from app.users.auth import (
     ensure_id_from_token,
-    get_auth_user_from_token,
-    get_user_from_token,
+    ensure_auth_user_from_token,
+    ensure_user_from_token,
 )
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
@@ -24,7 +24,7 @@ router.include_router(payment_router, tags=["payment"])
 
 @router.get("/")
 async def get_auth_status(
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> schemas.User:
     return current_user
 
@@ -68,7 +68,7 @@ def change_credentials(
 @router.post("/settings")
 def change_settings(
     settings: schemas.PartialUserSettings,
-    user: schemas.User = Depends(get_auth_user_from_token),
+    user: schemas.User = Depends(ensure_auth_user_from_token),
 ) -> schemas.User:
     user.settings = user.settings.model_copy(
         update=settings.model_dump(exclude_unset=True)
@@ -80,7 +80,7 @@ def change_settings(
 @router.post("/signup-code")
 def submit_signup_code(
     code: dict[Literal["code"], str] = Body(),
-    user: schemas.User = Depends(get_auth_user_from_token),
+    user: schemas.User = Depends(ensure_auth_user_from_token),
 ) -> schemas.User:
     if user.premium > 0:
         return user
