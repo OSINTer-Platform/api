@@ -53,7 +53,8 @@ class FrontendConfig(BaseConfig):
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
 
-        self.SIGNUP_CODE = os.environ.get("SIGNUP_KEY", None)
+        signup_code = os.environ.get("SIGNUP_CODES", None)
+        self.SIGNUP_CODES = signup_code.split(",") if signup_code else []
 
         self.hasher = PasswordHasher()
 

@@ -82,11 +82,7 @@ def submit_signup_code(
     if user.premium > 0:
         return user
 
-    premium = (
-        bool(config_options.SIGNUP_CODE) and config_options.SIGNUP_CODE == code["code"]
-    )
-
-    if premium:
+    if code["code"] in config_options.SIGNUP_CODES:
         user.premium = 1
     else:
         raise HTTPException(

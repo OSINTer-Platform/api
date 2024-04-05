@@ -201,15 +201,15 @@ async def get_token(
 async def signup(
     form_data: SignupForm = Depends(),
 ) -> DefaultResponse:
-    if form_data.signup_code and config_options.SIGNUP_CODE != form_data.signup_code:
+    if (
+        form_data.signup_code
+        and form_data.signup_code not in config_options.SIGNUP_CODES
+    ):
         raise HTTPException(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,
             detail="A wrong signup code was entered",
         )
-    premium = (
-        bool(config_options.SIGNUP_CODE)
-        and config_options.SIGNUP_CODE == form_data.signup_code
-    )
+    premium = form_data.signup_code in config_options.SIGNUP_CODES
     if create_user(
         username=form_data.username,
         password=form_data.password,
