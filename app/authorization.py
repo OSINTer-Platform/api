@@ -14,7 +14,7 @@ Area: TypeAlias = Literal[
 ]
 
 levels_access: dict[str, list[Area]] = {
-    "pro": ["assitant", "cluster", "dashboard", "map", "similar", "summary"]
+    "pro": ["assistant", "cluster", "dashboard", "map", "similar", "summary"]
 }
 
 areas: set[Area] = {area for areas in levels_access.values() for area in areas}

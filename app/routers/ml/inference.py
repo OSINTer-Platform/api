@@ -12,7 +12,7 @@ from app.authorization import UserAuthorizer
 from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
 from modules.objects import BaseArticle
 
-AssistantAuthorizer = UserAuthorizer(["assitant"])
+AssistantAuthorizer = UserAuthorizer(["assistant"])
 
 router = APIRouter(dependencies=[Depends(AssistantAuthorizer)])
 
