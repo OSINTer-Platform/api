@@ -21,10 +21,7 @@ areas: set[Area] = {area for areas in levels_access.values() for area in areas}
 
 
 def authorize(level: str, area: Area) -> bool:
-    if level in levels_access and area in levels_access[level]:
-        return False
-
-    return False
+    return level in levels_access and area in levels_access[level]
 
 
 def get_allowed_areas(
