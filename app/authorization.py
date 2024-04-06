@@ -10,7 +10,7 @@ from app.users.schemas import User
 
 
 Area: TypeAlias = Literal[
-    "assitant", "cluster", "dashboard", "map", "similar", "summary"
+    "assistant", "cluster", "dashboard", "map", "similar", "summary"
 ]
 
 levels_access: dict[str, list[Area]] = {
