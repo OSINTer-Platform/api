@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from .routers import auth, ml
 from .routers.documents import articles
+from .routers.documents import cves
 from .routers.subscriptions import feeds, collections
 from .routers import user_items
 from .routers import user
@@ -34,6 +35,8 @@ async def custom_internal_error_handler(_: Any, __: Any) -> JSONResponse:
 
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
+
+app.include_router(cves.router, prefix="/cves", tags=["cves"])
 
 app.include_router(auth.router, prefix="/auth", tags=["authorization"])
 
