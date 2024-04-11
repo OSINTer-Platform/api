@@ -1,12 +1,12 @@
-from typing import Literal, Self
-from fastapi import Depends, HTTPException, Query, status
+from typing import Annotated, Literal, Self, Set
+from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
 from app.users.schemas import Collection, FeedCreate
 
-from modules.elastic import ArticleSearchQuery
+from modules.elastic import ArticleSearchQuery, CVESearchQuery
 
 from app import config_options
-from app.common import EsIDList, ArticleSortBy
+from app.common import CVESortBy, EsIDList, ArticleSortBy
 from app.users.auth import check_premium
 
 
@@ -111,4 +111,28 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
             premium=premium,
+        )
+
+
+class FastapiCVESearchQuery(CVESearchQuery):
+    def __init__(
+        self,
+        limit: Annotated[int, Body()] = 0,
+        sort_by: Annotated[CVESortBy | None, Body()] = "document_count",
+        sort_order: Annotated[Literal["desc", "asc"], Body()] = "desc",
+        search_term: Annotated[str | None, Body()] = None,
+        cves: Annotated[Set[str] | None, Body()] = None,
+        ids: Annotated[EsIDList | None, Body()] = None,
+        highlight: Annotated[bool, Body()] = False,
+        highlight_symbol: Annotated[str, Body()] = "**",
+    ):
+        super().__init__(
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search_term=search_term,
+            cves=cves,
+            ids=ids,
+            highlight=highlight,
+            highlight_symbol=highlight_symbol,
         )

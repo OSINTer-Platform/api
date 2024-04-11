@@ -1,8 +1,9 @@
 from typing import Annotated
-from fastapi import APIRouter, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from starlette.status import HTTP_404_NOT_FOUND
 
 from app import config_options
+from app.dependencies import FastapiCVESearchQuery
 from modules.elastic import ArticleSearchQuery, CVESearchQuery
 from modules.objects.articles import BaseArticle, FullArticle
 from modules.objects.cves import BaseCVE, FullCVE
@@ -42,3 +43,11 @@ def get_cve_articles(
     return config_options.es_article_client.query_documents(
         ArticleSearchQuery(limit=0, ids={id for id in cve.documents}), complete
     )[0]
+
+
+@router.post("/search")
+def search_cves(
+    query: Annotated[FastapiCVESearchQuery, Depends(FastapiCVESearchQuery)],
+    complete: bool = False,
+) -> list[BaseCVE] | list[FullCVE]:
+    return config_options.es_cve_client.query_documents(query, complete)[0]
