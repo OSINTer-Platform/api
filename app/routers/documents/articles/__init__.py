@@ -23,8 +23,8 @@ from ....dependencies import (
     FastapiArticleSearchQuery,
     FastapiQueryParamsArticleSearchQuery,
     SourceExclusions,
-    get_source_exclusions,
 )
+from app.authorization import get_source_exclusions
 from ....utils.documents import convert_query_to_zip, send_file
 from .rss import router as rss_router
 

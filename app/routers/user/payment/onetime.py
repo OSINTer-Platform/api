@@ -6,7 +6,8 @@ from typing_extensions import TypedDict
 
 import stripe
 
-from app.users.auth import ensure_id_from_token
+from app.users.auth import ensure_user_from_token
+from app.users.schemas import User
 
 router = APIRouter()
 
@@ -35,7 +36,7 @@ def get_payment_types() -> dict[str, PaymentDetails]:
 
 @router.post("/create-payment-intent")
 def create_payment_intent(
-    _: UUID = Depends(ensure_id_from_token), payment_type: str = Query(...)
+    _: User = Depends(ensure_user_from_token), payment_type: str = Query(...)
 ) -> PaymentDetailsWithIntent:
     if payment_type not in payment_options:
         raise HTTPException(

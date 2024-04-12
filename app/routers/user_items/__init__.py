@@ -9,7 +9,8 @@ from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.common import EsIDList, HTTPError
-from app.dependencies import FastapiArticleSearchQuery, get_source_exclusions
+from app.dependencies import FastapiArticleSearchQuery
+from app.authorization import get_source_exclusions
 from app.users import crud, schemas
 from app.users.auth import ensure_user_from_token
 from app.utils.documents import convert_query_to_zip, send_file

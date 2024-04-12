@@ -3,6 +3,8 @@ from urllib.parse import parse_qsl, urlencode
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.dependencies import UserCache
+
 from .routers import auth, ml
 from .routers.documents import articles
 from .routers.documents import cves
@@ -28,6 +30,12 @@ async def filter_blank_query_params(
             keep_blank_values=False,
         )
         scope["query_string"] = urlencode(filtered_query_params).encode("latin-1")
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def attach_user_obj(request: Request, call_next: Callable[..., Any]) -> Any:
+    request.state.user_cache = UserCache()
     return await call_next(request)
 
 

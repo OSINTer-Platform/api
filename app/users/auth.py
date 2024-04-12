@@ -1,16 +1,23 @@
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Annotated, Any, cast
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Request
 from jose import JWTError, jwt
+from starlette.status import HTTP_401_UNAUTHORIZED
 
 from app import config_options
 from app.utils.auth import OAuth2PasswordBearerWithCookie
-from app.users.crud import get_full_user_object
-from app.users.schemas import User
+from app.users.schemas import AuthUser, User
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
+
+
+auth_exception = HTTPException(
+    HTTP_401_UNAUTHORIZED,
+    detail="User is not authorized",
+    headers={"WWW-Authenticate": "Bearer"},
+)
 
 
 def create_access_token(
@@ -51,49 +58,39 @@ async def get_id_from_token(request: Request) -> UUID | None:
         return None
 
 
-def ensure_id_from_token(
-    id: None | UUID = Depends(get_id_from_token),
-) -> UUID:
-    if id is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return id
-
-
-def get_user_from_token(id: None | UUID = Depends(get_id_from_token)) -> User | None:
+def get_user_from_token(
+    request: Request, id: Annotated[None | UUID, Depends(get_id_from_token)]
+) -> User | None:
     if not id:
         return None
 
-    return get_full_user_object(id)
+    try:
+        return ensure_user_from_token(request, id)
+    except:
+        return None
 
 
 def ensure_user_from_token(
-    id: UUID = Depends(ensure_id_from_token),
+    request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
 ) -> User:
-    user = get_full_user_object(id)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if not id:
+        raise auth_exception
 
-    return user
+    user = cast(User | None, request.state.user_cache.get_user(id))
+    if user:
+        return user
+    else:
+        raise auth_exception
 
 
 def ensure_auth_user_from_token(
-    id: UUID = Depends(ensure_id_from_token),
+    request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
 ) -> User:
-    user = get_full_user_object(id, auth=True)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    if not id:
+        raise auth_exception
 
-    return user
+    user = request.state.user_cache.get_auth_user(id)
+
+    if not user:
+        raise auth_exception
+    return cast(AuthUser, user)

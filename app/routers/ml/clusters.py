@@ -18,7 +18,8 @@ from modules.objects import (
 from ... import config_options
 from ...common import EsID, HTTPError
 from ...utils.documents import convert_query_to_zip, send_file
-from app.dependencies import FastapiArticleSearchQuery, get_source_exclusions
+from app.dependencies import FastapiArticleSearchQuery
+from app.authorization import get_source_exclusions
 
 ClusterAuthorizer = UserAuthorizer(["cluster"])
 router = APIRouter()

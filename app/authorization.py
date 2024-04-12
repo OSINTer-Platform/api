@@ -1,11 +1,9 @@
 from typing import Annotated, Literal, TypeAlias
-from uuid import UUID
 
-from fastapi import Depends, HTTPException
-from starlette.status import HTTP_401_UNAUTHORIZED
+from fastapi import Depends
 
-from app.users.auth import get_id_from_token, get_user_from_token
-from app.users.crud import get_full_user_object
+from app.users.auth import ensure_user_from_token
+from app.users.auth import get_user_from_token, auth_exception
 from app.users.schemas import User
 
 
@@ -39,22 +37,24 @@ def get_allowed_areas(
     return []
 
 
+def get_source_exclusions(
+    allowed_areas: Annotated[list[Area], Depends(get_allowed_areas)]
+) -> list[str]:
+    areas_to_fields: dict[Area, str] = {
+        "map": "ml.coordinates",
+        "cluster": "ml.cluster",
+        "similar": "similar",
+        "summary": "summary",
+    }
+
+    return [v for k, v in areas_to_fields.items() if not k in allowed_areas]
+
+
 class UserAuthorizer:
     def __init__(self, areas: list[Area]):
         self.areas: list[Area] = areas
 
-    def __call__(self, id: Annotated[UUID | None, Depends(get_id_from_token)]) -> User:
-        unathorized_exception = HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="User is not authorized for this",
-        )
-        if not id:
-            raise unathorized_exception
-
-        user = get_full_user_object(id)
-        if not user:
-            raise unathorized_exception
-
+    def __call__(self, user: Annotated[User, Depends(ensure_user_from_token)]) -> User:
         if user.premium > 0:
             return user
 
@@ -62,4 +62,4 @@ class UserAuthorizer:
             if authorize(user.payment.subscription.level, area):
                 return user
 
-        raise unathorized_exception
+        raise auth_exception

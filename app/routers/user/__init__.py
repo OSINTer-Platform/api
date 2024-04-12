@@ -9,12 +9,13 @@ from starlette.status import (
 from app.users import schemas
 
 from app.users.auth import (
-    ensure_id_from_token,
+    get_id_from_token,
     ensure_auth_user_from_token,
     ensure_user_from_token,
 )
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
+from app.users.auth import auth_exception
 
 from .payment import router as payment_router
 
@@ -31,12 +32,14 @@ async def get_auth_status(
 
 @router.post("/credentials")
 def change_credentials(
-    id: UUID = Depends(ensure_id_from_token),
+    id: UUID | None = Depends(get_id_from_token),
     password: str = Body(...),
     new_username: str | None = Body(None),
     new_password: str | None = Body(None),
     new_email: str | None = Body(None),
 ) -> schemas.User:
+    if not id:
+        raise auth_exception
     user = verify_user(id, password=password)
     if not user or not user.rev:
         raise HTTPException(

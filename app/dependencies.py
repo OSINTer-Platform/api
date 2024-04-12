@@ -1,27 +1,16 @@
 from typing import Annotated, Literal, Self, Set, TypeAlias
+from uuid import UUID
 from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
-from app.authorization import Area, get_allowed_areas
-from app.users.schemas import Collection, FeedCreate
+
+from app.authorization import get_source_exclusions
+from app.users.crud import get_full_user_object
+from app.users.schemas import AuthUser, Collection, FeedCreate, User
 
 from modules.elastic import ArticleSearchQuery, CVESearchQuery
 
 from app import config_options
 from app.common import CVESortBy, EsIDList, ArticleSortBy
-
-
-def get_source_exclusions(
-    allowed_areas: Annotated[list[Area], Depends(get_allowed_areas)]
-) -> list[str]:
-    areas_to_fields: dict[Area, str] = {
-        "map": "ml.coordinates",
-        "cluster": "ml.cluster",
-        "similar": "similar",
-        "summary": "summary",
-    }
-
-    return [v for k, v in areas_to_fields.items() if not k in allowed_areas]
-
 
 SourceExclusions: TypeAlias = Annotated[list[str], Depends(get_source_exclusions)]
 
@@ -152,3 +141,30 @@ class FastapiCVESearchQuery(CVESearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
         )
+
+class UserCache:
+    def __init__(self) -> None:
+        self.user: None | User | AuthUser = None
+
+    def get_user(self: Self, id: UUID) -> User | None:
+        if isinstance(self.user, User):
+            return self.user
+
+        user = get_full_user_object(id)
+        if not isinstance(user, User):
+            return None
+
+        self.user = user
+        return user
+
+    def get_auth_user(self: Self, id: UUID) -> AuthUser | None:
+        if isinstance(self.user, AuthUser):
+            return self.user
+
+        user = get_full_user_object(id, auth=True)
+
+        if not isinstance(user, AuthUser):
+            return None
+
+        self.user = user
+        return user
