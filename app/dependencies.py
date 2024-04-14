@@ -130,6 +130,11 @@ class FastapiCVESearchQuery(CVESearchQuery):
         ids: Annotated[EsIDList | None, Body()] = None,
         highlight: Annotated[bool, Body()] = False,
         highlight_symbol: Annotated[str, Body()] = "**",
+        first_date: Annotated[datetime | None, Body()] = None,
+        last_date: Annotated[datetime | None, Body()] = None,
+        date_field: Annotated[
+            Literal["publish_date", "modified_date"], Body()
+        ] = "publish_date",
     ):
         super().__init__(
             limit=limit,
@@ -140,7 +145,11 @@ class FastapiCVESearchQuery(CVESearchQuery):
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
+            first_date=first_date,
+            last_date=last_date,
+            date_field=date_field,
         )
+
 
 class UserCache:
     def __init__(self) -> None:
