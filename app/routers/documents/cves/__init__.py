@@ -4,6 +4,7 @@ from starlette.status import HTTP_404_NOT_FOUND
 
 from app import config_options
 from app.dependencies import FastapiCVESearchQuery
+from app.common import HTTPError
 from modules.elastic import ArticleSearchQuery, CVESearchQuery
 from modules.objects.articles import BaseArticle, FullArticle
 from modules.objects.cves import BaseCVE, FullCVE
@@ -15,7 +16,15 @@ CVEPathParam = Annotated[str, Path(pattern="^[Cc][Vv][Ee]-\\d{4}-\\d{4,7}$")]
 
 
 @router.get(
-    "/{cve_id}", response_model_exclude_unset=True, response_model_by_alias=False
+    "/{cve_id}",
+    response_model_exclude_unset=True,
+    response_model_by_alias=False,
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when CVE isn't found",
+        }
+    },
 )
 def get_cve_details(
     cve_id: CVEPathParam, complete: Annotated[bool, Query()] = False
