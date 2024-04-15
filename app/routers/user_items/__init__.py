@@ -13,7 +13,7 @@ from app.dependencies import FastapiArticleSearchQuery
 from app.authorization import get_source_exclusions
 from app.users import crud, schemas
 from app.users.auth import ensure_user_from_token
-from app.utils.documents import convert_query_to_zip, send_file
+from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
@@ -112,7 +112,7 @@ def get_item_contents(item_id: UUID) -> schemas.ItemBase:
 def export_item_articles(
     search_query: FastapiArticleSearchQuery = Depends(get_query_from_item),
 ) -> StreamingResponse:
-    zip_file: BytesIO = convert_query_to_zip(search_query)
+    zip_file: BytesIO = convert_article_query_to_zip(search_query)
 
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-Item-Download.zip",

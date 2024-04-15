@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 
 from modules.files import article_to_md
+from modules.objects.articles import FullArticle
 
 from .. import config_options
 from ..dependencies import (
@@ -34,23 +35,27 @@ def send_file(
     return response
 
 
-def convert_query_to_zip(
+def convert_article_query_to_zip(
     search_q: FastapiArticleSearchQuery = Depends(FastapiQueryParamsArticleSearchQuery),
 ) -> BytesIO:
     articles = config_options.es_article_client.query_documents(search_q, True)[0]
 
     if articles:
-        zip_file = BytesIO()
-
-        with ZipFile(zip_file, "w") as zip_archive:
-            for article in articles:
-                zip_archive.writestr(
-                    f"OSINTer-MD-articles/{sanitize_filename(article.source)}/{sanitize_filename(article.title)}.md",
-                    article_to_md(article),
-                )
-
-        return zip_file
+        return convert_articles_to_zip(articles)
     else:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Articles not found"
         )
+
+
+def convert_articles_to_zip(articles: list[FullArticle]) -> BytesIO:
+    zip_file = BytesIO()
+
+    with ZipFile(zip_file, "w") as zip_archive:
+        for article in articles:
+            zip_archive.writestr(
+                f"OSINTer-MD-articles/{sanitize_filename(article.source)}/{sanitize_filename(article.title)}.md",
+                article_to_md(article),
+            )
+
+    return zip_file

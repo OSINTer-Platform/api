@@ -17,7 +17,7 @@ from modules.objects import (
 
 from ... import config_options
 from ...common import EsID, HTTPError
-from ...utils.documents import convert_query_to_zip, send_file
+from ...utils.documents import convert_article_query_to_zip, send_file
 from app.dependencies import FastapiArticleSearchQuery
 from app.authorization import get_source_exclusions
 
@@ -120,7 +120,7 @@ async def download_articles_from_cluster(
 ) -> StreamingResponse:
     source_exclusions = get_source_exclusions(get_allowed_areas(user))
 
-    zip_file: BytesIO = convert_query_to_zip(
+    zip_file: BytesIO = convert_article_query_to_zip(
         FastapiArticleSearchQuery(source_exclusions, limit=0, cluster_id=cluster.id)
     )
 

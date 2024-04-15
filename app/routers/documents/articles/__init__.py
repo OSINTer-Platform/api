@@ -25,7 +25,7 @@ from ....dependencies import (
     SourceExclusions,
 )
 from app.authorization import get_source_exclusions
-from ....utils.documents import convert_query_to_zip, send_file
+from ....utils.documents import convert_article_query_to_zip, send_file
 from .rss import router as rss_router
 
 router = APIRouter()
@@ -64,7 +64,7 @@ async def search_articles(
     },
 )
 def download_multiple_markdown_files_using_search(
-    zip_file: BytesIO = Depends(convert_query_to_zip),
+    zip_file: BytesIO = Depends(convert_article_query_to_zip),
 ) -> StreamingResponse:
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-Search-Download.zip",
