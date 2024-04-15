@@ -1,10 +1,15 @@
+from datetime import date
+from io import BytesIO
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_404_NOT_FOUND
 
 from app import config_options
-from app.dependencies import FastapiCVESearchQuery
+from app.authorization import get_source_exclusions
 from app.common import HTTPError
+from app.dependencies import FastapiArticleSearchQuery, FastapiCVESearchQuery
+from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.elastic import ArticleSearchQuery, CVESearchQuery
 from modules.objects.articles import BaseArticle, FullArticle
 from modules.objects.cves import BaseCVE, FullCVE
@@ -53,3 +58,28 @@ def search_cves(
     complete: bool = False,
 ) -> list[BaseCVE] | list[FullCVE]:
     return config_options.es_cve_client.query_documents(query, complete)[0]
+
+
+@router.get(
+    "/{cve_id}/export",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when cluster isn't found",
+        }
+    },
+)
+async def download_articles_from_cluster(
+    source_exclusions: Annotated[list[str], Depends(get_source_exclusions)],
+    cve_id: CVEPathParam,
+) -> StreamingResponse:
+    zip_file: BytesIO = convert_article_query_to_zip(
+        FastapiArticleSearchQuery(source_exclusions, limit=0, cve=cve_id)
+    )
+
+    return send_file(
+        file_name=f"OSINTer-MD-articles-{date.today()}-CVE-{cve_id}-Download.zip",
+        file_content=zip_file,
+        file_type="application/zip",
+    )
