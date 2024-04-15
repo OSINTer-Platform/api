@@ -35,6 +35,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         highlight: bool = False,
         highlight_symbol: str = "**",
         cluster_id: str | None = None,
+        cve: str | None = None,
     ):
         if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
             raise HTTPException(
@@ -55,6 +56,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
+            cve=cve,
             custom_exclude_fields=exclusions,
         )
 
@@ -101,6 +103,7 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
         cluster_id: str | None = Query(None),
+        cve: str | None = None,
     ):
         super().__init__(
             exclusions=exclusions,
@@ -116,6 +119,7 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
+            cve=cve,
         )
 
 

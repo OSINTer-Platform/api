@@ -33,15 +33,8 @@ def get_cve_details(
 def get_cve_articles(
     cve_id: CVEPathParam, complete: Annotated[bool, Query()] = False
 ) -> list[BaseArticle] | list[FullArticle]:
-    try:
-        cve = config_options.es_cve_client.query_documents(
-            CVESearchQuery(limit=1, cves={cve_id.upper()}), True
-        )[0][0]
-    except IndexError:
-        raise HTTPException(HTTP_404_NOT_FOUND, "CVE was not found")
-
     return config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0, ids={id for id in cve.documents}), complete
+        ArticleSearchQuery(limit=0, cve=cve_id), complete
     )[0]
 
 
