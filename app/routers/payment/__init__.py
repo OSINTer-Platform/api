@@ -120,8 +120,6 @@ async def handle_stripe_webhook(
             HTTP_400_BAD_REQUEST, "Error when verifying webhook signature"
         )
 
-    print(event.type)
-
     if event.type in [
         "customer.subscription.created",
         "customer.subscription.updated",
