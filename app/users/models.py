@@ -60,6 +60,49 @@ class User(Document):  # type: ignore[misc]
     )
 
 
+class Survey(Document):  # type: ignore[misc]
+    _id = TextField()
+
+    metadata = DictField(
+        Mapping.build(
+            user_id=TextField(),
+            submission_date=DateTimeField(),
+        )
+    )
+
+    contents = ListField(
+        DictField(
+            Mapping.build(
+                title=TextField(), rating=IntegerField(), feedback=TextField()
+            )
+        )
+    )
+
+    version = IntegerField()
+    type = TextField(default="survey")
+
+    # Views
+    all = ViewField(
+        "surveys",
+        """
+        function(doc) {
+            if(doc.type == "survey") {
+                emit(doc._id, doc);
+            }
+        }""",
+    )
+
+    by_user_id = ViewField(
+        "surveys",
+        """
+        function(doc) {
+            if(doc.type == "survey") {
+                emit(doc.metadata.user_id, doc)
+            }
+        }""",
+    )
+
+
 class ItemBase(Document):  # type: ignore[misc]
     _id = TextField()
     name = TextField()
@@ -139,6 +182,8 @@ DBModels = TypeVar("DBModels", Feed, Collection, User)
 views: list[ViewDefinition] = [
     User.all,
     User.by_username,
+    Survey.all,
+    Survey.by_user_id,
     Feed.all,
     Feed.get_minimal_info,
     Collection.all,

@@ -161,3 +161,22 @@ class User(ORMBase):
 class AuthUser(User):
     hashed_password: str
     hashed_email: str | None
+
+
+class SurveySection(BaseModel):
+    title: str
+    rating: int
+    feedback: str
+
+
+class SurveyMetaData(BaseModel):
+    user_id: UUID
+    submission_date: datetime
+
+
+class Survey(ORMBase):
+    id: UUID = Field(alias="_id", default_factory=uuid4)
+    contents: list[SurveySection]
+    version: int
+    metadata: SurveyMetaData
+    type: Literal["survey"] = "survey"
