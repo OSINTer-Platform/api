@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Iterable, cast
+from typing import Annotated, Iterable, cast
 from fastapi import APIRouter, Body, Depends, Query
 
 from app import config_options
 from app.users import models, schemas
-from app.users.auth import get_user_from_token
+from app.users.auth import ensure_user_from_token
 
 
 router = APIRouter()
@@ -12,9 +12,9 @@ router = APIRouter()
 
 @router.post("/submit")
 def submit_survey(
-    contents: list[schemas.SurveySection] = Body(),
-    current_user: schemas.User = Depends(get_user_from_token),
-    version: int = Body(),
+    contents: Annotated[list[schemas.SurveySection], Body()],
+    current_user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    version: Annotated[int, Body()],
 ) -> None:
     survey = schemas.Survey(
         contents=contents,
@@ -29,7 +29,8 @@ def submit_survey(
 
 @router.get("/", response_model=list[schemas.Survey])
 def get_submittet_surveys(
-    version: int = Query(), current_user: schemas.User = Depends(get_user_from_token)
+    version: Annotated[int, Query()],
+    current_user: Annotated[schemas.User, Depends(ensure_user_from_token)],
 ) -> list[models.Survey]:
     user_surveys = cast(
         Iterable[models.Survey],
