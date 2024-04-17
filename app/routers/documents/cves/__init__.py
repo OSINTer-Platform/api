@@ -48,7 +48,10 @@ def get_cve_articles(
     cve_id: CVEPathParam, complete: Annotated[bool, Query()] = False
 ) -> list[BaseArticle] | list[FullArticle]:
     return config_options.es_article_client.query_documents(
-        ArticleSearchQuery(limit=0, cve=cve_id, sort_by="publish_date", sort_order="desc"), complete
+        ArticleSearchQuery(
+            limit=0, cve=cve_id, sort_by="publish_date", sort_order="desc"
+        ),
+        complete,
     )[0]
 
 
