@@ -55,7 +55,7 @@ def get_cve_articles(
     )[0]
 
 
-@router.post("/search")
+@router.post("/search", response_model_by_alias=False)
 def search_cves(
     query: Annotated[FastapiCVESearchQuery, Depends(FastapiCVESearchQuery)],
     complete: bool = False,
