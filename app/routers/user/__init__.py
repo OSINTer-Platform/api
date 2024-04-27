@@ -80,6 +80,15 @@ def change_settings(
     return user
 
 
+@router.post("/clear-read")
+def clear_read_articles(
+    user: schemas.User = Depends(ensure_user_from_token),
+) -> schemas.User:
+    user.read_articles = []
+    update_user(user)
+    return user
+
+
 @router.post("/signup-code")
 def submit_signup_code(
     code: dict[Literal["code"], str] = Body(),
