@@ -58,6 +58,8 @@ def verify_user(
                 config_options.hasher.verify(hashed_value, raw_value)
             except VerifyMismatchError:
                 return False
+        elif raw_value:
+            return False
 
     return user
 
