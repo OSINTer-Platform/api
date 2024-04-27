@@ -131,16 +131,23 @@ def remove_user(username: str) -> bool:
     return True
 
 
-def update_user(user: schemas.User, rev: str | None = None) -> None:
-    if not rev:
-        rev = cast(
-            str,
-            cast(
-                models.User, models.User.load(config_options.couch_conn, str(user.id))
-            ).rev,
+def update_user(user: schemas.User | schemas.AuthUser, rev: str | None = None) -> None:
+    db_user = {}
+
+    if not rev or type(user) is schemas.User:
+        user_model = cast(
+            models.User, models.User.load(config_options.couch_conn, str(user.id))
         )
 
+        rev = cast(
+            str,
+            user_model.rev,
+        )
+
+        db_user = schemas.AuthUser.model_validate(user_model).db_serialize()
+
     config_options.couch_conn[str(user.id)] = {
+        **db_user,
         **user.db_serialize(),
         "_rev": rev,
     }
