@@ -2,7 +2,7 @@ from datetime import date
 from io import BytesIO
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
 
@@ -110,6 +110,14 @@ def download_single_markdown_file(
     )
 
 
+def mark_as_read(article: FullArticle, user: User | None) -> None:
+    config_options.es_article_client.increment_read_counter(article.id)
+    if user:
+        user.read_articles = [id for id in user.read_articles if id != article.id]
+        user.read_articles.insert(0, article.id)
+        update_user(user)
+
+
 @router.get(
     "/{id}/content",
     responses={
@@ -120,17 +128,14 @@ def download_single_markdown_file(
     },
 )
 async def get_article_content(
+    background_tasks: BackgroundTasks,
     id: EsID,
     user: User | None = Depends(get_user_from_token),
 ) -> FullArticle:
     source_exclusions = get_source_exclusions(get_allowed_areas(user))
     article = get_single_article(id, source_exclusions)
-    config_options.es_article_client.increment_read_counter(article.id)
 
-    if user:
-        user.read_articles = [id for id in user.read_articles if id != article.id]
-        user.read_articles.insert(0, article.id)
-        update_user(user)
+    background_tasks.add_task(mark_as_read, article, user)
 
     return article
 
