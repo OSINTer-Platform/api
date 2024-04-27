@@ -21,7 +21,6 @@ from .... import config_options
 from ....common import EsID, HTTPError
 from ....dependencies import (
     FastapiArticleSearchQuery,
-    FastapiQueryParamsArticleSearchQuery,
     SourceExclusions,
 )
 from app.authorization import get_source_exclusions
@@ -42,11 +41,9 @@ async def get_newest_articles(source_exclusions: SourceExclusions) -> list[BaseA
     )[0]
 
 
-@router.get("/search", response_model_exclude_unset=True)
+@router.post("/search", response_model_exclude_unset=True)
 async def search_articles(
-    query: FastapiQueryParamsArticleSearchQuery = Depends(
-        FastapiQueryParamsArticleSearchQuery
-    ),
+    query: FastapiArticleSearchQuery = Depends(FastapiArticleSearchQuery),
     complete: bool = Query(False),
 ) -> list[BaseArticle] | list[FullArticle]:
     articles = config_options.es_article_client.query_documents(query, complete)[0]
