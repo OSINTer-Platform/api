@@ -127,14 +127,10 @@ async def get_article_content(
     article = get_single_article(id, source_exclusions)
     config_options.es_article_client.increment_read_counter(article.id)
 
-    try:
-        if user:
-            user.read_articles = [id for id in user.read_articles if id != article.id]
-            user.read_articles.insert(0, article.id)
-            update_user(user)
-
-    except HTTPException:
-        pass
+    if user:
+        user.read_articles = [id for id in user.read_articles if id != article.id]
+        user.read_articles.insert(0, article.id)
+        update_user(user)
 
     return article
 
