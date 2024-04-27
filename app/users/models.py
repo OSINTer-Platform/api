@@ -19,10 +19,9 @@ class User(Document):  # type: ignore[misc]
     active = BooleanField()
     premium = IntegerField(default=0)
 
-    already_read = TextField()
-
     feed_ids = ListField(TextField())
     collection_ids = ListField(TextField())
+    read_articles = ListField(TextField())
 
     settings = DictField(
         Mapping.build(

@@ -130,10 +130,9 @@ class User(ORMBase):
     active: bool = True
     premium: int = 0
 
-    already_read: UUID | None = None
-
     feed_ids: set[UUID] = set()
     collection_ids: set[UUID] = set()
+    read_articles: set[str] = set()
 
     feeds: list[Feed] = []
     collections: list[Collection] = []
@@ -143,7 +142,7 @@ class User(ORMBase):
 
     type: Literal["user"] = "user"
 
-    @field_validator("feed_ids", "collection_ids", mode="before")
+    @field_validator("feed_ids", "collection_ids", "read_articles", mode="before")
     @classmethod
     def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):

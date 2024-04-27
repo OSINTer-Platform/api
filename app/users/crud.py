@@ -113,11 +113,7 @@ def create_user(
         premium=premium,
     )
 
-    collection = create_collection("Already Read", id, deleteable=False)
-    new_user.already_read = collection.id
-
     new_user.store(config_options.couch_conn)
-    modify_user_subscription(id, set([collection.id]), "subscribe", "collection")
 
     return True
 

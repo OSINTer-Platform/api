@@ -10,7 +10,7 @@ from app.authorization import UserAuthorizer, get_allowed_areas
 from app.users.auth import (
     get_user_from_token,
 )
-from app.users.crud import modify_collection
+from app.users.crud import modify_collection, update_user
 from app.users.schemas import User
 from app.utils.profiles import ProfileDetails, collect_profile_details
 
@@ -128,8 +128,9 @@ async def get_article_content(
     config_options.es_article_client.increment_read_counter(article.id)
 
     try:
-        if user and user.already_read:
-            modify_collection(user.already_read, set([article.id]), user, "extend")
+        if user:
+            user.read_articles.add(article.id)
+            update_user(user)
 
     except HTTPException:
         pass
