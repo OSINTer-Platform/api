@@ -146,7 +146,7 @@ def update_user(user: schemas.User, rev: str | None = None) -> None:
 
 def modify_user_subscription(
     user_id: UUID,
-    ids: set[UUID],
+    ids: list[UUID],
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
 ) -> schemas.User | None:
@@ -165,9 +165,11 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if action == "subscribe":
-        source = source.union(ids)
+        for id in ids:
+            if not id in source:
+                source.append(id)
     elif action == "unsubscribe":
-        source.difference_update(ids)
+        source = [id for id in source if id not in ids]
     else:
         raise NotImplementedError
 

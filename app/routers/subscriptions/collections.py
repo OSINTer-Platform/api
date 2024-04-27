@@ -35,9 +35,9 @@ def create_collection(
     if subscribe:
         user_obj: schemas.User | None = crud.modify_user_subscription(
             user_id=current_user.id,
-            ids={
+            ids=[
                 collection.id,
-            },
+            ],
             action="subscribe",
             item_type="collection",
         )
@@ -58,7 +58,7 @@ def subscribe_to_collection(
 ) -> None:
     crud.modify_user_subscription(
         user_id=current_user.id,
-        ids={collection_id},
+        ids=[collection_id],
         action="subscribe",
         item_type="collection",
     )
@@ -71,7 +71,7 @@ def unsubscribe_from_collection(
 ) -> None:
     crud.modify_user_subscription(
         user_id=current_user.id,
-        ids={collection_id},
+        ids=[collection_id],
         action="unsubscribe",
         item_type="collection",
     )

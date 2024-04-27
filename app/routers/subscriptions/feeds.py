@@ -32,9 +32,9 @@ def create_feed(
     if subscribe:
         user_obj: schemas.User | None = crud.modify_user_subscription(
             user_id=current_user.id,
-            ids={
+            ids=[
                 feed.id,
-            },
+            ],
             action="subscribe",
             item_type="feed",
         )
@@ -54,7 +54,7 @@ def subscribe_to_collection(
     current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> None:
     crud.modify_user_subscription(
-        user_id=current_user.id, ids={feed_id}, action="subscribe", item_type="feed"
+        user_id=current_user.id, ids=[feed_id], action="subscribe", item_type="feed"
     )
 
 
@@ -64,5 +64,5 @@ def unsubscribe_from_collection(
     current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> None:
     crud.modify_user_subscription(
-        user_id=current_user.id, ids={feed_id}, action="unsubscribe", item_type="feed"
+        user_id=current_user.id, ids=[feed_id], action="unsubscribe", item_type="feed"
     )

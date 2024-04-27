@@ -129,7 +129,8 @@ async def get_article_content(
 
     try:
         if user:
-            user.read_articles.add(article.id)
+            user.read_articles = [id for id in user.read_articles if id != article.id]
+            user.read_articles.insert(0, article.id)
             update_user(user)
 
     except HTTPException:

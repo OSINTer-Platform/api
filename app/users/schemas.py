@@ -130,9 +130,9 @@ class User(ORMBase):
     active: bool = True
     premium: int = 0
 
-    feed_ids: set[UUID] = set()
-    collection_ids: set[UUID] = set()
-    read_articles: set[str] = set()
+    feed_ids: list[UUID] = []
+    collection_ids: list[UUID] = []
+    read_articles: list[str] = []
 
     feeds: list[Feed] = []
     collections: list[Collection] = []
@@ -146,7 +146,7 @@ class User(ORMBase):
     @classmethod
     def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):
-            return set(id_list)
+            return list(id_list)
 
         return id_list
 

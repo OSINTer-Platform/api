@@ -71,11 +71,11 @@ def create_standard_items() -> None:
     crud.remove_user("OSINTer")
     crud.create_user(username="OSINTer", password=token_urlsafe(64), id=UUID(int=0))
 
-    stored_feeds: set[UUID] = set()
+    stored_feeds: list[UUID] = []
 
     for feed_name, feed in standard_feeds.items():
         new_feed = crud.create_feed(feed_params=feed, name=feed_name, owner=UUID(int=0))
-        stored_feeds.add(new_feed.id)
+        stored_feeds.append(new_feed.id)
 
     crud.modify_user_subscription(
         user_id=UUID(int=0), ids=stored_feeds, action="subscribe", item_type="feed"
