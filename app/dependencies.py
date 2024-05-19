@@ -139,6 +139,7 @@ class FastapiCVESearchQuery(CVESearchQuery):
         date_field: Annotated[
             Literal["publish_date", "modified_date"], Body()
         ] = "publish_date",
+        min_doc_count: Annotated[int | None, Body()] = None,
     ):
         super().__init__(
             limit=limit,
@@ -152,6 +153,7 @@ class FastapiCVESearchQuery(CVESearchQuery):
             first_date=first_date,
             last_date=last_date,
             date_field=date_field,
+            min_doc_count=min_doc_count,
         )
 
 
