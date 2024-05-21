@@ -1,6 +1,7 @@
 from datetime import date
 from io import BytesIO
 from typing import Annotated
+from typing_extensions import TypedDict
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_404_NOT_FOUND
@@ -23,6 +24,47 @@ protected_router = APIRouter(
 )
 
 CVEPathParam = Annotated[str, Path(pattern="^[Cc][Vv][Ee]-\\d{4}-\\d{4,7}$")]
+
+
+class CVEOverview(TypedDict):
+    cve: str
+    title: str
+    details: str
+
+
+@router.get("/overview")
+def get_cve_overviews(cves: Annotated[list[str], Query()]) -> list[CVEOverview]:
+    cves_content = config_options.es_cve_client.query_documents(
+        CVESearchQuery(limit=10000, cves=set(cves)), False
+    )[0]
+
+    cve_overviews: list[CVEOverview] = []
+
+    for cve in cves_content:
+        overview = CVEOverview(cve=cve.cve, title=cve.title, details="")
+
+        if cve.cvss3:
+            overview["details"] = " | ".join(
+                [
+                    f"Base: {cve.cvss3.cvss_data.base_score}",
+                    f"Exploitability: {cve.cvss3.exploitability_score}",
+                    f"Impact: {cve.cvss3.impact_score}",
+                    f"Articles: {cve.document_count}",
+                ]
+            )
+        elif cve.cvss2:
+            overview["details"] = " | ".join(
+                [
+                    f"Base: {cve.cvss2.cvss_data.base_score}",
+                    f"Exploitability: {cve.cvss2.exploitability_score}",
+                    f"Impact: {cve.cvss2.impact_score}",
+                    f"Articles: {cve.document_count}",
+                ]
+            )
+
+        cve_overviews.append(overview)
+
+    return cve_overviews
 
 
 @protected_router.get(
