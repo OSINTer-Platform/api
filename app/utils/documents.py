@@ -28,9 +28,9 @@ def send_file(
             iter([file_content.getvalue()]), media_type=file_type
         )
 
-    response.headers[
-        "Content-Disposition"
-    ] = f"attachment; filename={file_name.encode('ascii',errors='ignore').decode()}"
+    response.headers["Content-Disposition"] = (
+        f"attachment; filename={file_name.encode('ascii',errors='ignore').decode()}"
+    )
 
     return response
 

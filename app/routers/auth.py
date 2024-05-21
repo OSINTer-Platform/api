@@ -126,9 +126,11 @@ def get_token_from_form(
         )
 
     expire_date = timedelta(
-        hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
-        if remember_me
-        else config_options.ACCESS_TOKEN_EXPIRE_HOURS
+        hours=(
+            config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
+            if remember_me
+            else config_options.ACCESS_TOKEN_EXPIRE_HOURS
+        )
     )
 
     access_token = create_access_token(
