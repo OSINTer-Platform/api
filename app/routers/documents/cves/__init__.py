@@ -6,7 +6,7 @@ from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_404_NOT_FOUND
 
 from app import config_options
-from app.authorization import get_source_exclusions
+from app.authorization import UserAuthorizer, get_source_exclusions
 from app.common import HTTPError
 from app.dependencies import FastapiArticleSearchQuery, FastapiCVESearchQuery
 from app.utils.documents import convert_article_query_to_zip, send_file
@@ -15,12 +15,17 @@ from modules.objects.articles import BaseArticle, FullArticle
 from modules.objects.cves import BaseCVE, FullCVE
 
 
+CVEAuthorizer = UserAuthorizer(["cve"])
+
 router = APIRouter()
+protected_router = APIRouter(
+    dependencies=[Depends(CVEAuthorizer)],
+)
 
 CVEPathParam = Annotated[str, Path(pattern="^[Cc][Vv][Ee]-\\d{4}-\\d{4,7}$")]
 
 
-@router.get(
+@protected_router.get(
     "/{cve_id}",
     response_model_exclude_unset=True,
     response_model_by_alias=False,
@@ -43,7 +48,7 @@ def get_cve_details(
         raise HTTPException(HTTP_404_NOT_FOUND, "CVE was not found")
 
 
-@router.get("/{cve_id}/articles", response_model_exclude_unset=True)
+@protected_router.get("/{cve_id}/articles", response_model_exclude_unset=True)
 def get_cve_articles(
     cve_id: CVEPathParam, complete: Annotated[bool, Query()] = False
 ) -> list[BaseArticle] | list[FullArticle]:
@@ -55,7 +60,7 @@ def get_cve_articles(
     )[0]
 
 
-@router.post("/search", response_model_by_alias=False)
+@protected_router.post("/search", response_model_by_alias=False)
 def search_cves(
     query: Annotated[FastapiCVESearchQuery, Depends(FastapiCVESearchQuery)],
     complete: bool = False,
@@ -63,7 +68,7 @@ def search_cves(
     return config_options.es_cve_client.query_documents(query, complete)[0]
 
 
-@router.get(
+@protected_router.get(
     "/{cve_id}/export",
     tags=["download"],
     responses={
@@ -86,3 +91,6 @@ async def download_articles_from_cluster(
         file_content=zip_file,
         file_type="application/zip",
     )
+
+
+router.include_router(protected_router)

@@ -8,11 +8,11 @@ from app.users.schemas import User
 
 
 Area: TypeAlias = Literal[
-    "assistant", "cluster", "dashboard", "map", "similar", "summary"
+    "assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"
 ]
 
 levels_access: dict[str, list[Area]] = {
-    "pro": ["assistant", "cluster", "dashboard", "map", "similar", "summary"]
+    "pro": ["assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"]
 }
 
 areas: set[Area] = {area for areas in levels_access.values() for area in areas}
