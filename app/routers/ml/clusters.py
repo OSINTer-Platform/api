@@ -17,7 +17,7 @@ from modules.objects import (
 from ... import config_options
 from ...common import EsID, HTTPError
 from ...utils.documents import convert_article_query_to_zip, send_file
-from app.dependencies import FastapiArticleSearchQuery
+from app.dependencies import FastapiArticleSearchQuery, FastapiClusterSearchQuery
 from app.authorization import get_source_exclusions
 
 ClusterAuthorizer = UserAuthorizer(["cluster"])
@@ -122,3 +122,11 @@ async def download_articles_from_cluster(
         file_content=zip_file,
         file_type="application/zip",
     )
+
+
+@router.post("/clusters/search")
+def search_clusters(
+    query: Annotated[FastapiClusterSearchQuery, Depends(FastapiClusterSearchQuery)],
+    complete: bool = False,
+) -> list[BaseCluster] | list[FullCluster]:
+    return config_options.es_cluster_client.query_documents(query, complete)[0]
