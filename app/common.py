@@ -12,7 +12,7 @@ ArticleSortBy = Literal[
     "publish_date", "read_times", "source", "author", "inserted_at", ""
 ]
 
-CVESortBy = Literal["document_count", "cve", "publish_date", "modified_date"]
+CVESortBy = Literal["document_count", "cve", "publish_date", "modified_date", ""]
 
 ClusterSortBy = Literal["document_count", "nr", ""]
 
