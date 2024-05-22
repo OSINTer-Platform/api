@@ -5,8 +5,7 @@ from typing import Annotated, TypeAlias, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from app.authorization import UserAuthorizer, get_allowed_areas
-from app.users.schemas import User
+from app.authorization import UserAuthorizer
 from modules.elastic import ClusterSearchQuery
 from modules.objects import (
     BaseArticle,
@@ -22,7 +21,7 @@ from app.dependencies import FastapiArticleSearchQuery
 from app.authorization import get_source_exclusions
 
 ClusterAuthorizer = UserAuthorizer(["cluster"])
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(ClusterAuthorizer)])
 
 ClusterID: TypeAlias = Union[int, EsID]
 
@@ -48,7 +47,6 @@ def query_cluster(cluster_id: ClusterID) -> FullCluster:
 @router.get(
     "/clusters",
     response_model_exclude_unset=True,
-    dependencies=[Depends(ClusterAuthorizer)],
 )
 def get_article_clusters(
     complete: bool = Query(False),
@@ -66,7 +64,6 @@ def get_article_clusters(
             "description": "Returned when cluster isn't found",
         }
     },
-    dependencies=[Depends(ClusterAuthorizer)],
 )
 def get_cluster(cluster: FullCluster = Depends(query_cluster)) -> FullCluster:
     return cluster
@@ -83,12 +80,10 @@ def get_cluster(cluster: FullCluster = Depends(query_cluster)) -> FullCluster:
     },
 )
 def get_articles_from_cluster(
-    user: Annotated[User, Depends(UserAuthorizer(["cluster"]))],
+    source_exclusions: Annotated[list[str], Depends(get_source_exclusions)],
     cluster: FullCluster = Depends(query_cluster),
     complete: bool = Query(True),
 ) -> list[BaseArticle] | list[FullArticle]:
-    source_exclusions = get_source_exclusions(get_allowed_areas(user))
-
     articles_from_cluster = config_options.es_article_client.query_documents(
         FastapiArticleSearchQuery(
             source_exclusions, limit=0, ids=cluster.documents, sort_by="publish_date"
@@ -115,11 +110,9 @@ def get_articles_from_cluster(
     },
 )
 async def download_articles_from_cluster(
-    user: Annotated[User, Depends(UserAuthorizer(["cluster"]))],
+    source_exclusions: Annotated[list[str], Depends(get_source_exclusions)],
     cluster: FullCluster = Depends(query_cluster),
 ) -> StreamingResponse:
-    source_exclusions = get_source_exclusions(get_allowed_areas(user))
-
     zip_file: BytesIO = convert_article_query_to_zip(
         FastapiArticleSearchQuery(source_exclusions, limit=0, cluster_id=cluster.id)
     )
