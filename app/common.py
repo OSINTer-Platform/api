@@ -14,6 +14,8 @@ ArticleSortBy = Literal[
 
 CVESortBy = Literal["document_count", "cve", "publish_date", "modified_date"]
 
+ClusterSortBy = Literal["document_count", "nr", ""]
+
 
 class DefaultResponseStatus(str, Enum):
     SUCCESS = "success"

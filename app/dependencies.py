@@ -7,10 +7,10 @@ from app.authorization import get_source_exclusions
 from app.users.crud import get_full_user_object
 from app.users.schemas import AuthUser, Collection, FeedCreate, User
 
-from modules.elastic import ArticleSearchQuery, CVESearchQuery
+from modules.elastic import ArticleSearchQuery, CVESearchQuery, ClusterSearchQuery
 
 from app import config_options
-from app.common import CVESortBy, EsIDList, ArticleSortBy
+from app.common import CVESortBy, ClusterSortBy, EsIDList, ArticleSortBy
 
 SourceExclusions: TypeAlias = Annotated[list[str], Depends(get_source_exclusions)]
 
@@ -120,6 +120,36 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
             cve=cve,
+        )
+
+
+class FastapiClusterSearchQuery(ClusterSearchQuery):
+    def __init__(
+        self,
+        limit: Annotated[int, Body()] = 0,
+        sort_by: Annotated[ClusterSortBy | None, Body()] = "document_count",
+        sort_order: Annotated[Literal["desc", "asc"], Body()] = "desc",
+        search_term: Annotated[str | None, Body()] = None,
+        ids: Annotated[EsIDList | None, Body()] = None,
+        highlight: Annotated[bool, Body()] = False,
+        highlight_symbol: Annotated[str, Body()] = "**",
+        first_date: Annotated[datetime | None, Body()] = None,
+        last_date: Annotated[datetime | None, Body()] = None,
+        cluster_nr: Annotated[int | None, Body()] = None,
+        exclude_outliers: Annotated[bool, Body()] = True,
+    ):
+        super().__init__(
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search_term=search_term,
+            ids=ids,
+            highlight=highlight,
+            highlight_symbol=highlight_symbol,
+            first_date=first_date,
+            last_date=last_date,
+            cluster_nr=cluster_nr,
+            exclude_outliers=exclude_outliers,
         )
 
 
