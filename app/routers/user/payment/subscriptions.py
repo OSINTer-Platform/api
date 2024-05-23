@@ -95,6 +95,20 @@ def cancel_subscription(
         )
 
 
+@router.post("/subscription/uncancel")
+def resume_subscription(user: Annotated[User, Depends(ensure_user_from_token)]) -> None:
+    if user.payment.subscription.state not in ["active", "past_due"]:
+        raise HTTPException(
+            HTTP_404_NOT_FOUND, "User doesn't have any active subscriptions"
+        )
+    elif not user.payment.subscription.cancel_at_period_end:
+        raise HTTPException(HTTP_400_BAD_REQUEST, "User subscription isn't cancelled")
+
+    stripe.Subscription.modify(
+        user.payment.subscription.stripe_subscription_id, cancel_at_period_end=False
+    )
+
+
 @router.post("/subscription/acknowledge-close")
 def acknowledge_subscription_closing(
     user: User = Depends(ensure_user_from_token),
