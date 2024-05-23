@@ -1,6 +1,6 @@
-from typing import Literal
+from typing import Annotated, Literal
 from typing_extensions import TypedDict
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from starlette.status import (
     HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
@@ -77,9 +77,18 @@ def create_subscription(
 
 
 @router.delete("/subscription")
-def cancel_subscription(user: User = Depends(ensure_user_from_token)) -> None:
-    if user.payment.subscription.stripe_subscription_id:
-        stripe.Subscription.cancel(user.payment.subscription.stripe_subscription_id)
+def cancel_subscription(
+    immediate: Annotated[bool, Query()] = False,
+    user: User = Depends(ensure_user_from_token),
+) -> None:
+    if user.payment.subscription.state in ["active", "past_due"]:
+        if immediate:
+            stripe.Subscription.cancel(user.payment.subscription.stripe_subscription_id)
+        else:
+            stripe.Subscription.modify(
+                user.payment.subscription.stripe_subscription_id,
+                cancel_at_period_end=True,
+            )
     else:
         raise HTTPException(
             HTTP_404_NOT_FOUND, "User doesn't have any active subscriptions"
