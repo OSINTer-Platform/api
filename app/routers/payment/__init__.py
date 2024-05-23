@@ -43,6 +43,7 @@ def handle_subscription_change(e: stripe.Event) -> None:
 
     match e.type:
         case "customer.subscription.updated":
+
             if data["status"] in ["trailing", "active"]:
                 # WARNING: Potential problematic undefined object reference
                 product_id = data["plan"]["product"]
@@ -88,6 +89,8 @@ def handle_subscription_change(e: stripe.Event) -> None:
         user.payment.subscription.stripe_subscription_id = data["id"]
         user.payment.subscription.stripe_product_id = data["plan"]["product"]
         user.payment.subscription.last_updated = data["created"]
+        user.payment.subscription.cancel_at_period_end = data["cancel_at_period_end"]
+        user.payment.subscription.current_period_end = data["current_period_end"]
 
     elif e.type.startswith("invoice"):
         user.payment.invoice.invoice_url = data["hosted_invoice_url"]

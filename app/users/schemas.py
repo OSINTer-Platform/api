@@ -118,6 +118,9 @@ class UserPayment(ORMBase):
         level: Literal["", "pro"] = ""
         state: Literal["", "active", "past_due", "closed"] = ""
 
+        cancel_at_period_end: bool = False
+        current_period_end: int = 0
+
     stripe_id: str = ""
     invoice: Invoice = Invoice()
     subscription: Subscription = Subscription()

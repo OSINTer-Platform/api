@@ -50,6 +50,8 @@ class User(Document):  # type: ignore[misc]
                     stripe_subscription_id=TextField(default=""),
                     state=TextField(default=""),
                     level=TextField(default=""),
+                    cancel_at_period_end=BooleanField(default=False),
+                    current_period_end=IntegerField(default=0),
                 )
             ),
         )
