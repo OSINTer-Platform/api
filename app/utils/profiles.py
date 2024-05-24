@@ -16,7 +16,10 @@ def collect_profile_details() -> dict[str, ProfileDetails]:
         config_options.es_article_client.get_unique_values(field_name="profile").keys()
     )
 
-    profiles = sorted(get_profiles(), key=lambda profile: profile.source.profile_name)
+    profiles = sorted(
+        get_profiles(include_disabled=True),
+        key=lambda profile: profile.source.profile_name,
+    )
 
     details: dict[str, ProfileDetails] = {}
 
