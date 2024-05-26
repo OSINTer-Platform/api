@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 import secrets
 
@@ -63,8 +64,18 @@ class FrontendConfig(BaseConfig):
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
 
-        signup_code = os.environ.get("SIGNUP_CODES", None)
-        self.SIGNUP_CODES = signup_code.split(",") if signup_code else []
+        signup_code = os.environ.get("SIGNUP_CODES", "")
+        self.SIGNUP_CODES: dict[str, timedelta] = {}
+        for code_pair in signup_code.split(","):
+            try:
+                code, day_diff_str = code_pair.split(":")
+                day_diff = int(day_diff_str)
+                diff = timedelta(days=day_diff)
+
+                self.SIGNUP_CODES[code] = diff
+            except:
+                raise Exception(f"Error when parsing following signup code-string: {code_pair}")
+
 
         self.hasher = PasswordHasher()
 
