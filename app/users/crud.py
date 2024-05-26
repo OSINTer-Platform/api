@@ -149,6 +149,8 @@ def update_user(user: schemas.User | schemas.AuthUser, rev: str | None = None) -
 
         db_user = schemas.AuthUser.model_validate(user_model).db_serialize()
 
+    user = expire_premium(user)
+
     config_options.couch_conn[str(user.id)] = {
         **db_user,
         **user.db_serialize(),

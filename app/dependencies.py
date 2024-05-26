@@ -3,7 +3,7 @@ from uuid import UUID
 from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
 
-from app.authorization import get_source_exclusions
+from app.authorization import expire_premium, get_source_exclusions
 from app.users.crud import get_full_user_object
 from app.users.schemas import AuthUser, Collection, FeedCreate, User
 
@@ -199,6 +199,8 @@ class UserCache:
         if not isinstance(user, User):
             return None
 
+        user = expire_premium(user)
+
         self.user = user
         return user
 
@@ -210,6 +212,8 @@ class UserCache:
 
         if not isinstance(user, AuthUser):
             return None
+
+        user = expire_premium(user)
 
         self.user = user
         return user

@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Annotated, Literal, TypeAlias
 
 from fastapi import Depends
@@ -48,6 +49,17 @@ def get_source_exclusions(
     }
 
     return [v for k, v in areas_to_fields.items() if not k in allowed_areas]
+
+
+def expire_premium[U: User](user: U) -> U:
+    if (
+        user.premium.expire_time > 0
+        and user.premium.expire_time < datetime.now(UTC).timestamp()
+    ):
+        user.premium.status = False
+        user.premium.expire_time = 0
+
+    return user
 
 
 class UserAuthorizer:
