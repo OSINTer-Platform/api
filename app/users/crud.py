@@ -106,16 +106,18 @@ def create_user(
 
     password_hash = config_options.hasher.hash(password)
 
-    new_user = models.User(
-        _id=str(id),
+    user_schema = schemas.AuthUser(
+        _id=id,
         username=username,
         active=True,
         hashed_password=password_hash,
         hashed_email=email_hash,
         premium=premium,
+        settings=schemas.UserSettings(),
+        payment=schemas.UserPayment(),
     )
 
-    new_user.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = user_schema.db_serialize()
 
     return True
 
