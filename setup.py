@@ -19,7 +19,5 @@ except PreconditionFailed:
 from app import config_options
 
 from app.users.models import views
-from app.users.standard import create_standard_items
 
 ViewDefinition.sync_many(config_options.couch_conn, views)
-create_standard_items()

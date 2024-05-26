@@ -153,18 +153,3 @@ def update_collection(
     return handle_crud_response(
         crud.modify_collection(id=collection_id, contents=contents, user=current_user)
     )
-
-
-@router.get(
-    "/standard/feeds",
-    response_model_exclude_none=True,
-)
-def get_standard_items() -> dict[str, schemas.Feed]:
-    standard_user = crud.get_full_user_object(UUID(int=0))
-
-    if not standard_user:
-        raise HTTPException(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Backend setup missing"
-        )
-
-    return crud.get_feeds(standard_user)
