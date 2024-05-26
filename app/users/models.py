@@ -163,8 +163,8 @@ class Feed(ItemBase):
     search_term = TextField()
     highlight = BooleanField()
 
-    first_date = DateTimeField()
-    last_date = DateTimeField()
+    first_date = TextField()
+    last_date = TextField()
 
     sources = ListField(TextField())
 
