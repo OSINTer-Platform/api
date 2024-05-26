@@ -28,7 +28,7 @@ def get_allowed_areas(
     if not user:
         return []
 
-    if user.premium > 0:
+    if user.premium.status:
         return list(areas)
 
     if user.payment.subscription.level in levels_access:
@@ -55,7 +55,7 @@ class UserAuthorizer:
         self.areas: list[Area] = areas
 
     def __call__(self, user: Annotated[User, Depends(ensure_user_from_token)]) -> User:
-        if user.premium > 0:
+        if user.premium.status:
             return user
 
         for area in self.areas:

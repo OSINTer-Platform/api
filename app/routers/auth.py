@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from typing_extensions import TypedDict
 from uuid import UUID
@@ -217,12 +217,18 @@ async def signup(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,
             detail="A wrong signup code was entered",
         )
-    premium = form_data.signup_code in config_options.SIGNUP_CODES
+    user_premium = None
+    if form_data.signup_code in config_options.SIGNUP_CODES:
+        diff = datetime.now(UTC) + config_options.SIGNUP_CODES[form_data.signup_code]
+        user_premium = schemas.UserPremium(
+            status=True, expire_time=int(diff.timestamp())
+        )
+
     if create_user(
         username=form_data.username,
         password=form_data.password,
         email=form_data.email,
-        premium=1 if premium else 0,
+        premium=user_premium,
     ):
         return DefaultResponse(status=DefaultResponseStatus.SUCCESS, msg="User created")
     else:

@@ -91,6 +91,12 @@ class Collection(ItemBase):
 UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
 
+class UserPremium(ORMBase):
+    status: bool = False
+    expire_time: int = 0
+    acknowledged: dict[str, bool] = {}
+
+
 class UserSettings(ORMBase):
     dark_mode: bool = True
     render_external: bool = False
@@ -131,7 +137,6 @@ class User(ORMBase):
     username: str
 
     active: bool = True
-    premium: int = 0
 
     feed_ids: list[UUID] = []
     collection_ids: list[UUID] = []
@@ -140,6 +145,7 @@ class User(ORMBase):
     feeds: list[Feed] = []
     collections: list[Collection] = []
 
+    premium: UserPremium
     payment: UserPayment
     settings: UserSettings
 

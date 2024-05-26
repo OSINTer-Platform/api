@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Literal, cast
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
@@ -94,11 +95,13 @@ def submit_signup_code(
     code: dict[Literal["code"], str] = Body(),
     user: schemas.User = Depends(ensure_auth_user_from_token),
 ) -> schemas.User:
-    if user.premium > 0:
+    if user.premium.status:
         return user
 
     if code["code"] in config_options.SIGNUP_CODES:
-        user.premium = 1
+        diff = datetime.now(UTC) + config_options.SIGNUP_CODES[code["code"]]
+        user.premium.status = True
+        user.premium.expire_time = int(diff.timestamp())
     else:
         raise HTTPException(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,

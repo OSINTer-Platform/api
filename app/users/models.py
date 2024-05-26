@@ -17,7 +17,6 @@ class User(Document):  # type: ignore[misc]
     _id = TextField()
     username = TextField()
     active = BooleanField()
-    premium = IntegerField(default=0)
 
     feed_ids = ListField(TextField())
     collection_ids = ListField(TextField())
@@ -28,6 +27,14 @@ class User(Document):  # type: ignore[misc]
             dark_mode=BooleanField(default=True),
             render_external=BooleanField(default=False),
             list_render_mode=TextField(default="large"),
+        )
+    )
+
+    premium = DictField(
+        Mapping.build(
+            status=BooleanField(default=False),
+            expire_time=IntegerField(default=0),
+            acknowledged=DictField(default={}),
         )
     )
 

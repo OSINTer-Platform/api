@@ -7,6 +7,7 @@ from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
 from app import config_options
+from app.authorization import expire_premium
 from app.users import models, schemas
 
 
@@ -91,7 +92,7 @@ def create_user(
     password: str,
     email: str | None = "",
     id: UUID | None = None,
-    premium: int = 0,
+    premium: schemas.UserPremium | None = None,
 ) -> bool:
     if check_username(username):
         return False
@@ -112,9 +113,9 @@ def create_user(
         active=True,
         hashed_password=password_hash,
         hashed_email=email_hash,
-        premium=premium,
         settings=schemas.UserSettings(),
         payment=schemas.UserPayment(),
+        premium=premium if premium else schemas.UserPremium(),
     )
 
     config_options.couch_conn[str(id)] = user_schema.db_serialize()
