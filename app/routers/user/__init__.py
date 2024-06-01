@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Literal, cast
+from typing import Annotated, Literal, cast
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
 from starlette.status import (
@@ -81,15 +81,6 @@ def change_settings(
     return user
 
 
-@router.post("/clear-read")
-def clear_read_articles(
-    user: schemas.User = Depends(ensure_user_from_token),
-) -> schemas.User:
-    user.read_articles = []
-    update_user(user)
-    return user
-
-
 @router.post("/signup-code")
 def submit_signup_code(
     code: dict[Literal["code"], str] = Body(),
@@ -108,5 +99,15 @@ def submit_signup_code(
             detail="A wrong signup code was entered",
         )
 
+    update_user(user)
+    return user
+
+
+@router.put("/read-articles")
+def update_read_articles(
+    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    article_ids: Annotated[list[str], Body()],
+) -> schemas.User:
+    user.read_articles = article_ids
     update_user(user)
     return user
