@@ -1,4 +1,4 @@
-from typing import Literal, cast
+from typing import Literal, TypeAlias, cast, overload
 from uuid import UUID, uuid4
 
 from argon2.exceptions import VerifyMismatchError
@@ -272,16 +272,47 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
     }
 
 
-def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
+ItemType: TypeAlias = Literal["feed", "collection", "webhook"]
+
+
+@overload
+def get_item(id: UUID, item_type: Literal["feed"]) -> schemas.Feed | int: ...
+@overload
+def get_item(
+    id: UUID, item_type: Literal["collection"]
+) -> schemas.Collection | int: ...
+@overload
+def get_item(id: UUID, item_type: Literal["webhook"]) -> schemas.Webhook | int: ...
+@overload
+def get_item(
+    id: UUID, item_type: tuple[Literal["feed"], Literal["collection"]]
+) -> schemas.Feed | schemas.Collection | int: ...
+@overload
+def get_item(
+    id: UUID, item_type: None | tuple[ItemType, ItemType] = ...
+) -> schemas.Feed | schemas.Collection | schemas.Webhook | int: ...
+
+
+def get_item(
+    id: UUID, item_type: ItemType | tuple[ItemType, ItemType] | None = None
+) -> schemas.Feed | schemas.Collection | schemas.Webhook | int:
     try:
         item: Document = config_options.couch_conn[str(id)]
     except ResourceNotFound:
         return 404
 
+    if item_type:
+        if isinstance(item_type, str) and item_type != item["type"]:
+            return 404
+        elif not item["type"] in item_type:
+            return 404
+
     if item["type"] == "feed":
         return schemas.Feed.model_validate(item)
     elif item["type"] == "collection":
         return schemas.Collection.model_validate(item)
+    elif item["type"] == "webhook":
+        return schemas.Webhook.model_validate(item)
     else:
         return 404
 

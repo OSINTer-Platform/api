@@ -102,7 +102,7 @@ def get_item_articles(
     response_model=schemas.UserItem,
 )
 def get_item_contents(item_id: UUID) -> schemas.ItemBase:
-    return handle_crud_response(crud.get_item(item_id))
+    return handle_crud_response(crud.get_item(item_id, ("feed", "collection")))
 
 
 @router.get(
