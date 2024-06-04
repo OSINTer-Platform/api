@@ -18,8 +18,17 @@ Level: TypeAlias = Literal["pro"]
 levels = typing.get_args(Level)
 
 
+class WebhookLimits(TypedDict):
+    max_count: int | None
+    max_feeds_per_hook: int | None
+
+
 levels_access: dict[Level, list[Area]] = {
     "pro": ["assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"]
+}
+
+webhook_limits: dict[Level, WebhookLimits] = {
+    "pro": {"max_count": 10, "max_feeds_per_hook": 3},
 }
 
 areas: set[Area] = {area for areas in levels_access.values() for area in areas}
@@ -46,6 +55,17 @@ def get_allowed_areas(
         return levels_access[user.payment.subscription.level]
 
     return []
+
+
+def get_webhook_limits(
+    user: Annotated[User, Depends(ensure_user_from_token)]
+) -> WebhookLimits:
+    if user.premium.status:
+        return {"max_count": None, "max_feeds_per_hook": None}
+    elif is_level(user.payment.subscription.level):
+        return webhook_limits[user.payment.subscription.level]
+    else:
+        raise authorization_exception
 
 
 def get_source_exclusions(
