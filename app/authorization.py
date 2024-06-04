@@ -10,7 +10,7 @@ from app.users.schemas import User
 
 
 Area: TypeAlias = Literal[
-    "assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"
+    "assistant", "cluster", "dashboard", "map", "similar", "summary", "cve", "webhook"
 ]
 
 Level: TypeAlias = Literal["pro"]
