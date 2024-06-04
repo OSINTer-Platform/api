@@ -4,8 +4,9 @@ from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
 from app.common import ArticleSortBy
+from app.connectors import WebhookType
 
 
 class Base(BaseModel):
@@ -70,7 +71,13 @@ class FeedCreate(Base):
         return id_list
 
 
+class FeedWebhooks(ORMBase):
+    hooks: list[UUID] = []
+    last_article: str = ""
+
+
 class Feed(ItemBase, FeedCreate):
+    webhooks: FeedWebhooks = FeedWebhooks()
     type: Literal["feed"] = "feed"
 
 
@@ -209,3 +216,14 @@ class Survey(ORMBase):
     version: int
     metadata: SurveyMetaData
     type: Literal["survey"] = "survey"
+
+
+class Webhook(ORMBase):
+    id: UUID = Field(alias="_id", default_factory=uuid4)
+    name: str
+    owner: UUID
+    url: SecretStr
+
+    hook_type: WebhookType
+
+    type: Literal["webhook"] = "webhook"

@@ -168,6 +168,10 @@ class Feed(ItemBase):
 
     sources = ListField(TextField())
 
+    webhooks = DictField(
+        Mapping.build(hooks=ListField(TextField()), last_article=TextField())
+    )
+
     type = TextField(default="feed")
 
     # Views
@@ -177,6 +181,18 @@ class Feed(ItemBase):
         function(doc) {
             if(doc.type == "feed") {
                 emit(doc._id, doc);
+            }
+        }""",
+    )
+
+    by_webhook = ViewField(
+        "feeds",
+        """
+        function(doc) {
+            if(doc.type == "feed") {
+                for (const hook of doc.webhooks.hooks) {
+                    emit(doc._id, doc);
+                }
             }
         }""",
     )
@@ -219,6 +235,36 @@ class Collection(ItemBase):
     )
 
 
+class Webhook(Document):  # type: ignore[misc]
+    _id = TextField()
+    owner = TextField()
+    name = TextField()
+    url = TextField()
+    hook_type = TextField()
+
+    type = TextField(default="webhook")
+
+    all = ViewField(
+        "webhooks",
+        """
+        function(doc) {
+            if(doc.type == "webhook") {
+                emit(doc._id, doc);
+            }
+        }""",
+    )
+
+    by_owner = ViewField(
+        "webhooks",
+        """
+        function(doc) {
+            if(doc.type == "webhook") {
+                emit(doc.owner, doc)
+            }
+        }""",
+    )
+
+
 DBModels = TypeVar("DBModels", Feed, Collection, User)
 
 views: list[ViewDefinition] = [
@@ -229,5 +275,8 @@ views: list[ViewDefinition] = [
     Survey.by_user_id,
     Feed.all,
     Feed.get_minimal_info,
+    Feed.by_webhook,
     Collection.all,
+    Webhook.all,
+    Webhook.by_owner,
 ]
