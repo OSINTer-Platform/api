@@ -17,62 +17,14 @@ from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
+from .utils import (
+    responses,
+    handle_crud_response,
+    get_query_from_item,
+)
 
 
 router = APIRouter()
-
-
-responses: dict[int | str, dict[str, Any]] = {
-    404: {
-        "model": HTTPError,
-        "description": "Returned when item doesn't already exist",
-        "detail": "No item with that ID found",
-        "status_code": status.HTTP_404_NOT_FOUND,
-    },
-    403: {
-        "model": HTTPError,
-        "description": "Returned when the user doesn't own that item",
-        "detail": "The requested item isn't owned by the authenticated user",
-        "status_code": status.HTTP_403_FORBIDDEN,
-    },
-    422: {
-        "model": HTTPError,
-        "description": "Returned when user tries to delete items that are not deleteable",
-        "detail": "The specified feed or collection is marked as non-deleteable",
-        "status_code": status.HTTP_422_UNPROCESSABLE_ENTITY,
-    },
-}
-
-
-R = TypeVar("R")
-
-
-def handle_crud_response(response: R | int) -> R:
-    if isinstance(response, int):
-        raise HTTPException(
-            status_code=responses[response]["status_code"],
-            detail=responses[response]["detail"],
-        )
-
-    return response
-
-
-def get_query_from_item(
-    item_id: UUID, exclusions: Annotated[list[str], Depends(get_source_exclusions)]
-) -> FastapiArticleSearchQuery | None:
-    item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
-
-    if isinstance(item, int):
-        handle_crud_response(item)
-        return None
-
-    elif not isinstance(item, schemas.Feed | schemas.Collection):
-        handle_crud_response(404)
-        return None
-
-    q = FastapiArticleSearchQuery.from_item(item, exclusions)
-
-    return q
 
 
 @router.delete(
