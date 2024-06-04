@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
-from typing import Annotated, Literal, TypeAlias, TypeVar
+from typing import Annotated, Literal, TypeAlias, TypeGuard, TypeVar, TypedDict
+import typing
 
 from fastapi import Depends
 
@@ -12,15 +13,24 @@ Area: TypeAlias = Literal[
     "assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"
 ]
 
-levels_access: dict[str, list[Area]] = {
+Level: TypeAlias = Literal["pro"]
+
+levels = typing.get_args(Level)
+
+
+levels_access: dict[Level, list[Area]] = {
     "pro": ["assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"]
 }
 
 areas: set[Area] = {area for areas in levels_access.values() for area in areas}
 
 
+def is_level(level: str) -> TypeGuard[Level]:
+    return level in levels
+
+
 def authorize(level: str, area: Area) -> bool:
-    return level in levels_access and area in levels_access[level]
+    return is_level(level) and area in levels_access[level]
 
 
 def get_allowed_areas(
@@ -32,7 +42,7 @@ def get_allowed_areas(
     if user.premium.status:
         return list(areas)
 
-    if user.payment.subscription.level in levels_access:
+    if is_level(user.payment.subscription.level):
         return levels_access[user.payment.subscription.level]
 
     return []

@@ -14,7 +14,7 @@ from app.users.auth import (
 )
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
-from app.authorization import Area, levels_access
+from app.authorization import Area, Level, levels_access
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -30,7 +30,7 @@ async def check_mail_available() -> bool:
 
 
 @router.get("/allowed-areas")
-def get_allowed_areas() -> dict[str, list[Area]]:
+def get_allowed_areas() -> dict[Level, list[Area]]:
     return levels_access
 
 
