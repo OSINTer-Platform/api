@@ -16,7 +16,7 @@ from app.users.auth import (
 )
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
-from app.users.auth import auth_exception
+from app.users.auth import authentication_exception
 
 from .payment import router as payment_router
 
@@ -40,13 +40,10 @@ def change_credentials(
     new_email: str | None = Body(None),
 ) -> schemas.User:
     if not id:
-        raise auth_exception
+        raise authentication_exception
     user = verify_user(id, password=password)
     if not user or not user.rev:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
+        raise authentication_exception
 
     rev = cast(str, user.rev)
     user_schema = schemas.AuthUser.model_validate(user)

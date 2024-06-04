@@ -4,7 +4,7 @@ from typing import Annotated, Literal, TypeAlias, TypeVar
 from fastapi import Depends
 
 from app.users.auth import ensure_user_from_token
-from app.users.auth import get_user_from_token, auth_exception
+from app.users.auth import get_user_from_token, authorization_exception
 from app.users.schemas import User
 
 
@@ -77,4 +77,4 @@ class UserAuthorizer:
             if authorize(user.payment.subscription.level, area):
                 return user
 
-        raise auth_exception
+        raise authorization_exception
