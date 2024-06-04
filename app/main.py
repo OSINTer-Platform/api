@@ -3,12 +3,15 @@ from urllib.parse import parse_qsl, urlencode
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+from app.dependencies import UserCache
+
 from .routers import auth, ml
 from .routers.documents import articles
 from .routers.documents import cves
 from .routers.subscriptions import feeds, collections
 from .routers import user_items
 from .routers import user
+from .routers import payment
 from .routers import survey
 
 app = FastAPI(
@@ -27,6 +30,12 @@ async def filter_blank_query_params(
             keep_blank_values=False,
         )
         scope["query_string"] = urlencode(filtered_query_params).encode("latin-1")
+    return await call_next(request)
+
+
+@app.middleware("http")
+async def attach_user_obj(request: Request, call_next: Callable[..., Any]) -> Any:
+    request.state.user_cache = UserCache()
     return await call_next(request)
 
 
@@ -50,6 +59,8 @@ app.include_router(user.router, prefix="/my/user", tags=["user"])
 app.include_router(user_items.router, prefix="/user-items", tags=["user-items"])
 
 app.include_router(survey.router, prefix="/surveys", tags=["survey"])
+
+app.include_router(payment.router, prefix="/payment", tags=["payment"])
 
 ml.mount_routers()
 app.include_router(ml.router, prefix="/ml", tags=["ml"])

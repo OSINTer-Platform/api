@@ -7,6 +7,7 @@ from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
 
 from app import config_options
+from app.authorization import expire_premium
 from app.users import models, schemas
 
 
@@ -58,6 +59,8 @@ def verify_user(
                 config_options.hasher.verify(hashed_value, raw_value)
             except VerifyMismatchError:
                 return False
+        elif raw_value:
+            return False
 
     return user
 
@@ -89,7 +92,7 @@ def create_user(
     password: str,
     email: str | None = "",
     id: UUID | None = None,
-    premium: int = 0,
+    premium: schemas.UserPremium | None = None,
 ) -> bool:
     if check_username(username):
         return False
@@ -104,20 +107,18 @@ def create_user(
 
     password_hash = config_options.hasher.hash(password)
 
-    new_user = models.User(
-        _id=str(id),
+    user_schema = schemas.AuthUser(
+        _id=id,
         username=username,
         active=True,
         hashed_password=password_hash,
         hashed_email=email_hash,
-        premium=premium,
+        settings=schemas.UserSettings(),
+        payment=schemas.UserPayment(),
+        premium=premium if premium else schemas.UserPremium(),
     )
 
-    collection = create_collection("Already Read", id, deleteable=False)
-    new_user.already_read = collection.id
-
-    new_user.store(config_options.couch_conn)
-    modify_user_subscription(id, set([collection.id]), "subscribe", "collection")
+    config_options.couch_conn[str(id)] = user_schema.db_serialize()
 
     return True
 
@@ -133,16 +134,25 @@ def remove_user(username: str) -> bool:
     return True
 
 
-def update_user(user: schemas.User, rev: str | None = None) -> None:
-    if not rev:
-        rev = cast(
-            str,
-            cast(
-                models.User, models.User.load(config_options.couch_conn, str(user.id))
-            ).rev,
+def update_user(user: schemas.User | schemas.AuthUser, rev: str | None = None) -> None:
+    db_user = {}
+
+    if not rev or type(user) is schemas.User:
+        user_model = cast(
+            models.User, models.User.load(config_options.couch_conn, str(user.id))
         )
 
+        rev = cast(
+            str,
+            user_model.rev,
+        )
+
+        db_user = schemas.AuthUser.model_validate(user_model).db_serialize()
+
+    user = expire_premium(user)
+
     config_options.couch_conn[str(user.id)] = {
+        **db_user,
         **user.db_serialize(),
         "_rev": rev,
     }
@@ -150,7 +160,7 @@ def update_user(user: schemas.User, rev: str | None = None) -> None:
 
 def modify_user_subscription(
     user_id: UUID,
-    ids: set[UUID],
+    ids: list[UUID],
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
 ) -> schemas.User | None:
@@ -169,9 +179,11 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if action == "subscribe":
-        source = source.union(ids)
+        for id in ids:
+            if not id in source:
+                source.append(id)
     elif action == "unsubscribe":
-        source.difference_update(ids)
+        source = [id for id in source if id not in ids]
     else:
         raise NotImplementedError
 

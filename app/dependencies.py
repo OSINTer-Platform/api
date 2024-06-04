@@ -1,13 +1,18 @@
-from typing import Annotated, Literal, Self, Set
+from typing import Annotated, Literal, Self, Set, TypeAlias
+from uuid import UUID
 from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
-from app.users.schemas import Collection, FeedCreate
 
-from modules.elastic import ArticleSearchQuery, CVESearchQuery
+from app.authorization import expire_premium, get_source_exclusions
+from app.users.crud import get_full_user_object
+from app.users.schemas import AuthUser, Collection, FeedCreate, User
+
+from modules.elastic import ArticleSearchQuery, CVESearchQuery, ClusterSearchQuery
 
 from app import config_options
-from app.common import CVESortBy, EsIDList, ArticleSortBy
-from app.users.auth import check_premium
+from app.common import CVESortBy, ClusterSortBy, EsIDList, ArticleSortBy
+
+SourceExclusions: TypeAlias = Annotated[list[str], Depends(get_source_exclusions)]
 
 
 class FastapiArticleSearchQuery(ArticleSearchQuery):
@@ -17,19 +22,20 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
 
     def __init__(
         self,
-        limit: int = 0,
-        sort_by: ArticleSortBy | None = "",
-        sort_order: Literal["desc", "asc"] = "desc",
-        search_term: str | None = None,
-        semantic_search: str | None = None,
-        first_date: datetime | None = None,
-        last_date: datetime | None = None,
-        sources: set[str] | None = None,
-        ids: EsIDList | None = None,
-        highlight: bool = False,
-        highlight_symbol: str = "**",
-        cluster_id: str | None = None,
-        premium: bool = Depends(check_premium),
+        exclusions: SourceExclusions,
+        limit: Annotated[int, Body()] = 0,
+        sort_by: Annotated[ArticleSortBy | None, Body()] = "",
+        sort_order: Annotated[Literal["desc", "asc"], Body()] = "desc",
+        search_term: Annotated[str | None, Body()] = None,
+        semantic_search: Annotated[str | None, Body()] = None,
+        first_date: Annotated[datetime | None, Body()] = None,
+        last_date: Annotated[datetime | None, Body()] = None,
+        sources: Annotated[set[str] | None, Body()] = None,
+        ids: Annotated[EsIDList | None, Body()] = None,
+        highlight: Annotated[bool, Body()] = False,
+        highlight_symbol: Annotated[str, Body()] = "**",
+        cluster_id: Annotated[str | None, Body()] = None,
+        cve: Annotated[str | None, Body()] = None,
     ):
         if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
             raise HTTPException(
@@ -50,13 +56,15 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
-            custom_exclude_fields=None if premium else ["summary", "similar", "ml"],
+            cve=cve,
+            custom_exclude_fields=exclusions,
         )
 
     @classmethod
-    def from_item(cls, item: FeedCreate | Collection, premium: bool) -> Self:
+    def from_item(cls, item: FeedCreate | Collection, exclusions: list[str]) -> Self:
         if isinstance(item, FeedCreate):
             return cls(
+                exclusions=exclusions,
                 limit=item.limit if item.limit else 0,
                 sort_by=item.sort_by,
                 sort_order=item.sort_order,
@@ -66,15 +74,14 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
                 first_date=item.first_date,
                 last_date=item.last_date,
                 sources=item.sources,
-                premium=premium,
             )
         elif isinstance(item, Collection):
             return cls(
+                exclusions=exclusions,
                 limit=10_000 if len(item.ids) < 10_000 else 0,
                 sort_by="publish_date",
                 sort_order="desc",
                 ids=item.ids,
-                premium=premium,
             )
         else:
             raise NotImplemented
@@ -83,6 +90,7 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
 class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
     def __init__(
         self,
+        exclusions: SourceExclusions,
         limit: int = Query(0),
         sort_by: ArticleSortBy | None = Query(""),
         sort_order: Literal["desc", "asc"] = Query("desc"),
@@ -95,9 +103,10 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         highlight: bool = Query(False),
         highlight_symbol: str = Query("**"),
         cluster_id: str | None = Query(None),
-        premium: bool = Depends(check_premium),
+        cve: str | None = None,
     ):
         super().__init__(
+            exclusions=exclusions,
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
@@ -110,7 +119,37 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             highlight=highlight,
             highlight_symbol=highlight_symbol,
             cluster_id=cluster_id,
-            premium=premium,
+            cve=cve,
+        )
+
+
+class FastapiClusterSearchQuery(ClusterSearchQuery):
+    def __init__(
+        self,
+        limit: Annotated[int, Body()] = 0,
+        sort_by: Annotated[ClusterSortBy | None, Body()] = "document_count",
+        sort_order: Annotated[Literal["desc", "asc"], Body()] = "desc",
+        search_term: Annotated[str | None, Body()] = None,
+        ids: Annotated[EsIDList | None, Body()] = None,
+        highlight: Annotated[bool, Body()] = False,
+        highlight_symbol: Annotated[str, Body()] = "**",
+        first_date: Annotated[datetime | None, Body()] = None,
+        last_date: Annotated[datetime | None, Body()] = None,
+        cluster_nr: Annotated[int | None, Body()] = None,
+        exclude_outliers: Annotated[bool, Body()] = True,
+    ):
+        super().__init__(
+            limit=limit,
+            sort_by=sort_by,
+            sort_order=sort_order,
+            search_term=search_term,
+            ids=ids,
+            highlight=highlight,
+            highlight_symbol=highlight_symbol,
+            first_date=first_date,
+            last_date=last_date,
+            cluster_nr=cluster_nr,
+            exclude_outliers=exclude_outliers,
         )
 
 
@@ -125,6 +164,12 @@ class FastapiCVESearchQuery(CVESearchQuery):
         ids: Annotated[EsIDList | None, Body()] = None,
         highlight: Annotated[bool, Body()] = False,
         highlight_symbol: Annotated[str, Body()] = "**",
+        first_date: Annotated[datetime | None, Body()] = None,
+        last_date: Annotated[datetime | None, Body()] = None,
+        date_field: Annotated[
+            Literal["publish_date", "modified_date"], Body()
+        ] = "publish_date",
+        min_doc_count: Annotated[int | None, Body()] = None,
     ):
         super().__init__(
             limit=limit,
@@ -135,4 +180,40 @@ class FastapiCVESearchQuery(CVESearchQuery):
             ids=ids,
             highlight=highlight,
             highlight_symbol=highlight_symbol,
+            first_date=first_date,
+            last_date=last_date,
+            date_field=date_field,
+            min_doc_count=min_doc_count,
         )
+
+
+class UserCache:
+    def __init__(self) -> None:
+        self.user: None | User | AuthUser = None
+
+    def get_user(self: Self, id: UUID) -> User | None:
+        if isinstance(self.user, User):
+            return self.user
+
+        user = get_full_user_object(id)
+        if not isinstance(user, User):
+            return None
+
+        user = expire_premium(user)
+
+        self.user = user
+        return user
+
+    def get_auth_user(self: Self, id: UUID) -> AuthUser | None:
+        if isinstance(self.user, AuthUser):
+            return self.user
+
+        user = get_full_user_object(id, auth=True)
+
+        if not isinstance(user, AuthUser):
+            return None
+
+        user = expire_premium(user)
+
+        self.user = user
+        return user

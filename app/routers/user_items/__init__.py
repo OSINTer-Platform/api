@@ -1,5 +1,6 @@
 from datetime import date
 from io import BytesIO
+from typing import Annotated
 from typing_extensions import Any, TypeVar
 from uuid import UUID
 
@@ -9,9 +10,10 @@ from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
 from app.common import EsIDList, HTTPError
 from app.dependencies import FastapiArticleSearchQuery
+from app.authorization import get_source_exclusions
 from app.users import crud, schemas
-from app.users.auth import check_premium, get_user_from_token
-from app.utils.documents import convert_query_to_zip, send_file
+from app.users.auth import ensure_user_from_token
+from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
@@ -56,7 +58,7 @@ def handle_crud_response(response: R | int) -> R:
 
 
 def get_query_from_item(
-    item_id: UUID, premium: bool = Depends(check_premium)
+    item_id: UUID, exclusions: Annotated[list[str], Depends(get_source_exclusions)]
 ) -> FastapiArticleSearchQuery | None:
     item: schemas.Feed | schemas.Collection | int = crud.get_item(item_id)
 
@@ -68,7 +70,7 @@ def get_query_from_item(
         handle_crud_response(404)
         return None
 
-    q = FastapiArticleSearchQuery.from_item(item, premium)
+    q = FastapiArticleSearchQuery.from_item(item, exclusions)
 
     return q
 
@@ -77,7 +79,7 @@ def get_query_from_item(
     "/{item_id}", status_code=status.HTTP_204_NO_CONTENT, responses=responses
 )
 def delete_item(
-    item_id: UUID, current_user: schemas.User = Depends(get_user_from_token)
+    item_id: UUID, current_user: schemas.User = Depends(ensure_user_from_token)
 ) -> None:
     return handle_crud_response(crud.remove_item(current_user, item_id))
 
@@ -110,7 +112,7 @@ def get_item_contents(item_id: UUID) -> schemas.ItemBase:
 def export_item_articles(
     search_query: FastapiArticleSearchQuery = Depends(get_query_from_item),
 ) -> StreamingResponse:
-    zip_file: BytesIO = convert_query_to_zip(search_query)
+    zip_file: BytesIO = convert_article_query_to_zip(search_query)
 
     return send_file(
         file_name=f"OSINTer-MD-articles-{date.today()}-Item-Download.zip",
@@ -123,7 +125,7 @@ def export_item_articles(
 def update_item_name(
     item_id: UUID,
     new_name: str,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> None:
     return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
 
@@ -132,7 +134,7 @@ def update_item_name(
 def update_feed(
     feed_id: UUID,
     contents: schemas.FeedCreate,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> schemas.Feed:
     return handle_crud_response(
         crud.modify_feed(id=feed_id, contents=contents, user=current_user)
@@ -146,23 +148,8 @@ def update_feed(
 def update_collection(
     collection_id: UUID,
     contents: EsIDList,
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> schemas.Collection:
     return handle_crud_response(
         crud.modify_collection(id=collection_id, contents=contents, user=current_user)
     )
-
-
-@router.get(
-    "/standard/feeds",
-    response_model_exclude_none=True,
-)
-def get_standard_items() -> dict[str, schemas.Feed]:
-    standard_user = crud.get_full_user_object(UUID(int=0))
-
-    if not standard_user:
-        raise HTTPException(
-            status_code=HTTP_500_INTERNAL_SERVER_ERROR, detail="Backend setup missing"
-        )
-
-    return crud.get_feeds(standard_user)

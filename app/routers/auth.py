@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Literal
 from typing_extensions import TypedDict
 from uuid import UUID
@@ -10,10 +10,11 @@ from app.users import schemas
 
 from app.users.auth import (
     create_access_token,
-    get_user_from_token,
+    ensure_user_from_token,
 )
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
+from app.authorization import Area, levels_access
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -26,6 +27,11 @@ router = APIRouter()
 # Should also check whether mail server is active and available, once implemented
 async def check_mail_available() -> bool:
     return config_options.EMAIL_SERVER_AVAILABLE
+
+
+@router.get("/allowed-areas")
+def get_allowed_areas() -> dict[str, list[Area]]:
+    return levels_access
 
 
 @router.get("/forgotten-password")
@@ -82,7 +88,7 @@ async def send_password_recovery_mail(
 
 @router.get("/status")
 async def get_auth_status(
-    current_user: User = Depends(get_user_from_token),
+    current_user: User = Depends(ensure_user_from_token),
 ) -> User:
     return current_user
 
@@ -90,7 +96,7 @@ async def get_auth_status(
 @router.post("/logout")
 async def logout(
     response: Response,
-    _: User = Depends(get_user_from_token),
+    _: User = Depends(ensure_user_from_token),
 ) -> None:
     response.delete_cookie(key="access_token")
     return
@@ -120,9 +126,11 @@ def get_token_from_form(
         )
 
     expire_date = timedelta(
-        hours=config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
-        if remember_me
-        else config_options.ACCESS_TOKEN_EXPIRE_HOURS
+        hours=(
+            config_options.REMEMBER_ACCESS_TOKEN_EXPIRE_HOURS
+            if remember_me
+            else config_options.ACCESS_TOKEN_EXPIRE_HOURS
+        )
     )
 
     access_token = create_access_token(
@@ -209,12 +217,18 @@ async def signup(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,
             detail="A wrong signup code was entered",
         )
-    premium = form_data.signup_code in config_options.SIGNUP_CODES
+    user_premium = None
+    if form_data.signup_code in config_options.SIGNUP_CODES:
+        diff = datetime.now(UTC) + config_options.SIGNUP_CODES[form_data.signup_code]
+        user_premium = schemas.UserPremium(
+            status=True, expire_time=int(diff.timestamp())
+        )
+
     if create_user(
         username=form_data.username,
         password=form_data.password,
         email=form_data.email,
-        premium=1 if premium else 0,
+        premium=user_premium,
     ):
         return DefaultResponse(status=DefaultResponseStatus.SUCCESS, msg="User created")
     else:

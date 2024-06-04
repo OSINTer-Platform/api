@@ -1,3 +1,4 @@
+from datetime import timedelta
 import os
 import secrets
 
@@ -8,6 +9,9 @@ from modules.config import BaseConfig
 
 
 from uuid import uuid4
+from logging import getLogger
+
+logger = getLogger("osinter")
 
 
 def load_secret_key() -> str:
@@ -26,6 +30,13 @@ def load_secret_key() -> str:
 class FrontendConfig(BaseConfig):
     def __init__(self) -> None:
         super().__init__()
+        self.STRIPE_API_KEY = os.environ.get("STRIPE_API_KEY", None)
+        self.STRIPE_WEBHOOK_SECRET = os.environ.get("STRIPE_WEBHOOK_SECRET", None)
+
+        for needed_secret in ["STRIPE_API_KEY", "STRIPE_WEBHOOK_SECRET"]:
+            if not self[needed_secret]:
+                logger.warn(f"Missing {needed_secret}. Stripe integration may not function")
+
         self.SECRET_KEY = os.environ.get("SECRET_KEY") or load_secret_key()
 
         self.ACCESS_TOKEN_EXPIRE_HOURS = int(
@@ -53,8 +64,18 @@ class FrontendConfig(BaseConfig):
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
 
-        signup_code = os.environ.get("SIGNUP_CODES", None)
-        self.SIGNUP_CODES = signup_code.split(",") if signup_code else []
+        signup_code = os.environ.get("SIGNUP_CODES", "")
+        self.SIGNUP_CODES: dict[str, timedelta] = {}
+        for code_pair in signup_code.split(","):
+            try:
+                code, day_diff_str = code_pair.split(":")
+                day_diff = int(day_diff_str)
+                diff = timedelta(days=day_diff)
+
+                self.SIGNUP_CODES[code] = diff
+            except:
+                raise Exception(f"Error when parsing following signup code-string: {code_pair}")
+
 
         self.hasher = PasswordHasher()
 

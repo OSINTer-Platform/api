@@ -12,10 +12,13 @@ from modules.objects import (
 )
 
 from ... import config_options
-from app.dependencies import FastapiArticleSearchQuery
-from app.users.auth import require_premium
 
-router = APIRouter(prefix="/map", dependencies=[Depends(require_premium)])
+from app.dependencies import FastapiArticleSearchQuery
+from app.authorization import UserAuthorizer
+
+MapAuthorizer = UserAuthorizer(["map"])
+
+router = APIRouter(prefix="/map", dependencies=[Depends(MapAuthorizer)])
 
 
 class PartialMLArticle(AbstractDocument):
@@ -34,7 +37,7 @@ class PartialMLArticle(AbstractDocument):
 )
 async def query_partial_article_map() -> list[PartialArticle]:
     articles = config_options.es_article_client.query_documents(
-        FastapiArticleSearchQuery(limit=0, premium=True),
+        FastapiArticleSearchQuery([], limit=0),
         ["title", "description", "source", "profile", "publish_date", "ml"],
     )[0]
 

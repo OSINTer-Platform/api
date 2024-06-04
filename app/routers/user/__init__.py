@@ -1,4 +1,5 @@
-from typing import Literal, cast
+from datetime import UTC, datetime
+from typing import Annotated, Literal, cast
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
 from starlette.status import (
@@ -9,31 +10,37 @@ from starlette.status import (
 from app.users import schemas
 
 from app.users.auth import (
-    ensure_id_from_token,
-    get_auth_user_from_token,
-    get_user_from_token,
+    get_id_from_token,
+    ensure_auth_user_from_token,
+    ensure_user_from_token,
 )
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
+from app.users.auth import auth_exception
+
+from .payment import router as payment_router
 
 router = APIRouter()
+router.include_router(payment_router, tags=["payment"])
 
 
 @router.get("/")
 async def get_auth_status(
-    current_user: schemas.User = Depends(get_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> schemas.User:
     return current_user
 
 
 @router.post("/credentials")
 def change_credentials(
-    id: UUID = Depends(ensure_id_from_token),
+    id: UUID | None = Depends(get_id_from_token),
     password: str = Body(...),
     new_username: str | None = Body(None),
     new_password: str | None = Body(None),
     new_email: str | None = Body(None),
 ) -> schemas.User:
+    if not id:
+        raise auth_exception
     user = verify_user(id, password=password)
     if not user or not user.rev:
         raise HTTPException(
@@ -65,7 +72,7 @@ def change_credentials(
 @router.post("/settings")
 def change_settings(
     settings: schemas.PartialUserSettings,
-    user: schemas.User = Depends(get_auth_user_from_token),
+    user: schemas.User = Depends(ensure_auth_user_from_token),
 ) -> schemas.User:
     user.settings = user.settings.model_copy(
         update=settings.model_dump(exclude_unset=True)
@@ -77,18 +84,36 @@ def change_settings(
 @router.post("/signup-code")
 def submit_signup_code(
     code: dict[Literal["code"], str] = Body(),
-    user: schemas.User = Depends(get_auth_user_from_token),
+    user: schemas.User = Depends(ensure_auth_user_from_token),
 ) -> schemas.User:
-    if user.premium > 0:
+    if user.premium.status:
         return user
 
     if code["code"] in config_options.SIGNUP_CODES:
-        user.premium = 1
+        diff = datetime.now(UTC) + config_options.SIGNUP_CODES[code["code"]]
+        user.premium.status = True
+        user.premium.expire_time = int(diff.timestamp())
     else:
         raise HTTPException(
             status_code=HTTP_422_UNPROCESSABLE_ENTITY,
             detail="A wrong signup code was entered",
         )
 
+    update_user(user)
+    return user
+
+@router.post("/acknowledge-premium")
+def acknowledge_premium(user: Annotated[schemas.User, Depends(ensure_user_from_token)], field: Annotated[str, Body()], status: Annotated[bool, Body()]) -> schemas.User:
+    user.premium.acknowledged[field] = status
+    update_user(user)
+    return user
+
+
+@router.put("/read-articles")
+def update_read_articles(
+    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    article_ids: Annotated[list[str], Body()],
+) -> schemas.User:
+    user.read_articles = article_ids
     update_user(user)
     return user

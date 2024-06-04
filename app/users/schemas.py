@@ -19,7 +19,7 @@ class Base(BaseModel):
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
-        warnings: bool = True
+        warnings: bool = True,
     ) -> dict[str, Any]:
         return self.model_dump(
             mode="json",
@@ -91,6 +91,12 @@ class Collection(ItemBase):
 UserItem: TypeAlias = Annotated[Union[Feed, Collection], Field(discriminator="type")]
 
 
+class UserPremium(ORMBase):
+    status: bool = False
+    expire_time: int = 0
+    acknowledged: dict[str, bool] = {}
+
+
 class UserSettings(ORMBase):
     dark_mode: bool = True
     render_external: bool = False
@@ -103,30 +109,53 @@ class PartialUserSettings(ORMBase):
     list_render_mode: Literal["large"] | Literal["title"] | None = None
 
 
+class UserPayment(ORMBase):
+    class Invoice(ORMBase):
+        last_updated: int = 0
+        action_required: bool = False
+        action_type: Literal["", "authenticate", "update"] = ""
+        payment_intent: str = ""
+        invoice_url: str = ""
+
+    class Subscription(ORMBase):
+        last_updated: int = 0
+        stripe_product_id: str = ""
+        stripe_subscription_id: str = ""
+        level: Literal["", "pro"] = ""
+        state: Literal["", "active", "past_due", "closed"] = ""
+
+        cancel_at_period_end: bool = False
+        current_period_end: int = 0
+
+    stripe_id: str = ""
+    invoice: Invoice = Invoice()
+    subscription: Subscription = Subscription()
+
+
 class User(ORMBase):
     id: UUID = Field(alias="_id")
     username: str
 
     active: bool = True
-    premium: int = 0
 
-    already_read: UUID | None = None
-
-    feed_ids: set[UUID] = set()
-    collection_ids: set[UUID] = set()
+    feed_ids: list[UUID] = []
+    collection_ids: list[UUID] = []
+    read_articles: list[str] = []
 
     feeds: list[Feed] = []
     collections: list[Collection] = []
 
+    premium: UserPremium
+    payment: UserPayment
     settings: UserSettings
 
     type: Literal["user"] = "user"
 
-    @field_validator("feed_ids", "collection_ids", mode="before")
+    @field_validator("feed_ids", "collection_ids", "read_articles", mode="before")
     @classmethod
     def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):
-            return set(id_list)
+            return list(id_list)
 
         return id_list
 
@@ -140,7 +169,7 @@ class User(ORMBase):
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
-        warnings: bool = True
+        warnings: bool = True,
     ) -> dict[str, Any]:
         if exclude:
             exclude = exclude.union({"feeds", "collections"})

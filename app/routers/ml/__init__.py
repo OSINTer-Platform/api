@@ -23,11 +23,11 @@ def mount_routers() -> None:
 
 @router.get("/")
 def check_ml_availability() -> (
-    dict[Literal["clustering", "map", "elser", "inference"], bool]
+    dict[Literal["cluster", "map", "elser", "assistant"], bool]
 ):
     return {
-        "clustering": config_options.ML_CLUSTERING_AVAILABLE,
+        "cluster": config_options.ML_CLUSTERING_AVAILABLE,
         "map": config_options.ML_MAP_AVAILABLE,
         "elser": config_options.ELSER_AVAILABLE,
-        "inference": config_options.LIVE_INFERENCE_AVAILABLE,
+        "assistant": config_options.LIVE_INFERENCE_AVAILABLE,
     }

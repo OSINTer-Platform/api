@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from app import config_options
-from app.dependencies import FastapiArticleSearchQuery
+from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
 from app.utils.rss import generate_rss_feed
 
 router = APIRouter()
@@ -16,11 +16,14 @@ class XMLResponse(Response):
 
 @router.get("/newest/rss")
 def get_newest_rss(
-    request: Request, original_url: bool = Query(False), limit: int = Query(50)
+    request: Request,
+    source_exclusions: SourceExclusions,
+    original_url: bool = Query(False),
+    limit: int = Query(50),
 ) -> Response:
     articles = config_options.es_article_client.query_documents(
         FastapiArticleSearchQuery(
-            limit=limit, sort_by="publish_date", sort_order="desc", premium=False
+            source_exclusions, limit=limit, sort_by="publish_date", sort_order="desc"
         ),
         True,
     )[0]
