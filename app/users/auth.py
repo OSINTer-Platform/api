@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, cast
 from uuid import UUID
 
@@ -25,9 +25,9 @@ def create_access_token(
 ) -> str:
     to_encode = data.copy()
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(
+        expire = datetime.now(UTC) + timedelta(
             hours=config_options.ACCESS_TOKEN_EXPIRE_HOURS
         )
     to_encode.update({"exp": expire})
