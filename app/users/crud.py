@@ -317,24 +317,6 @@ def get_item(
         return 404
 
 
-def modify_feed(
-    id: UUID, contents: schemas.FeedCreate, user: schemas.User
-) -> int | schemas.Feed:
-    item: models.Feed | None = models.Feed.load(config_options.couch_conn, str(id))
-
-    if item is None or item.type != "feed":
-        return 404
-    elif item.owner != str(user.id):
-        return 403
-
-    for k, v in contents.db_serialize(exclude_unset=True).items():
-        setattr(item, k, v)
-
-    item.store(config_options.couch_conn)
-
-    return schemas.Feed.model_validate(item)
-
-
 def modify_collection(
     id: UUID,
     contents: set[str],

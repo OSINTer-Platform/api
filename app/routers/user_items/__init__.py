@@ -1,16 +1,13 @@
 from datetime import date
 from io import BytesIO
 from typing import Annotated
-from typing_extensions import Any, TypeVar
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
-from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.common import EsIDList, HTTPError
+from app.common import EsIDList
 from app.dependencies import FastapiArticleSearchQuery
-from app.authorization import get_source_exclusions
 from app.users import crud, schemas
 from app.users.auth import ensure_user_from_token
 from app.utils.documents import convert_article_query_to_zip, send_file
@@ -21,6 +18,8 @@ from .utils import (
     responses,
     handle_crud_response,
     get_query_from_item,
+    get_own_feed,
+    update_last_article,
 )
 
 
@@ -84,13 +83,19 @@ def update_item_name(
 
 @router.put("/feed/{feed_id}", responses=responses)
 def update_feed(
-    feed_id: UUID,
+    feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     contents: schemas.FeedCreate,
-    current_user: schemas.User = Depends(ensure_user_from_token),
 ) -> schemas.Feed:
-    return handle_crud_response(
-        crud.modify_feed(id=feed_id, contents=contents, user=current_user)
-    )
+
+    for k, v in contents.db_serialize(exclude_unset=True).items():
+        setattr(feed, k, v)
+
+    if len(feed.webhooks.hooks) > 0:
+        feed = update_last_article(feed)
+
+    config_options.couch_conn[str(feed.id)] = feed.db_serialize()
+
+    return feed
 
 
 @router.put(
