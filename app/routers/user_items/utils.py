@@ -75,6 +75,18 @@ def get_own_feed(
     return item
 
 
+def get_own_webhook(
+    webhook_id: UUID, user: Annotated[schemas.User, Depends(ensure_user_from_token)]
+) -> schemas.Webhook:
+    WebhookAuthorizer(user)
+    item = handle_crud_response(crud.get_item(webhook_id, "webhook"))
+
+    if item.owner != user.id:
+        handle_crud_response(403)
+
+    return item
+
+
 def update_last_article(feed: schemas.Feed) -> schemas.Feed:
     q = FastapiArticleSearchQuery.from_item(feed, [])
     q.limit = 1

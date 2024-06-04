@@ -3,12 +3,15 @@ from io import BytesIO
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, Query, status
+from couchdb.client import ViewResults
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from starlette.status import HTTP_403_FORBIDDEN
 
+from app.authorization import WebhookLimits, get_webhook_limits
 from app.common import EsIDList
 from app.dependencies import FastapiArticleSearchQuery
-from app.users import crud, schemas
+from app.users import crud, models, schemas
 from app.users.auth import ensure_user_from_token
 from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.objects import BaseArticle, FullArticle
@@ -20,6 +23,7 @@ from .utils import (
     handle_crud_response,
     get_query_from_item,
     get_own_feed,
+    get_own_webhook,
     update_last_article,
 )
 
@@ -94,6 +98,52 @@ def update_feed(
 
     if len(feed.webhooks.hooks) > 0:
         feed = update_last_article(feed)
+
+    config_options.couch_conn[str(feed.id)] = feed.db_serialize()
+
+    return feed
+
+
+@router.put("/feed/{feed_id}/webhook", responses=responses, tags=["webhooks"])
+def add_webhook_to_feed(
+    feed: Annotated[schemas.Feed, Depends(get_own_feed)],
+    webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
+    webhook_limits: Annotated[WebhookLimits, Depends(get_webhook_limits)],
+) -> schemas.Feed:
+    if str(webhook.id) in feed.webhooks.hooks:
+        return feed
+
+    if webhook_limits["max_feeds_per_hook"]:
+        webhook_feeds_view: ViewResults = models.Feed.by_webhook(
+            config_options.couch_conn
+        )
+        webhook_feeds_view.options["key"] = str(webhook.id)
+
+        if len(webhook_feeds_view) >= webhook_limits["max_feeds_per_hook"]:
+            raise HTTPException(
+                HTTP_403_FORBIDDEN,
+                f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
+            )
+
+    feed.webhooks.hooks.append(webhook.id)
+
+    if len(feed.webhooks.hooks) == 1:
+        feed = update_last_article(feed)
+
+    config_options.couch_conn[str(feed.id)] = feed.db_serialize()
+
+    return feed
+
+
+@router.delete("/feed/{feed_id}/webhook", responses=responses, tags=["webhooks"])
+def remove_webhook_from_feed(
+    feed: Annotated[schemas.Feed, Depends(get_own_feed)],
+    webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
+) -> schemas.Feed:
+    if webhook.id not in feed.webhooks.hooks:
+        return feed
+
+    feed.webhooks.hooks.remove(webhook.id)
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
 
