@@ -14,6 +14,7 @@ from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.objects import BaseArticle, FullArticle
 
 from ... import config_options
+from . import webhooks
 from .utils import (
     responses,
     handle_crud_response,
@@ -24,6 +25,7 @@ from .utils import (
 
 
 router = APIRouter()
+router.include_router(webhooks.router, tags=["webhooks"], prefix="/webhook")
 
 
 @router.delete(
