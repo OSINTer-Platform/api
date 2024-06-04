@@ -64,6 +64,9 @@ class FrontendConfig(BaseConfig):
             os.environ.get("ARTICLE_RENDER_URL") or "https://osinter.dk/article"
         )
 
+        self.FULL_LOGO_URL = os.environ.get("FULL_LOGO_URL") or "https://osinter.dk/fullLogo.png"
+        self.SMALL_LOGO_URL = os.environ.get("SMALL_LOGO_URL") or "https://osinter.dk/fullLogo.png"
+
         signup_code = os.environ.get("SIGNUP_CODES", "")
         self.SIGNUP_CODES: dict[str, timedelta] = {}
         for code_pair in signup_code.split(","):
