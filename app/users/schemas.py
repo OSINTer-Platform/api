@@ -19,7 +19,7 @@ class Base(BaseModel):
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
-        warnings: bool = True
+        warnings: bool = True,
     ) -> dict[str, Any]:
         return self.model_dump(
             mode="json",
@@ -169,7 +169,7 @@ class User(ORMBase):
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
-        warnings: bool = True
+        warnings: bool = True,
     ) -> dict[str, Any]:
         if exclude:
             exclude = exclude.union({"feeds", "collections"})
