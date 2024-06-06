@@ -5,6 +5,7 @@ from argon2.exceptions import VerifyMismatchError
 from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
+from pydantic import SecretStr
 
 from app import config_options
 from app.authorization import expire_premium
@@ -54,21 +55,13 @@ def verify_user(
     return user
 
 
-def get_full_user_object(
-    id: UUID, auth: bool = False
-) -> None | schemas.User | schemas.AuthUser:
+def get_full_user_object(id: UUID) -> None | schemas.User:
     user: models.User | None = models.User.load(config_options.couch_conn, str(id))
 
     if not user:
         return None
 
-    user_schema: schemas.AuthUser | schemas.User
-    if auth:
-        user_schema = schemas.AuthUser.model_validate(user)
-    else:
-        user_schema = schemas.User.model_validate(user)
-
-    return user_schema
+    return schemas.User.model_validate(user)
 
 
 # Ensures that usernames are unique
@@ -92,18 +85,20 @@ def create_user(
 
     password_hash = config_options.hasher.hash(password)
 
-    user_schema = schemas.AuthUser(
+    user_schema = schemas.User(
         _id=id,
         username=username,
         active=True,
-        hashed_password=password_hash,
-        hashed_email=email_hash,
+        hashed_password=SecretStr(password_hash),
+        hashed_email=SecretStr(email_hash) if email_hash else None,
         settings=schemas.UserSettings(),
         payment=schemas.UserPayment(),
         premium=premium if premium else schemas.UserPremium(),
     )
 
-    config_options.couch_conn[str(id)] = user_schema.db_serialize()
+    config_options.couch_conn[str(id)] = user_schema.db_serialize(
+        context={"show_secrets": True}
+    )
 
     return True
 
@@ -119,22 +114,12 @@ def remove_user(username: str) -> bool:
     return True
 
 
-def update_user(user: schemas.User | schemas.AuthUser) -> None:
-    db_user = {}
-
-    if type(user) is schemas.User:
-        user_model = cast(
-            models.User, models.User.load(config_options.couch_conn, str(user.id))
-        )
-
-        db_user = schemas.AuthUser.model_validate(user_model).db_serialize()
-
+def update_user(user: schemas.User) -> None:
     user = expire_premium(user)
 
-    config_options.couch_conn[str(user.id)] = {
-        **db_user,
-        **user.db_serialize(),
-    }
+    config_options.couch_conn[str(user.id)] = (
+        user.db_serialize(context={"show_secrets": True}),
+    )
 
 
 def modify_user_subscription(
@@ -148,7 +133,7 @@ def modify_user_subscription(
     if not user:
         return None
 
-    user_schema = schemas.AuthUser.model_validate(user)
+    user_schema = schemas.User.model_validate(user)
 
     if item_type == "feed":
         source = user_schema.feed_ids
@@ -171,7 +156,9 @@ def modify_user_subscription(
     elif item_type == "collection":
         user_schema.collection_ids = source
 
-    config_options.couch_conn[str(user_schema.id)] = user_schema.db_serialize()
+    config_options.couch_conn[str(user_schema.id)] = user_schema.db_serialize(
+        context={"show_secrets": True}
+    )
 
     return user_schema
 

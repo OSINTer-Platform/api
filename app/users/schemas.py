@@ -4,7 +4,15 @@ from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FieldSerializationInfo,
+    SecretStr,
+    field_serializer,
+    field_validator,
+)
 from app.common import ArticleSortBy
 from app.connectors import WebhookType
 
@@ -160,6 +168,9 @@ class User(DBItemBase):
     payment: UserPayment
     settings: UserSettings
 
+    hashed_password: SecretStr
+    hashed_email: SecretStr | None
+
     type: Literal["user"] = "user"
 
     @field_validator("feed_ids", "collection_ids", "read_articles", mode="before")
@@ -170,11 +181,15 @@ class User(DBItemBase):
 
         return id_list
 
-
-
-class AuthUser(User):
-    hashed_password: str
-    hashed_email: str | None
+    @field_serializer("hashed_password", "hashed_email")
+    def dump_secrets(
+        self, v: SecretStr | None, info: FieldSerializationInfo
+    ) -> str | None:
+        if v and info.context and info.context.get("show_secrets"):
+            return v.get_secret_value()
+        elif v:
+            return str(v)
+        return None
 
 
 class SurveySection(BaseModel):

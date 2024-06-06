@@ -8,7 +8,7 @@ from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from app import config_options
 from app.utils.auth import OAuth2PasswordBearerWithCookie
-from app.users.schemas import AuthUser, User
+from app.users.schemas import User
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
@@ -94,8 +94,8 @@ def ensure_auth_user_from_token(
     if not id:
         raise authentication_exception
 
-    user = request.state.user_cache.get_auth_user(id)
+    user: User | None = request.state.user_cache.get_user(id)
 
     if not user:
         raise authentication_exception
-    return cast(AuthUser, user)
+    return user

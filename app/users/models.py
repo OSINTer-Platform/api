@@ -68,7 +68,6 @@ class User(BaseDocument):
         )
     )
 
-    # AuthUser
     hashed_password = TextField()
     hashed_email = TextField()
 

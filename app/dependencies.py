@@ -5,7 +5,7 @@ from datetime import datetime
 
 from app.authorization import expire_premium, get_source_exclusions
 from app.users.crud import get_full_user_object
-from app.users.schemas import AuthUser, Collection, FeedCreate, User
+from app.users.schemas import Collection, FeedCreate, User
 
 from modules.elastic import ArticleSearchQuery, CVESearchQuery, ClusterSearchQuery
 
@@ -189,7 +189,7 @@ class FastapiCVESearchQuery(CVESearchQuery):
 
 class UserCache:
     def __init__(self) -> None:
-        self.user: None | User | AuthUser = None
+        self.user: None | User = None
 
     def get_user(self: Self, id: UUID) -> User | None:
         if isinstance(self.user, User):
@@ -197,20 +197,6 @@ class UserCache:
 
         user = get_full_user_object(id)
         if not isinstance(user, User):
-            return None
-
-        user = expire_premium(user)
-
-        self.user = user
-        return user
-
-    def get_auth_user(self: Self, id: UUID) -> AuthUser | None:
-        if isinstance(self.user, AuthUser):
-            return self.user
-
-        user = get_full_user_object(id, auth=True)
-
-        if not isinstance(user, AuthUser):
             return None
 
         user = expire_premium(user)
