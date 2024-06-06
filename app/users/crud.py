@@ -117,8 +117,8 @@ def remove_user(username: str) -> bool:
 def update_user(user: schemas.User) -> None:
     user = expire_premium(user)
 
-    config_options.couch_conn[str(user.id)] = (
-        user.db_serialize(context={"show_secrets": True}),
+    config_options.couch_conn[str(user.id)] = user.db_serialize(
+        context={"show_secrets": True}
     )
 
 
@@ -183,8 +183,7 @@ def create_feed(
     if owner:
         feed.owner = owner
 
-    feed_model = models.Feed(**feed.db_serialize())
-    feed_model.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = feed.db_serialize()
 
     return feed
 
@@ -211,8 +210,7 @@ def create_collection(
     if ids:
         collection.ids = ids
 
-    collection_model = models.Collection(**collection.db_serialize())
-    collection_model.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = collection.db_serialize()
 
     return collection
 
@@ -293,34 +291,46 @@ def modify_collection(
 
     if item is None or item.type != "collection":
         return 404
-    elif item.owner != str(user.id):
+
+    collection = schemas.Collection.model_validate(item)
+
+    if collection.owner != user.id:
         return 403
 
     if action == "replace":
-        item.ids = list(contents)
+        collection.ids = contents
     elif action == "extend":
-        item.ids.extend(list(contents))  # pyright: ignore
+        collection.ids.update(contents)
 
-    item.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = collection.db_serialize()
 
-    return schemas.Collection.model_validate(item)
+    return collection
 
 
-def change_item_name(id: UUID, new_name: str, user: schemas.User) -> int | None:
+def change_item_name(
+    id: UUID, new_name: str, user: schemas.User
+) -> int | schemas.Collection | schemas.Feed:
     item: models.ItemBase | None = models.ItemBase.load(
         config_options.couch_conn, str(id)
     )
 
     if item is None or not item.type in ["feed", "collection"]:
         return 404
-    elif item.owner != str(user.id):
+
+    item_schema = (
+        schemas.Feed.model_validate(item)
+        if item.type == "feed"
+        else schemas.Collection.model_validate(item)
+    )
+
+    if item_schema.owner != user.id:
         return 403
 
-    item.name = new_name
+    item_schema.name = new_name
 
-    item.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = item_schema.db_serialize()
 
-    return None
+    return item_schema
 
 
 # Has to verify the user owns the item before deletion

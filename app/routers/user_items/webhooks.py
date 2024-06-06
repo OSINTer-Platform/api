@@ -41,9 +41,9 @@ async def create_webhook(
         name=webhook_name, owner=user.id, url=SecretStr(url), hook_type=webhook_type
     )
 
-    webhook_model = models.Webhook(**webhook.db_serialize())
-    webhook_model.url = webhook.url.get_secret_value()
-    webhook_model.store(config_options.couch_conn)
+    config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(
+        context={"show_secrets": True}
+    )
 
     return webhook
 
