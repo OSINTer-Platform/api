@@ -110,7 +110,7 @@ def add_webhook_to_feed(
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
     webhook_limits: Annotated[WebhookLimits, Depends(get_webhook_limits)],
 ) -> schemas.Feed:
-    if str(webhook.id) in feed.webhooks.hooks:
+    if webhook.id in feed.webhooks.hooks:
         return feed
 
     webhook_feeds_view: ViewResults = models.Feed.by_webhook(config_options.couch_conn)
