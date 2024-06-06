@@ -177,7 +177,7 @@ def create_feed(
         name=name,
         _id=id,
         deleteable=deleteable,
-        **feed_params.db_serialize(),
+        **feed_params.model_dump(),
     )
 
     if owner:

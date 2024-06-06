@@ -93,7 +93,7 @@ def update_feed(
     contents: schemas.FeedCreate,
 ) -> schemas.Feed:
 
-    for k, v in contents.db_serialize(exclude_unset=True).items():
+    for k, v in contents.model_dump(exclude_unset=True).items():
         setattr(feed, k, v)
 
     if len(feed.webhooks.hooks) > 0:

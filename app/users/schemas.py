@@ -17,14 +17,21 @@ from app.common import ArticleSortBy
 from app.connectors import WebhookType
 
 
-class Base(BaseModel):
+# Used for mapping the _id field of the DB model to the schemas id field
+class ORMBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class DBItemBase(ORMBase):
+    id: UUID = Field(alias="_id", default_factory=uuid4)
+    rev: str | None = Field(alias="_rev", default=None)
+
     def db_serialize(
         self,
         *,
         include: set[str] | None = None,
         exclude: set[str] | None = None,
         context: dict[str, Any] | None = None,
-        by_alias: bool = True,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
@@ -32,12 +39,12 @@ class Base(BaseModel):
         warnings: bool = True,
         serialize_as_any: bool = False
     ) -> dict[str, Any]:
-        return self.model_dump(
+        model = self.model_dump(
             mode="json",
             include=include,
             exclude=exclude,
             context=context,
-            by_alias=by_alias,
+            by_alias=True,
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
@@ -46,15 +53,10 @@ class Base(BaseModel):
             serialize_as_any=serialize_as_any,
         )
 
+        if model["_rev"] is None:
+            del model["_rev"]
 
-# Used for mapping the _id field of the DB model to the schemas id field
-class ORMBase(Base):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
-
-
-class DBItemBase(ORMBase):
-    id: UUID = Field(alias="_id", default_factory=uuid4)
-    rev: str = Field(alias="_rev", default="")
+        return model
 
 
 class ItemBase(DBItemBase):
@@ -63,7 +65,7 @@ class ItemBase(DBItemBase):
     deleteable: bool | None = True
 
 
-class FeedCreate(Base):
+class FeedCreate(BaseModel):
     limit: int | None = 100
 
     sort_by: ArticleSortBy | None = "publish_date"
