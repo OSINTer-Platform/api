@@ -113,24 +113,29 @@ def add_webhook_to_feed(
     if str(webhook.id) in feed.webhooks.hooks:
         return feed
 
-    if webhook_limits["max_feeds_per_hook"]:
-        webhook_feeds_view: ViewResults = models.Feed.by_webhook(
-            config_options.couch_conn
-        )
-        webhook_feeds_view.options["key"] = str(webhook.id)
+    webhook_feeds_view: ViewResults = models.Feed.by_webhook(config_options.couch_conn)
+    webhook_feeds_view.options["key"] = str(webhook.id)
+    webhook_feeds = [schemas.Feed.model_validate(feed) for feed in webhook_feeds_view]
 
-        if len(webhook_feeds_view) >= webhook_limits["max_feeds_per_hook"]:
-            raise HTTPException(
-                HTTP_403_FORBIDDEN,
-                f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
-            )
+    if (
+        webhook_limits["max_feeds_per_hook"]
+        and len(webhook_feeds) + 1 >= webhook_limits["max_feeds_per_hook"]
+    ):
+        raise HTTPException(
+            HTTP_403_FORBIDDEN,
+            f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
+        )
 
     feed.webhooks.hooks.append(webhook.id)
+    webhook.attached_feeds = [feed.id for feed in webhook_feeds]
 
     if len(feed.webhooks.hooks) == 1:
         feed = update_last_article(feed)
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
+    config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(
+        context={"show_secrets": True}
+    )
 
     return feed
 
@@ -144,8 +149,12 @@ def remove_webhook_from_feed(
         return feed
 
     feed.webhooks.hooks.remove(webhook.id)
+    webhook.attached_feeds = [id for id in webhook.attached_feeds if id != feed.id]
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
+    config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(
+        context={"show_secrets": True}
+    )
 
     return feed
 

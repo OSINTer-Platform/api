@@ -240,6 +240,7 @@ class Webhook(BaseDocument):
     name = TextField()
     url = TextField()
     hook_type = TextField()
+    attached_feeds = ListField(TextField())
 
     type = TextField(default="webhook")
 

@@ -216,5 +216,12 @@ class Webhook(DBItemBase):
     url: SecretStr
 
     hook_type: WebhookType
+    attached_feeds: list[UUID] = []
 
     type: Literal["webhook"] = "webhook"
+
+    @field_serializer("url")
+    def dump_secrets(self, v: SecretStr, info: FieldSerializationInfo) -> str:
+        if info.context and info.context.get("show_secrets"):
+            return v.get_secret_value()
+        return str(v)
