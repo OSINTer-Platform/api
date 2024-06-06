@@ -15,23 +15,27 @@ class Base(BaseModel):
         *,
         include: set[str] | None = None,
         exclude: set[str] | None = None,
+        context: dict[str, Any] | None = None,
         by_alias: bool = True,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
         warnings: bool = True,
+        serialize_as_any: bool = False
     ) -> dict[str, Any]:
         return self.model_dump(
             mode="json",
             include=include,
             exclude=exclude,
+            context=context,
             by_alias=by_alias,
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             round_trip=round_trip,
             warnings=warnings,
+            serialize_as_any=serialize_as_any,
         )
 
 
