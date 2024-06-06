@@ -100,7 +100,11 @@ def submit_signup_code(
 
 
 @router.post("/acknowledge-premium")
-def acknowledge_premium(user: Annotated[schemas.User, Depends(ensure_user_from_token)], field: Annotated[str, Body()], status: Annotated[bool, Body()]) -> schemas.User:
+def acknowledge_premium(
+    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    field: Annotated[str, Body()],
+    status: Annotated[bool, Body()],
+) -> schemas.User:
     user.premium.acknowledged[field] = status
     update_user(user)
     return user
