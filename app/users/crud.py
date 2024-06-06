@@ -11,17 +11,6 @@ from app.authorization import expire_premium
 from app.users import models, schemas
 
 
-def duplicate_document(
-    document: models.DBModels,
-    document_class: type[models.DBModels],
-    contents: schemas.ORMBase,
-) -> models.DBModels:
-    rev = document.rev
-    new_document = document_class(**contents.db_serialize())
-    new_document._data["_rev"] = rev
-    return new_document
-
-
 def check_username(username: str) -> Literal[False] | models.User:
     try:
         return cast(
@@ -134,17 +123,12 @@ def remove_user(username: str) -> bool:
     return True
 
 
-def update_user(user: schemas.User | schemas.AuthUser, rev: str | None = None) -> None:
+def update_user(user: schemas.User | schemas.AuthUser) -> None:
     db_user = {}
 
-    if not rev or type(user) is schemas.User:
+    if type(user) is schemas.User:
         user_model = cast(
             models.User, models.User.load(config_options.couch_conn, str(user.id))
-        )
-
-        rev = cast(
-            str,
-            user_model.rev,
         )
 
         db_user = schemas.AuthUser.model_validate(user_model).db_serialize()
@@ -154,7 +138,6 @@ def update_user(user: schemas.User | schemas.AuthUser, rev: str | None = None) -
     config_options.couch_conn[str(user.id)] = {
         **db_user,
         **user.db_serialize(),
-        "_rev": rev,
     }
 
 
@@ -192,9 +175,7 @@ def modify_user_subscription(
     elif item_type == "collection":
         user_schema.collection_ids = source
 
-    user = duplicate_document(user, models.User, user_schema)
-
-    user.store(config_options.couch_conn)
+    config_options.couch_conn[str(user_schema.id)] = user_schema.db_serialize()
 
     return user_schema
 

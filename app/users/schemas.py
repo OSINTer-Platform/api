@@ -15,7 +15,7 @@ class Base(BaseModel):
         *,
         include: set[str] | None = None,
         exclude: set[str] | None = None,
-        by_alias: bool = False,
+        by_alias: bool = True,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
@@ -40,8 +40,12 @@ class ORMBase(Base):
     model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
 
-class ItemBase(ORMBase):
+class DBItemBase(ORMBase):
     id: UUID = Field(alias="_id", default_factory=uuid4)
+    rev: str = Field(alias="_rev", default="")
+
+
+class ItemBase(DBItemBase):
     name: str
     owner: UUID | None = None
     deleteable: bool | None = True
@@ -139,8 +143,7 @@ class UserPayment(ORMBase):
     subscription: Subscription = Subscription()
 
 
-class User(ORMBase):
-    id: UUID = Field(alias="_id")
+class User(DBItemBase):
     username: str
 
     active: bool = True
@@ -171,7 +174,7 @@ class User(ORMBase):
         *,
         include: set[str] | None = None,
         exclude: set[str] | None = None,
-        by_alias: bool = False,
+        by_alias: bool = True,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
@@ -210,16 +213,14 @@ class SurveyMetaData(BaseModel):
     submission_date: datetime
 
 
-class Survey(ORMBase):
-    id: UUID = Field(alias="_id", default_factory=uuid4)
+class Survey(DBItemBase):
     contents: list[SurveySection]
     version: int
     metadata: SurveyMetaData
     type: Literal["survey"] = "survey"
 
 
-class Webhook(ORMBase):
-    id: UUID = Field(alias="_id", default_factory=uuid4)
+class Webhook(DBItemBase):
     name: str
     owner: UUID
     url: SecretStr

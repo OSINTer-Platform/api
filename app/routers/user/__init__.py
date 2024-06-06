@@ -42,10 +42,9 @@ def change_credentials(
     if not id:
         raise authentication_exception
     user = verify_user(id, password=password)
-    if not user or not user.rev:
+    if not user:
         raise authentication_exception
 
-    rev = cast(str, user.rev)
     user_schema = schemas.AuthUser.model_validate(user)
 
     if new_username:
@@ -61,7 +60,7 @@ def change_credentials(
     if new_email:
         user_schema.hashed_email = config_options.hasher.hash(new_email)
 
-    update_user(user_schema, rev)
+    update_user(user_schema)
 
     return user_schema
 
@@ -98,6 +97,7 @@ def submit_signup_code(
 
     update_user(user)
     return user
+
 
 @router.post("/acknowledge-premium")
 def acknowledge_premium(user: Annotated[schemas.User, Depends(ensure_user_from_token)], field: Annotated[str, Body()], status: Annotated[bool, Body()]) -> schemas.User:

@@ -13,8 +13,12 @@ from couchdb.mapping import (
 )
 
 
-class User(Document):  # type: ignore[misc]
+class BaseDocument(Document):  # type: ignore[misc]
     _id = TextField()
+    _rev = TextField()
+
+
+class User(BaseDocument):
     username = TextField()
     active = BooleanField()
 
@@ -102,9 +106,7 @@ class User(Document):  # type: ignore[misc]
     )
 
 
-class Survey(Document):  # type: ignore[misc]
-    _id = TextField()
-
+class Survey(BaseDocument):
     metadata = DictField(
         Mapping.build(
             user_id=TextField(),
@@ -145,8 +147,7 @@ class Survey(Document):  # type: ignore[misc]
     )
 
 
-class ItemBase(Document):  # type: ignore[misc]
-    _id = TextField()
+class ItemBase(BaseDocument):
     name = TextField()
     owner = TextField()
     type = TextField()
@@ -235,8 +236,7 @@ class Collection(ItemBase):
     )
 
 
-class Webhook(Document):  # type: ignore[misc]
-    _id = TextField()
+class Webhook(BaseDocument):
     owner = TextField()
     name = TextField()
     url = TextField()
