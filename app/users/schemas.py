@@ -152,9 +152,6 @@ class User(DBItemBase):
     collection_ids: list[UUID] = []
     read_articles: list[str] = []
 
-    feeds: list[Feed] = []
-    collections: list[Collection] = []
-
     premium: UserPremium
     payment: UserPayment
     settings: UserSettings
@@ -169,32 +166,6 @@ class User(DBItemBase):
 
         return id_list
 
-    def db_serialize(
-        self,
-        *,
-        include: set[str] | None = None,
-        exclude: set[str] | None = None,
-        by_alias: bool = True,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-        round_trip: bool = False,
-        warnings: bool = True,
-    ) -> dict[str, Any]:
-        if exclude:
-            exclude = exclude.union({"feeds", "collections"})
-
-        return self.model_dump(
-            mode="json",
-            include=include,
-            exclude=exclude,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-            round_trip=round_trip,
-            warnings=warnings,
-        )
 
 
 class AuthUser(User):
