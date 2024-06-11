@@ -90,8 +90,16 @@ class FeedCreate(BaseModel):
 
 
 class FeedWebhooks(ORMBase):
-    hooks: list[UUID] = []
+    hooks: set[UUID] = set()
     last_article: str = ""
+
+    @field_validator("hooks", mode="before")
+    @classmethod
+    def convert_proxies(cls, hooks_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(hooks_list, ListField.Proxy):
+            return set(hooks_list)
+
+        return hooks_list
 
 
 class Feed(ItemBase, FeedCreate):

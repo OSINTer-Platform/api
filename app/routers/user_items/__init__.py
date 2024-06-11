@@ -126,7 +126,7 @@ def add_webhook_to_feed(
             f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
         )
 
-    feed.webhooks.hooks.append(webhook.id)
+    feed.webhooks.hooks.add(webhook.id)
     webhook.attached_feeds = [feed.id for feed in webhook_feeds]
 
     if len(feed.webhooks.hooks) == 1:
