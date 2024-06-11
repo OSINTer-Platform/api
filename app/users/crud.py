@@ -317,7 +317,7 @@ def change_item_name(
     if item is None or not item.type in ["feed", "collection"]:
         return 404
 
-    item_schema = (
+    item_schema: schemas.Feed | schemas.Collection = (
         schemas.Feed.model_validate(item)
         if item.type == "feed"
         else schemas.Collection.model_validate(item)

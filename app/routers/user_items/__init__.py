@@ -1,6 +1,6 @@
 from datetime import date
 from io import BytesIO
-from typing import Annotated
+from typing import Annotated, cast
 from uuid import UUID
 
 from couchdb.client import ViewResults
@@ -83,8 +83,12 @@ def update_item_name(
     item_id: UUID,
     new_name: str,
     current_user: schemas.User = Depends(ensure_user_from_token),
-) -> None:
-    return handle_crud_response(crud.change_item_name(item_id, new_name, current_user))
+) -> schemas.Feed | schemas.Collection:
+    item: int | schemas.Feed | schemas.Collection = crud.change_item_name(
+        item_id, new_name, current_user
+    )
+    r = cast(schemas.Feed | schemas.Collection, handle_crud_response(item))
+    return r
 
 
 @router.put("/feed/{feed_id}", responses=responses)
