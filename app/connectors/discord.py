@@ -40,23 +40,22 @@ def format(articles: list[BaseArticle], feed_name: str) -> list[list[Embed]]:
     return batches
 
 
-async def send_messages(messages: list[tuple[list[str], list[list[Embed]]]]) -> None:
+async def send_messages(urls: list[str], message_batches: list[list[Embed]]) -> None:
     async with aiohttp.ClientSession() as session:
         send_actions: list[Coroutine[Any, Any, None]] = []
 
-        for urls, embed_batches in messages:
+        for url in urls:
             try:
-                for url in urls:
-                    webhook = Webhook.from_url(url, session=session)
-                    for embeds in embed_batches:
-                        action = webhook.send(
-                            "",
-                            wait=False,
-                            embeds=embeds,
-                            username="OSINTer",
-                            avatar_url=config_options.SMALL_LOGO_URL,
-                        )
-                        send_actions.append(action)
+                webhook = Webhook.from_url(url, session=session)
+                for messages in message_batches:
+                    action = webhook.send(
+                        "",
+                        wait=False,
+                        embeds=messages,
+                        username="OSINTer",
+                        avatar_url=config_options.SMALL_LOGO_URL,
+                    )
+                    send_actions.append(action)
             except ValueError:
                 pass
 

@@ -66,7 +66,7 @@ def format(articles: list[BaseArticle], feed_name: str) -> list[list[BlockMsg]]:
     return [create_blocks(article) for article in articles]
 
 
-async def send_messages(messages: list[tuple[list[str], list[list[BlockMsg]]]]) -> None:
+async def send_messages(urls: list[str], message_batches: list[list[BlockMsg]]) -> None:
     send_actions: list[Coroutine[Any, Any, None]] = []
     rate_limit_handler = AsyncRateLimitErrorRetryHandler(max_retry_count=10)
 
@@ -86,10 +86,9 @@ async def send_messages(messages: list[tuple[list[str], list[list[BlockMsg]]]]) 
                 if r.status_code != 400:
                     break
 
-    for urls, block_batches in messages:
-        for url in urls:
-            for blocks in block_batches:
-                send_actions.append(send(url, blocks))
+    for url in urls:
+        for messages in message_batches:
+            send_actions.append(send(url, messages))
 
     await asyncio.gather(*send_actions, return_exceptions=True)
 

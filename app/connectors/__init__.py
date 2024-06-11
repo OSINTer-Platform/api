@@ -1,3 +1,4 @@
+import typing
 from typing import Callable, Coroutine, Generic, Literal, TypeAlias, TypeVar, TypedDict
 from discord import Embed
 
@@ -6,15 +7,14 @@ from . import discord, slack
 
 
 WebhookType: TypeAlias = Literal["discord", "slack"]
+webhook_types = typing.get_args(WebhookType)
 
 ConnectorInput = TypeVar("ConnectorInput")
 
 
 class Connector(TypedDict, Generic[ConnectorInput]):
     format: Callable[[list[BaseArticle], str], ConnectorInput]
-    send_messages: Callable[
-        [list[tuple[list[str], ConnectorInput]]], Coroutine[None, None, None]
-    ]
+    send_messages: Callable[[list[str], ConnectorInput], Coroutine[None, None, None]]
     validate: Callable[[str], Coroutine[None, None, bool]]
 
 
