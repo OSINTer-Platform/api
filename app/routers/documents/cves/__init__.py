@@ -11,6 +11,7 @@ from app.authorization import UserAuthorizer, get_source_exclusions
 from app.common import HTTPError
 from app.dependencies import FastapiArticleSearchQuery, FastapiCVESearchQuery
 from app.utils.documents import convert_article_query_to_zip, send_file
+from app.utils.pdf import MarkdownPdf
 from modules.elastic import ArticleSearchQuery, CVESearchQuery
 from modules.objects.articles import BaseArticle, FullArticle
 from modules.objects.cves import BaseCVE, FullCVE
@@ -111,7 +112,7 @@ def search_cves(
 
 
 @protected_router.get(
-    "/{cve_id}/export",
+    "/{cve_id}/export/md",
     tags=["download"],
     responses={
         404: {
@@ -120,7 +121,7 @@ def search_cves(
         }
     },
 )
-async def download_articles_from_cluster(
+async def download_articles_from_cve_as_md(
     source_exclusions: Annotated[list[str], Depends(get_source_exclusions)],
     cve_id: CVEPathParam,
 ) -> StreamingResponse:
@@ -132,6 +133,47 @@ async def download_articles_from_cluster(
         file_name=f"OSINTer-MD-articles-{date.today()}-CVE-{cve_id}-Download.zip",
         file_content=zip_file,
         file_type="application/zip",
+    )
+
+
+@protected_router.get(
+    "/{cve_id}/export/pdf",
+    tags=["download"],
+    responses={
+        404: {
+            "model": HTTPError,
+            "description": "Returned when cluster isn't found",
+        }
+    },
+)
+async def download_articles_from_cve_as_pdf(
+    source_exclusions: Annotated[list[str], Depends(get_source_exclusions)],
+    cve_id: CVEPathParam,
+) -> StreamingResponse:
+
+    articles = config_options.es_article_client.query_documents(
+        FastapiArticleSearchQuery(
+            source_exclusions,
+            limit=0,
+            cve=cve_id,
+            sort_by="publish_date",
+            sort_order="desc",
+        ),
+        True,
+    )[0]
+
+    if len(articles) < 1:
+        raise HTTPException(HTTP_404_NOT_FOUND, f"No articles found for {cve_id}")
+
+    PDFCreator = MarkdownPdf(f"{cve_id} | OSINTer")
+
+    for article in articles:
+        PDFCreator.add_article(article)
+
+    return send_file(
+        file_name=f"{cve_id}-OSINTer-{date.today()}.pdf",
+        file_content=PDFCreator.save(),
+        file_type="application/pdf",
     )
 
 
