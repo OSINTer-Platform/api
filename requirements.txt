@@ -15,6 +15,7 @@ CouchDB
 pathvalidate
 openai
 stripe
+transformers
 
 # For converting to pdf
 PyMuPDF
