@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.dependencies import UserCache
 
+from .routers import router as root_router
 from .routers import auth, ml
 from .routers.documents import articles
 from .routers.documents import cves
@@ -43,6 +44,8 @@ async def attach_user_obj(request: Request, call_next: Callable[..., Any]) -> An
 async def custom_internal_error_handler(_: Any, __: Any) -> JSONResponse:
     return JSONResponse({"detail": "Internal server error"}, 500)
 
+
+app.include_router(root_router)
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
 
