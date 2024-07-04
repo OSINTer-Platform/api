@@ -27,7 +27,6 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         sort_by: Annotated[ArticleSortBy | None, Body()] = "",
         sort_order: Annotated[Literal["desc", "asc"], Body()] = "desc",
         search_term: Annotated[str | None, Body()] = None,
-        semantic_search: Annotated[str | None, Body()] = None,
         first_date: Annotated[datetime | None, Body()] = None,
         last_date: Annotated[datetime | None, Body()] = None,
         sources: Annotated[set[str] | None, Body()] = None,
@@ -37,18 +36,11 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         cluster_id: Annotated[str | None, Body()] = None,
         cve: Annotated[str | None, Body()] = None,
     ):
-        if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="This instance doesn't offer semantic search",
-            )
-
         super().__init__(
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
             search_term=search_term,
-            semantic_search=semantic_search,
             first_date=first_date,
             last_date=last_date,
             sources=sources,
@@ -69,7 +61,6 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
                 sort_by=item.sort_by,
                 sort_order=item.sort_order,
                 search_term=item.search_term,
-                semantic_search=item.semantic_search,
                 highlight=True if item.search_term and item.highlight else False,
                 first_date=item.first_date,
                 last_date=item.last_date,
@@ -95,7 +86,6 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         sort_by: ArticleSortBy | None = Query(""),
         sort_order: Literal["desc", "asc"] = Query("desc"),
         search_term: str | None = Query(None),
-        semantic_search: str | None = Query(None),
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
         sources: set[str] | None = Query(None),
@@ -111,7 +101,6 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             sort_by=sort_by,
             sort_order=sort_order,
             search_term=search_term,
-            semantic_search=semantic_search,
             first_date=first_date,
             last_date=last_date,
             sources=sources,

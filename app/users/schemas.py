@@ -72,7 +72,6 @@ class FeedCreate(BaseModel):
     sort_order: Literal["desc", "asc"] = "desc"
 
     search_term: str | None = None
-    semantic_search: str | None = None
     highlight: bool | None = False
 
     first_date: datetime | None = None
