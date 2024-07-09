@@ -25,43 +25,42 @@ def check_username(username: str) -> Literal[False] | models.User:
 # Return of db model for user is for use in following crud functions
 def verify_user(
     id: UUID,
-    user: models.User | None = None,
+    user: schemas.User | None = None,
     username: str | None = None,
     password: str | None = None,
     email: str | None = None,
-) -> Literal[False] | models.User:
-    if not user:
-        user = models.User.load(config_options.couch_conn, str(id))
+) -> Literal[False] | schemas.User:
+    # TODO: Implement rehashing
+    def verify_hash(raw_value: str, hashed_value: str) -> bool:
+        try:
+            config_options.hasher.verify(hashed_value, raw_value)
+        except VerifyMismatchError:
+            return False
+
+        return True
 
     if not user:
-        return False
+        user_query = get_item(id, "user")
+
+        if isinstance(user_query, int):
+            return False
+
+        user = user_query
 
     if username and user.username != username:
         return False
 
-    # TODO: Implement rehashing
-    for raw_value, hashed_value in [
-        [password, user.hashed_password],
-        [email, user.hashed_email],
-    ]:
-        if raw_value and hashed_value:
-            try:
-                config_options.hasher.verify(hashed_value, raw_value)
-            except VerifyMismatchError:
-                return False
-        elif raw_value:
-            return False
+    if password and not verify_hash(password, user.hashed_password.get_secret_value()):
+        return False
+
+    if (
+        email
+        and user.hashed_email
+        and not verify_hash(email, user.hashed_email.get_secret_value())
+    ):
+        return False
 
     return user
-
-
-def get_full_user_object(id: UUID) -> None | schemas.User:
-    user: models.User | None = models.User.load(config_options.couch_conn, str(id))
-
-    if not user:
-        return None
-
-    return schemas.User.model_validate(user)
 
 
 # Ensures that usernames are unique
@@ -128,17 +127,15 @@ def modify_user_subscription(
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
 ) -> schemas.User | None:
-    user = models.User.load(config_options.couch_conn, str(user_id))
+    user = get_item(user_id, "user")
 
-    if not user:
+    if isinstance(user, int):
         return None
 
-    user_schema = schemas.User.model_validate(user)
-
     if item_type == "feed":
-        source = user_schema.feed_ids
+        source = user.feed_ids
     elif item_type == "collection":
-        source = user_schema.collection_ids
+        source = user.collection_ids
     else:
         raise NotImplementedError
 
@@ -152,15 +149,15 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if item_type == "feed":
-        user_schema.feed_ids = source
+        user.feed_ids = source
     elif item_type == "collection":
-        user_schema.collection_ids = source
+        user.collection_ids = source
 
-    config_options.couch_conn[str(user_schema.id)] = user_schema.db_serialize(
+    config_options.couch_conn[str(user.id)] = user.db_serialize(
         context={"show_secrets": True}
     )
 
-    return user_schema
+    return user
 
 
 def create_feed(
@@ -234,9 +231,12 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
     }
 
 
-ItemType: TypeAlias = Literal["feed", "collection", "webhook"]
+ItemType: TypeAlias = Literal["feed", "collection", "webhook", "user"]
 
 
+@overload
+def get_item(id: UUID, item_type: Literal["user"]) -> schemas.User | int: ...
+@overload
 @overload
 def get_item(id: UUID, item_type: Literal["feed"]) -> schemas.Feed | int: ...
 @overload
@@ -257,7 +257,7 @@ def get_item(
 
 def get_item(
     id: UUID, item_type: ItemType | tuple[ItemType, ItemType] | None = None
-) -> schemas.Feed | schemas.Collection | schemas.Webhook | int:
+) -> schemas.Feed | schemas.Collection | schemas.Webhook | schemas.User | int:
     try:
         item: Document = config_options.couch_conn[str(id)]
     except ResourceNotFound:
@@ -275,6 +275,8 @@ def get_item(
         return schemas.Collection.model_validate(item)
     elif item["type"] == "webhook":
         return schemas.Webhook.model_validate(item)
+    elif item["type"] == "user":
+        return schemas.User.model_validate(item)
     else:
         return 404
 
@@ -285,12 +287,10 @@ def modify_collection(
     user: schemas.User,
     action: Literal["replace", "extend"] = "replace",
 ) -> int | schemas.Collection:
-    item: models.Collection | None = models.Collection.load(
-        config_options.couch_conn, str(id)
-    )
+    item = get_item(id, "collection")
 
-    if item is None or item.type != "collection":
-        return 404
+    if isinstance(item, int):
+        return item
 
     collection = schemas.Collection.model_validate(item)
 
@@ -310,12 +310,10 @@ def modify_collection(
 def change_item_name(
     id: UUID, new_name: str, user: schemas.User
 ) -> int | schemas.Collection | schemas.Feed:
-    item: models.ItemBase | None = models.ItemBase.load(
-        config_options.couch_conn, str(id)
-    )
+    item = get_item(id, ("feed", "collection"))
 
-    if item is None or not item.type in ["feed", "collection"]:
-        return 404
+    if isinstance(item, int):
+        return item
 
     item_schema: schemas.Feed | schemas.Collection = (
         schemas.Feed.model_validate(item)
@@ -338,16 +336,14 @@ def remove_item(
     user: schemas.User,
     id: UUID,
 ) -> int | None:
-    try:
-        item = config_options.couch_conn[str(id)]
-    except ResourceNotFound:
-        return None
+    item = get_item(id)
 
-    if item["type"] not in ["feed", "collection"]:
-        return 404
-    elif item["owner"] != str(user.id):
+    if isinstance(item, int):
+        return item
+
+    elif item.owner != str(user.id):
         return 403
-    elif not item["deleteable"]:
+    elif not getattr(item, "deleteable", True):
         return 422
 
     del config_options.couch_conn[str(id)]

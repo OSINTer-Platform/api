@@ -4,7 +4,7 @@ from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
 
 from app.authorization import expire_premium, get_source_exclusions
-from app.users.crud import get_full_user_object
+from app.users.crud import get_item
 from app.users.schemas import Collection, FeedCreate, User
 
 from modules.elastic import ArticleSearchQuery, CVESearchQuery, ClusterSearchQuery
@@ -184,8 +184,8 @@ class UserCache:
         if isinstance(self.user, User):
             return self.user
 
-        user = get_full_user_object(id)
-        if not isinstance(user, User):
+        user = get_item(id, "user")
+        if isinstance(user, int):
             return None
 
         user = expire_premium(user)
