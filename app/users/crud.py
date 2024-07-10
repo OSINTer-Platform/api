@@ -1,4 +1,4 @@
-from typing import Literal, TypeAlias, cast, overload
+from typing import Literal, TypeAlias, overload
 from uuid import UUID, uuid4
 
 from argon2.exceptions import VerifyMismatchError
@@ -12,12 +12,10 @@ from app.authorization import expire_premium
 from app.users import models, schemas
 
 
-def check_username(username: str) -> Literal[False] | models.User:
+def check_username(username: str) -> Literal[False] | schemas.User:
     try:
-        return cast(
-            models.User,
-            list(models.User.by_username(config_options.couch_conn)[username])[0],
-        )
+        user = list(models.User.by_username(config_options.couch_conn)[username])[0]
+        return schemas.User.model_validate(user)
     except IndexError:
         return False
 

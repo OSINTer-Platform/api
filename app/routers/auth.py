@@ -119,7 +119,7 @@ def get_token_from_form(
         )
 
     if not verify_user(
-        UUID(str(user._id)), user, form_data.username, form_data.password
+        user.id, user, form_data.username, form_data.password
     ):
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, detail="Wrong username or password"
@@ -134,7 +134,7 @@ def get_token_from_form(
     )
 
     access_token = create_access_token(
-        data={"sub": user._id}, expires_delta=expire_date
+        data={"sub": str(user.id)}, expires_delta=expire_date
     )
 
     return {
