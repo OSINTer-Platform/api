@@ -12,12 +12,12 @@ from modules.elastic import (
     SignificantTermAggBucket,
 )
 from modules.elastic.queries import CVESearchQuery, ClusterSearchQuery
-from modules.objects import AbstractDocument, BaseCVE, BaseCluster
+from modules.objects import BaseCVE, BaseCluster, AbstractArticle
 
 router = APIRouter()
 
 
-class PartialTrendingArticle(AbstractDocument):
+class PartialTrendingArticle(AbstractArticle):
     title: str
     url: str
     image_url: str
