@@ -14,7 +14,7 @@ from app.users.auth import (
 )
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
-from app.authorization import Area, levels_access
+from app.authorization import Area, Level, levels_access
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -30,7 +30,7 @@ async def check_mail_available() -> bool:
 
 
 @router.get("/allowed-areas")
-def get_allowed_areas() -> dict[str, list[Area]]:
+def get_allowed_areas() -> dict[Level, list[Area]]:
     return levels_access
 
 
@@ -119,7 +119,7 @@ def get_token_from_form(
         )
 
     if not verify_user(
-        UUID(str(user._id)), user, form_data.username, form_data.password
+        user.id, user, form_data.username, form_data.password
     ):
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, detail="Wrong username or password"
@@ -134,7 +134,7 @@ def get_token_from_form(
     )
 
     access_token = create_access_token(
-        data={"sub": user._id}, expires_delta=expire_date
+        data={"sub": str(user.id)}, expires_delta=expire_date
     )
 
     return {

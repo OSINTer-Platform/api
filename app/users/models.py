@@ -13,8 +13,12 @@ from couchdb.mapping import (
 )
 
 
-class User(Document):  # type: ignore[misc]
+class BaseDocument(Document):  # type: ignore[misc]
     _id = TextField()
+    _rev = TextField()
+
+
+class User(BaseDocument):
     username = TextField()
     active = BooleanField()
 
@@ -64,7 +68,6 @@ class User(Document):  # type: ignore[misc]
         )
     )
 
-    # AuthUser
     hashed_password = TextField()
     hashed_email = TextField()
 
@@ -102,9 +105,7 @@ class User(Document):  # type: ignore[misc]
     )
 
 
-class Survey(Document):  # type: ignore[misc]
-    _id = TextField()
-
+class Survey(BaseDocument):
     metadata = DictField(
         Mapping.build(
             user_id=TextField(),
@@ -145,8 +146,7 @@ class Survey(Document):  # type: ignore[misc]
     )
 
 
-class ItemBase(Document):  # type: ignore[misc]
-    _id = TextField()
+class ItemBase(BaseDocument):
     name = TextField()
     owner = TextField()
     type = TextField()
@@ -159,7 +159,6 @@ class Feed(ItemBase):
     sort_by = TextField()
     sort_order = TextField()
 
-    semantic_search = TextField()
     search_term = TextField()
     highlight = BooleanField()
 
@@ -167,6 +166,10 @@ class Feed(ItemBase):
     last_date = TextField()
 
     sources = ListField(TextField())
+
+    webhooks = DictField(
+        Mapping.build(hooks=ListField(TextField()), last_article=TextField())
+    )
 
     type = TextField(default="feed")
 
@@ -177,6 +180,18 @@ class Feed(ItemBase):
         function(doc) {
             if(doc.type == "feed") {
                 emit(doc._id, doc);
+            }
+        }""",
+    )
+
+    by_webhook = ViewField(
+        "feeds",
+        """
+        function(doc) {
+            if(doc.type == "feed") {
+                for (const hook of doc.webhooks.hooks) {
+                    emit(doc._id, doc);
+                }
             }
         }""",
     )
@@ -219,6 +234,36 @@ class Collection(ItemBase):
     )
 
 
+class Webhook(BaseDocument):
+    owner = TextField()
+    name = TextField()
+    url = TextField()
+    hook_type = TextField()
+    attached_feeds = ListField(TextField())
+
+    type = TextField(default="webhook")
+
+    all = ViewField(
+        "webhooks",
+        """
+        function(doc) {
+            if(doc.type == "webhook") {
+                emit(doc._id, doc);
+            }
+        }""",
+    )
+
+    by_owner = ViewField(
+        "webhooks",
+        """
+        function(doc) {
+            if(doc.type == "webhook") {
+                emit(doc.owner, doc)
+            }
+        }""",
+    )
+
+
 DBModels = TypeVar("DBModels", Feed, Collection, User)
 
 views: list[ViewDefinition] = [
@@ -229,5 +274,8 @@ views: list[ViewDefinition] = [
     Survey.by_user_id,
     Feed.all,
     Feed.get_minimal_info,
+    Feed.by_webhook,
     Collection.all,
+    Webhook.all,
+    Webhook.by_owner,
 ]

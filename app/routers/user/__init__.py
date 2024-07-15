@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Literal, cast
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import SecretStr
 from starlette.status import (
     HTTP_401_UNAUTHORIZED,
     HTTP_409_CONFLICT,
@@ -16,7 +17,7 @@ from app.users.auth import (
 )
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
-from app.users.auth import auth_exception
+from app.users.auth import authentication_exception
 
 from .payment import router as payment_router
 
@@ -40,16 +41,12 @@ def change_credentials(
     new_email: str | None = Body(None),
 ) -> schemas.User:
     if not id:
-        raise auth_exception
+        raise authentication_exception
     user = verify_user(id, password=password)
-    if not user or not user.rev:
-        raise HTTPException(
-            status_code=HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-        )
+    if not user:
+        raise authentication_exception
 
-    rev = cast(str, user.rev)
-    user_schema = schemas.AuthUser.model_validate(user)
+    user_schema = schemas.User.model_validate(user)
 
     if new_username:
         if check_username(new_username):
@@ -60,11 +57,13 @@ def change_credentials(
         user_schema.username = new_username
 
     if new_password:
-        user_schema.hashed_password = config_options.hasher.hash(new_password)
+        user_schema.hashed_password = SecretStr(
+            config_options.hasher.hash(new_password)
+        )
     if new_email:
-        user_schema.hashed_email = config_options.hasher.hash(new_email)
+        user_schema.hashed_email = SecretStr(config_options.hasher.hash(new_email))
 
-    update_user(user_schema, rev)
+    update_user(user_schema)
 
     return user_schema
 
@@ -102,8 +101,13 @@ def submit_signup_code(
     update_user(user)
     return user
 
+
 @router.post("/acknowledge-premium")
-def acknowledge_premium(user: Annotated[schemas.User, Depends(ensure_user_from_token)], field: Annotated[str, Body()], status: Annotated[bool, Body()]) -> schemas.User:
+def acknowledge_premium(
+    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    field: Annotated[str, Body()],
+    status: Annotated[bool, Body()],
+) -> schemas.User:
     user.premium.acknowledged[field] = status
     update_user(user)
     return user

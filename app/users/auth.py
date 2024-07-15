@@ -4,19 +4,24 @@ from uuid import UUID
 
 from fastapi import Depends, HTTPException, Request
 from jose import JWTError, jwt
-from starlette.status import HTTP_401_UNAUTHORIZED
+from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
 from app import config_options
 from app.utils.auth import OAuth2PasswordBearerWithCookie
-from app.users.schemas import AuthUser, User
+from app.users.schemas import User
 
 oauth2_scheme = OAuth2PasswordBearerWithCookie(tokenUrl="auth/login")
 
 
-auth_exception = HTTPException(
+authentication_exception = HTTPException(
     HTTP_401_UNAUTHORIZED,
     detail="User is not authorized",
     headers={"WWW-Authenticate": "Bearer"},
+)
+
+authorization_exception = HTTPException(
+    HTTP_403_FORBIDDEN,
+    detail="User doesn't have necessary permissions",
 )
 
 
@@ -74,23 +79,23 @@ def ensure_user_from_token(
     request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
 ) -> User:
     if not id:
-        raise auth_exception
+        raise authentication_exception
 
     user = cast(User | None, request.state.user_cache.get_user(id))
     if user:
         return user
     else:
-        raise auth_exception
+        raise authentication_exception
 
 
 def ensure_auth_user_from_token(
     request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
 ) -> User:
     if not id:
-        raise auth_exception
+        raise authentication_exception
 
-    user = request.state.user_cache.get_auth_user(id)
+    user: User | None = request.state.user_cache.get_user(id)
 
     if not user:
-        raise auth_exception
-    return cast(AuthUser, user)
+        raise authentication_exception
+    return user

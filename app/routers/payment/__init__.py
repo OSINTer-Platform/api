@@ -19,16 +19,16 @@ products: dict[str, stripe.Product] = {
 prices: dict[str, stripe.Price] = {obj["id"]: obj for obj in stripe.Price.list().data}
 
 
-def get_user_from_stripe_id(id: str) -> tuple[schemas.User, str | None]:
+def get_user_from_stripe_id(id: str) -> schemas.User:
     user_obj: models.User = list(
         models.User.by_stripe_id(config_options.couch_conn)[id]
     )[0]
-    return schemas.User.model_validate(user_obj), cast(str | None, user_obj.rev)
+    return schemas.User.model_validate(user_obj)
 
 
 def handle_subscription_change(e: stripe.Event) -> None:
     data = e.data["object"]
-    user, rev = get_user_from_stripe_id(data["customer"])
+    user = get_user_from_stripe_id(data["customer"])
 
     if e.type.startswith("invoice"):
         if user.payment.invoice.last_updated > data["created"]:
@@ -96,7 +96,7 @@ def handle_subscription_change(e: stripe.Event) -> None:
         user.payment.invoice.invoice_url = data["hosted_invoice_url"]
         user.payment.invoice.last_updated = data["created"]
 
-    update_user(user, rev)
+    update_user(user)
 
 
 @router.get("/prices", response_model=None)

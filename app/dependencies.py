@@ -4,8 +4,8 @@ from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
 
 from app.authorization import expire_premium, get_source_exclusions
-from app.users.crud import get_full_user_object
-from app.users.schemas import AuthUser, Collection, FeedCreate, User
+from app.users.crud import get_item
+from app.users.schemas import Collection, FeedCreate, User
 
 from modules.elastic import ArticleSearchQuery, CVESearchQuery, ClusterSearchQuery
 
@@ -27,7 +27,6 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         sort_by: Annotated[ArticleSortBy | None, Body()] = "",
         sort_order: Annotated[Literal["desc", "asc"], Body()] = "desc",
         search_term: Annotated[str | None, Body()] = None,
-        semantic_search: Annotated[str | None, Body()] = None,
         first_date: Annotated[datetime | None, Body()] = None,
         last_date: Annotated[datetime | None, Body()] = None,
         sources: Annotated[set[str] | None, Body()] = None,
@@ -37,18 +36,11 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
         cluster_id: Annotated[str | None, Body()] = None,
         cve: Annotated[str | None, Body()] = None,
     ):
-        if semantic_search and not config_options.ELASTICSEARCH_ELSER_PIPELINE:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="This instance doesn't offer semantic search",
-            )
-
         super().__init__(
             limit=limit,
             sort_by=sort_by,
             sort_order=sort_order,
             search_term=search_term,
-            semantic_search=semantic_search,
             first_date=first_date,
             last_date=last_date,
             sources=sources,
@@ -69,7 +61,6 @@ class FastapiArticleSearchQuery(ArticleSearchQuery):
                 sort_by=item.sort_by,
                 sort_order=item.sort_order,
                 search_term=item.search_term,
-                semantic_search=item.semantic_search,
                 highlight=True if item.search_term and item.highlight else False,
                 first_date=item.first_date,
                 last_date=item.last_date,
@@ -95,7 +86,6 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
         sort_by: ArticleSortBy | None = Query(""),
         sort_order: Literal["desc", "asc"] = Query("desc"),
         search_term: str | None = Query(None),
-        semantic_search: str | None = Query(None),
         first_date: datetime | None = Query(None),
         last_date: datetime | None = Query(None),
         sources: set[str] | None = Query(None),
@@ -111,7 +101,6 @@ class FastapiQueryParamsArticleSearchQuery(FastapiArticleSearchQuery):
             sort_by=sort_by,
             sort_order=sort_order,
             search_term=search_term,
-            semantic_search=semantic_search,
             first_date=first_date,
             last_date=last_date,
             sources=sources,
@@ -189,28 +178,14 @@ class FastapiCVESearchQuery(CVESearchQuery):
 
 class UserCache:
     def __init__(self) -> None:
-        self.user: None | User | AuthUser = None
+        self.user: None | User = None
 
     def get_user(self: Self, id: UUID) -> User | None:
         if isinstance(self.user, User):
             return self.user
 
-        user = get_full_user_object(id)
-        if not isinstance(user, User):
-            return None
-
-        user = expire_premium(user)
-
-        self.user = user
-        return user
-
-    def get_auth_user(self: Self, id: UUID) -> AuthUser | None:
-        if isinstance(self.user, AuthUser):
-            return self.user
-
-        user = get_full_user_object(id, auth=True)
-
-        if not isinstance(user, AuthUser):
+        user = get_item(id, "user")
+        if isinstance(user, int):
             return None
 
         user = expire_premium(user)

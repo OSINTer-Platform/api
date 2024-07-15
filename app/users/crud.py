@@ -1,33 +1,21 @@
-from typing import Literal, cast
+from typing import Literal, TypeAlias, overload
 from uuid import UUID, uuid4
 
 from argon2.exceptions import VerifyMismatchError
 from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
+from pydantic import SecretStr
 
 from app import config_options
 from app.authorization import expire_premium
 from app.users import models, schemas
 
 
-def duplicate_document(
-    document: models.DBModels,
-    document_class: type[models.DBModels],
-    contents: schemas.ORMBase,
-) -> models.DBModels:
-    rev = document.rev
-    new_document = document_class(**contents.db_serialize())
-    new_document._data["_rev"] = rev
-    return new_document
-
-
-def check_username(username: str) -> Literal[False] | models.User:
+def check_username(username: str) -> Literal[False] | schemas.User:
     try:
-        return cast(
-            models.User,
-            list(models.User.by_username(config_options.couch_conn)[username])[0],
-        )
+        user = list(models.User.by_username(config_options.couch_conn)[username])[0]
+        return schemas.User.model_validate(user)
     except IndexError:
         return False
 
@@ -35,55 +23,42 @@ def check_username(username: str) -> Literal[False] | models.User:
 # Return of db model for user is for use in following crud functions
 def verify_user(
     id: UUID,
-    user: models.User | None = None,
+    user: schemas.User | None = None,
     username: str | None = None,
     password: str | None = None,
     email: str | None = None,
-) -> Literal[False] | models.User:
-    if not user:
-        user = models.User.load(config_options.couch_conn, str(id))
+) -> Literal[False] | schemas.User:
+    # TODO: Implement rehashing
+    def verify_hash(raw_value: str, hashed_value: str) -> bool:
+        try:
+            config_options.hasher.verify(hashed_value, raw_value)
+        except VerifyMismatchError:
+            return False
+
+        return True
 
     if not user:
-        return False
+        user_query = get_item(id, "user")
+
+        if isinstance(user_query, int):
+            return False
+
+        user = user_query
 
     if username and user.username != username:
         return False
 
-    # TODO: Implement rehashing
-    for raw_value, hashed_value in [
-        [password, user.hashed_password],
-        [email, user.hashed_email],
-    ]:
-        if raw_value and hashed_value:
-            try:
-                config_options.hasher.verify(hashed_value, raw_value)
-            except VerifyMismatchError:
-                return False
-        elif raw_value:
-            return False
+    if password and not verify_hash(password, user.hashed_password.get_secret_value()):
+        return False
+
+    if (
+        email
+        and user.hashed_email
+        and not verify_hash(email, user.hashed_email.get_secret_value())
+    ):
+        return False
 
     return user
-
-
-def get_full_user_object(
-    id: UUID, complete: bool = False, auth: bool = False
-) -> None | schemas.User | schemas.AuthUser:
-    user: models.User | None = models.User.load(config_options.couch_conn, str(id))
-
-    if not user:
-        return None
-
-    user_schema: schemas.AuthUser | schemas.User
-    if auth:
-        user_schema = schemas.AuthUser.model_validate(user)
-    else:
-        user_schema = schemas.User.model_validate(user)
-
-    if complete:
-        user_schema.feeds = list(get_feeds(user_schema).values())
-        user_schema.collections = list(get_collections(user_schema).values())
-
-    return user_schema
 
 
 # Ensures that usernames are unique
@@ -107,18 +82,20 @@ def create_user(
 
     password_hash = config_options.hasher.hash(password)
 
-    user_schema = schemas.AuthUser(
+    user_schema = schemas.User(
         _id=id,
         username=username,
         active=True,
-        hashed_password=password_hash,
-        hashed_email=email_hash,
+        hashed_password=SecretStr(password_hash),
+        hashed_email=SecretStr(email_hash) if email_hash else None,
         settings=schemas.UserSettings(),
         payment=schemas.UserPayment(),
         premium=premium if premium else schemas.UserPremium(),
     )
 
-    config_options.couch_conn[str(id)] = user_schema.db_serialize()
+    config_options.couch_conn[str(id)] = user_schema.db_serialize(
+        context={"show_secrets": True}
+    )
 
     return True
 
@@ -134,28 +111,12 @@ def remove_user(username: str) -> bool:
     return True
 
 
-def update_user(user: schemas.User | schemas.AuthUser, rev: str | None = None) -> None:
-    db_user = {}
-
-    if not rev or type(user) is schemas.User:
-        user_model = cast(
-            models.User, models.User.load(config_options.couch_conn, str(user.id))
-        )
-
-        rev = cast(
-            str,
-            user_model.rev,
-        )
-
-        db_user = schemas.AuthUser.model_validate(user_model).db_serialize()
-
+def update_user(user: schemas.User) -> None:
     user = expire_premium(user)
 
-    config_options.couch_conn[str(user.id)] = {
-        **db_user,
-        **user.db_serialize(),
-        "_rev": rev,
-    }
+    config_options.couch_conn[str(user.id)] = user.db_serialize(
+        context={"show_secrets": True}
+    )
 
 
 def modify_user_subscription(
@@ -164,17 +125,15 @@ def modify_user_subscription(
     action: Literal["subscribe", "unsubscribe"],
     item_type: Literal["feed", "collection"],
 ) -> schemas.User | None:
-    user = models.User.load(config_options.couch_conn, str(user_id))
+    user = get_item(user_id, "user")
 
-    if not user:
+    if isinstance(user, int):
         return None
 
-    user_schema = schemas.AuthUser.model_validate(user)
-
     if item_type == "feed":
-        source = user_schema.feed_ids
+        source = user.feed_ids
     elif item_type == "collection":
-        source = user_schema.collection_ids
+        source = user.collection_ids
     else:
         raise NotImplementedError
 
@@ -188,15 +147,15 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if item_type == "feed":
-        user_schema.feed_ids = source
+        user.feed_ids = source
     elif item_type == "collection":
-        user_schema.collection_ids = source
+        user.collection_ids = source
 
-    user = duplicate_document(user, models.User, user_schema)
+    config_options.couch_conn[str(user.id)] = user.db_serialize(
+        context={"show_secrets": True}
+    )
 
-    user.store(config_options.couch_conn)
-
-    return user_schema
+    return user
 
 
 def create_feed(
@@ -213,14 +172,13 @@ def create_feed(
         name=name,
         _id=id,
         deleteable=deleteable,
-        **feed_params.db_serialize(),
+        **feed_params.model_dump(),
     )
 
     if owner:
         feed.owner = owner
 
-    feed_model = models.Feed(**feed.db_serialize())
-    feed_model.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = feed.db_serialize()
 
     return feed
 
@@ -247,8 +205,7 @@ def create_collection(
     if ids:
         collection.ids = ids
 
-    collection_model = models.Collection(**collection.db_serialize())
-    collection_model.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = collection.db_serialize()
 
     return collection
 
@@ -272,36 +229,54 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
     }
 
 
-def get_item(id: UUID) -> schemas.Feed | schemas.Collection | int:
+ItemType: TypeAlias = Literal["feed", "collection", "webhook", "user"]
+
+
+@overload
+def get_item(id: UUID, item_type: Literal["user"]) -> schemas.User | int: ...
+@overload
+@overload
+def get_item(id: UUID, item_type: Literal["feed"]) -> schemas.Feed | int: ...
+@overload
+def get_item(
+    id: UUID, item_type: Literal["collection"]
+) -> schemas.Collection | int: ...
+@overload
+def get_item(id: UUID, item_type: Literal["webhook"]) -> schemas.Webhook | int: ...
+@overload
+def get_item(
+    id: UUID, item_type: tuple[Literal["feed"], Literal["collection"]]
+) -> schemas.Feed | schemas.Collection | int: ...
+@overload
+def get_item(
+    id: UUID, item_type: None | tuple[ItemType, ItemType] = ...
+) -> schemas.Feed | schemas.Collection | schemas.Webhook | int: ...
+
+
+def get_item(
+    id: UUID, item_type: ItemType | tuple[ItemType, ItemType] | None = None
+) -> schemas.Feed | schemas.Collection | schemas.Webhook | schemas.User | int:
     try:
         item: Document = config_options.couch_conn[str(id)]
     except ResourceNotFound:
         return 404
 
+    if item_type:
+        if isinstance(item_type, str) and item_type != item["type"]:
+            return 404
+        elif not item["type"] in item_type:
+            return 404
+
     if item["type"] == "feed":
         return schemas.Feed.model_validate(item)
     elif item["type"] == "collection":
         return schemas.Collection.model_validate(item)
+    elif item["type"] == "webhook":
+        return schemas.Webhook.model_validate(item)
+    elif item["type"] == "user":
+        return schemas.User.model_validate(item)
     else:
         return 404
-
-
-def modify_feed(
-    id: UUID, contents: schemas.FeedCreate, user: schemas.User
-) -> int | schemas.Feed:
-    item: models.Feed | None = models.Feed.load(config_options.couch_conn, str(id))
-
-    if item is None or item.type != "feed":
-        return 404
-    elif item.owner != str(user.id):
-        return 403
-
-    for k, v in contents.db_serialize(exclude_unset=True).items():
-        setattr(item, k, v)
-
-    item.store(config_options.couch_conn)
-
-    return schemas.Feed.model_validate(item)
 
 
 def modify_collection(
@@ -310,40 +285,48 @@ def modify_collection(
     user: schemas.User,
     action: Literal["replace", "extend"] = "replace",
 ) -> int | schemas.Collection:
-    item: models.Collection | None = models.Collection.load(
-        config_options.couch_conn, str(id)
-    )
+    item = get_item(id, "collection")
 
-    if item is None or item.type != "collection":
-        return 404
-    elif item.owner != str(user.id):
+    if isinstance(item, int):
+        return item
+
+    collection = schemas.Collection.model_validate(item)
+
+    if collection.owner != user.id:
         return 403
 
     if action == "replace":
-        item.ids = list(contents)
+        collection.ids = contents
     elif action == "extend":
-        item.ids.extend(list(contents))  # pyright: ignore
+        collection.ids.update(contents)
 
-    item.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = collection.db_serialize()
 
-    return schemas.Collection.model_validate(item)
+    return collection
 
 
-def change_item_name(id: UUID, new_name: str, user: schemas.User) -> int | None:
-    item: models.ItemBase | None = models.ItemBase.load(
-        config_options.couch_conn, str(id)
+def change_item_name(
+    id: UUID, new_name: str, user: schemas.User
+) -> int | schemas.Collection | schemas.Feed:
+    item = get_item(id, ("feed", "collection"))
+
+    if isinstance(item, int):
+        return item
+
+    item_schema: schemas.Feed | schemas.Collection = (
+        schemas.Feed.model_validate(item)
+        if item.type == "feed"
+        else schemas.Collection.model_validate(item)
     )
 
-    if item is None or not item.type in ["feed", "collection"]:
-        return 404
-    elif item.owner != str(user.id):
+    if item_schema.owner != user.id:
         return 403
 
-    item.name = new_name
+    item_schema.name = new_name
 
-    item.store(config_options.couch_conn)
+    config_options.couch_conn[str(id)] = item_schema.db_serialize()
 
-    return None
+    return item_schema
 
 
 # Has to verify the user owns the item before deletion
@@ -351,16 +334,14 @@ def remove_item(
     user: schemas.User,
     id: UUID,
 ) -> int | None:
-    try:
-        item = config_options.couch_conn[str(id)]
-    except ResourceNotFound:
-        return None
+    item = get_item(id)
 
-    if item["type"] not in ["feed", "collection"]:
-        return 404
-    elif item["owner"] != str(user.id):
+    if isinstance(item, int):
+        return item
+
+    elif item.owner != str(user.id):
         return 403
-    elif not item["deleteable"]:
+    elif not getattr(item, "deleteable", True):
         return 422
 
     del config_options.couch_conn[str(id)]

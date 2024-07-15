@@ -15,7 +15,13 @@ CouchDB
 pathvalidate
 openai
 stripe
+transformers
 
 # For converting to pdf
 PyMuPDF
 markdown-it-py
+#
+# Used for connectors
+discord
+slack_sdk
+aiohttp

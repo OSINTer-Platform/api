@@ -4,56 +4,74 @@ from typing import Annotated, Any, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    FieldSerializationInfo,
+    SecretStr,
+    field_serializer,
+    field_validator,
+)
 from app.common import ArticleSortBy
+from app.connectors import WebhookType
 
 
-class Base(BaseModel):
+# Used for mapping the _id field of the DB model to the schemas id field
+class ORMBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+
+
+class DBItemBase(ORMBase):
+    id: UUID = Field(alias="_id", default_factory=uuid4)
+    rev: str | None = Field(alias="_rev", default=None)
+
     def db_serialize(
         self,
         *,
         include: set[str] | None = None,
         exclude: set[str] | None = None,
-        by_alias: bool = False,
+        context: dict[str, Any] | None = None,
         exclude_unset: bool = False,
         exclude_defaults: bool = False,
         exclude_none: bool = False,
         round_trip: bool = False,
         warnings: bool = True,
+        serialize_as_any: bool = False
     ) -> dict[str, Any]:
-        return self.model_dump(
+        model = self.model_dump(
             mode="json",
             include=include,
             exclude=exclude,
-            by_alias=by_alias,
+            context=context,
+            by_alias=True,
             exclude_unset=exclude_unset,
             exclude_defaults=exclude_defaults,
             exclude_none=exclude_none,
             round_trip=round_trip,
             warnings=warnings,
+            serialize_as_any=serialize_as_any,
         )
 
+        if model["_rev"] is None:
+            del model["_rev"]
 
-# Used for mapping the _id field of the DB model to the schemas id field
-class ORMBase(Base):
-    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
+        return model
 
 
-class ItemBase(ORMBase):
-    id: UUID = Field(alias="_id", default_factory=uuid4)
+class ItemBase(DBItemBase):
     name: str
     owner: UUID | None = None
     deleteable: bool | None = True
 
 
-class FeedCreate(Base):
+class FeedCreate(BaseModel):
     limit: int | None = 100
 
     sort_by: ArticleSortBy | None = "publish_date"
     sort_order: Literal["desc", "asc"] = "desc"
 
     search_term: str | None = None
-    semantic_search: str | None = None
     highlight: bool | None = False
 
     first_date: datetime | None = None
@@ -70,7 +88,21 @@ class FeedCreate(Base):
         return id_list
 
 
+class FeedWebhooks(ORMBase):
+    hooks: set[UUID] = set()
+    last_article: str = ""
+
+    @field_validator("hooks", mode="before")
+    @classmethod
+    def convert_proxies(cls, hooks_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(hooks_list, ListField.Proxy):
+            return set(hooks_list)
+
+        return hooks_list
+
+
 class Feed(ItemBase, FeedCreate):
+    webhooks: FeedWebhooks = FeedWebhooks()
     type: Literal["feed"] = "feed"
 
 
@@ -132,8 +164,7 @@ class UserPayment(ORMBase):
     subscription: Subscription = Subscription()
 
 
-class User(ORMBase):
-    id: UUID = Field(alias="_id")
+class User(DBItemBase):
     username: str
 
     active: bool = True
@@ -142,12 +173,12 @@ class User(ORMBase):
     collection_ids: list[UUID] = []
     read_articles: list[str] = []
 
-    feeds: list[Feed] = []
-    collections: list[Collection] = []
-
     premium: UserPremium
     payment: UserPayment
     settings: UserSettings
+
+    hashed_password: SecretStr
+    hashed_email: SecretStr | None
 
     type: Literal["user"] = "user"
 
@@ -159,37 +190,15 @@ class User(ORMBase):
 
         return id_list
 
-    def db_serialize(
-        self,
-        *,
-        include: set[str] | None = None,
-        exclude: set[str] | None = None,
-        by_alias: bool = False,
-        exclude_unset: bool = False,
-        exclude_defaults: bool = False,
-        exclude_none: bool = False,
-        round_trip: bool = False,
-        warnings: bool = True,
-    ) -> dict[str, Any]:
-        if exclude:
-            exclude = exclude.union({"feeds", "collections"})
-
-        return self.model_dump(
-            mode="json",
-            include=include,
-            exclude=exclude,
-            by_alias=by_alias,
-            exclude_unset=exclude_unset,
-            exclude_defaults=exclude_defaults,
-            exclude_none=exclude_none,
-            round_trip=round_trip,
-            warnings=warnings,
-        )
-
-
-class AuthUser(User):
-    hashed_password: str
-    hashed_email: str | None
+    @field_serializer("hashed_password", "hashed_email")
+    def dump_secrets(
+        self, v: SecretStr | None, info: FieldSerializationInfo
+    ) -> str | None:
+        if v and info.context and info.context.get("show_secrets"):
+            return v.get_secret_value()
+        elif v:
+            return str(v)
+        return None
 
 
 class SurveySection(BaseModel):
@@ -203,9 +212,25 @@ class SurveyMetaData(BaseModel):
     submission_date: datetime
 
 
-class Survey(ORMBase):
-    id: UUID = Field(alias="_id", default_factory=uuid4)
+class Survey(DBItemBase):
     contents: list[SurveySection]
     version: int
     metadata: SurveyMetaData
     type: Literal["survey"] = "survey"
+
+
+class Webhook(DBItemBase):
+    name: str
+    owner: UUID
+    url: SecretStr
+
+    hook_type: WebhookType
+    attached_feeds: list[UUID] = []
+
+    type: Literal["webhook"] = "webhook"
+
+    @field_serializer("url")
+    def dump_secrets(self, v: SecretStr, info: FieldSerializationInfo) -> str:
+        if info.context and info.context.get("show_secrets"):
+            return v.get_secret_value()
+        return str(v)
