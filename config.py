@@ -70,6 +70,8 @@ class FrontendConfig(BaseConfig):
         signup_code = os.environ.get("SIGNUP_CODES", "")
         self.SIGNUP_CODES: dict[str, timedelta] = {}
         for code_pair in signup_code.split(","):
+            if not code_pair:
+                continue
             try:
                 code, day_diff_str = code_pair.split(":")
                 day_diff = int(day_diff_str)
