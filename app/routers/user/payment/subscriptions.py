@@ -76,6 +76,24 @@ def create_subscription(
         raise HTTPException(status_code=HTTP_400_BAD_REQUEST, detail=e.user_message)
 
 
+@router.post("/subscription/change")
+def change_subscription(
+    user: Annotated[User, Depends(ensure_user_from_token)],
+    price_id: Annotated[str, Body()],
+) -> None:
+    try:
+        subscription_item = stripe.SubscriptionItem.list(
+            limit=1, subscription=user.payment.subscription.stripe_subscription_id
+        ).data[0]
+    except (stripe.InvalidRequestError, IndexError):
+        raise HTTPException(
+            status_code=HTTP_400_BAD_REQUEST,
+            detail="User doesn't have any active subscription",
+        )
+
+    stripe.SubscriptionItem.modify(subscription_item.id, price=price_id)
+
+
 @router.delete("/subscription")
 def cancel_subscription(
     immediate: Annotated[bool, Query()] = False,
