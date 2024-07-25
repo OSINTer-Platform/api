@@ -27,7 +27,9 @@ from app.authorization import get_source_exclusions
 from ....utils.documents import convert_article_query_to_zip, send_file
 from .rss import router as rss_router
 
-router = APIRouter()
+ArticleAuthorizer = UserAuthorizer(["articles"])
+
+router = APIRouter(dependencies=[Depends(ArticleAuthorizer)])
 router.include_router(rss_router, tags=["rss"])
 
 

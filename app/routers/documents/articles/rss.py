@@ -1,11 +1,14 @@
-from fastapi import APIRouter, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from app import config_options
+from app.authorization import UserAuthorizer
 from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
 from app.utils.rss import generate_rss_feed
 
-router = APIRouter()
+ArticleAuthorizer = UserAuthorizer(["articles"])
+
+router = APIRouter(dependencies=[Depends(ArticleAuthorizer)])
 
 jinja_templates = Jinja2Templates(directory="app/templates")
 
