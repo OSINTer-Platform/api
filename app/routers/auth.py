@@ -118,9 +118,7 @@ def get_token_from_form(
             status_code=HTTP_401_UNAUTHORIZED, detail="User wasn't found"
         )
 
-    if not verify_user(
-        user.id, user, form_data.username, form_data.password
-    ):
+    if not verify_user(user.id, user, form_data.username, form_data.password):
         raise HTTPException(
             status_code=HTTP_401_UNAUTHORIZED, detail="Wrong username or password"
         )
