@@ -1,8 +1,8 @@
 from concurrent import futures
 from datetime import UTC, datetime, timedelta
-from typing import Any, Sequence, TypedDict, cast
-from fastapi import APIRouter, HTTPException
-from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
+from typing import Annotated, Any, Sequence, TypedDict, cast
+from fastapi import APIRouter, HTTPException, Path
+from starlette.status import HTTP_403_FORBIDDEN, HTTP_500_INTERNAL_SERVER_ERROR
 
 from app import config_options
 from modules.elastic import (
@@ -12,7 +12,7 @@ from modules.elastic import (
     SignificantTermAggBucket,
 )
 from modules.elastic.queries import CVESearchQuery, ClusterSearchQuery
-from modules.objects import BaseCVE, BaseCluster, AbstractArticle
+from modules.objects import BaseCVE, BaseCluster, AbstractArticle, BaseArticle
 
 router = APIRouter()
 
@@ -39,6 +39,9 @@ class FrontpageData(TypedDict):
     articles: list[TrendingArticles]
     cves: list[BaseCVE]
     clusters: list[BaseCluster]
+
+
+CVEPathParam = Annotated[str, Path(pattern="^[Cc][Vv][Ee]-\\d{4}-\\d{4,7}$")]
 
 
 @router.get("/frontpage", response_model_by_alias=False)
@@ -144,3 +147,41 @@ def get_front_page_metrics() -> FrontpageData:
         "cves": trending_cves,
         "clusters": trending_clusters,
     }
+
+
+@router.get("/frontpage/cve-articles/{cve_id}")
+def get_fron_page_articles_for_cves(cve_id: CVEPathParam) -> list[BaseArticle]:
+    first_date = datetime.now(UTC) - timedelta(days=30)
+
+    cve_q = ArticleSearchQuery(
+        limit=1,
+        first_date=first_date,
+        aggregations={
+            "cves": {
+                "terms": {
+                    "field": "tags.interesting.values",
+                    "size": 2,
+                    "include": "CVE.*",
+                },
+            },
+        },
+    )
+
+    cve_metrics = config_options.es_article_client.query_documents(cve_q, False)[2]
+
+    if not cve_metrics:
+        raise HTTPException(
+            HTTP_500_INTERNAL_SERVER_ERROR, "Error when querying metrics"
+        )
+
+    cve_ids: list[str] = [
+        bucket["key"].lower() for bucket in cve_metrics["cves"]["buckets"]
+    ]
+
+    if cve_id.lower() in cve_ids:
+        q = ArticleSearchQuery(sort_by="", sort_order="desc", cve=cve_id)
+        return config_options.es_article_client.query_documents(q, False)[0]
+    else:
+        raise HTTPException(
+            HTTP_403_FORBIDDEN, detail=f"{cve_id} is not available for frontpage access"
+        )
