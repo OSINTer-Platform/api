@@ -86,20 +86,20 @@ def get_front_page_metrics() -> FrontpageData:
             "cves": {
                 "terms": {
                     "field": "tags.interesting.values",
-                    "size": 20,
+                    "size": 10,
                     "include": "CVE.*",
                 },
             },
             "new_tags": {
                 "significant_terms": {
                     "field": "tags.automatic",
-                    "size": 20,
+                    "size": 4,
                 },
             },
             "clusters": {
                 "significant_terms": {
                     "field": "ml.cluster",
-                    "size": 20,
+                    "size": 10,
                     "include": "..*",
                 },
             },
@@ -120,9 +120,7 @@ def get_front_page_metrics() -> FrontpageData:
     cluster_ids = [bucket["key"] for bucket in metrics["clusters"]["buckets"]]
 
     with futures.ThreadPoolExecutor() as executor:
-        article_futures = executor.submit(
-            get_articles, metrics["new_tags"]["buckets"][:4]
-        )
+        article_futures = executor.submit(get_articles, metrics["new_tags"]["buckets"])
         cve_futures = executor.submit(
             config_options.es_cve_client.query_documents,
             CVESearchQuery(cves=set(cve_ids)),
