@@ -153,7 +153,7 @@ class UserPayment(ORMBase):
         last_updated: int = 0
         stripe_product_id: str = ""
         stripe_subscription_id: str = ""
-        level: Literal["", "pro"] = ""
+        level: Literal["", "base", "pro"] = ""
         state: Literal["", "active", "past_due", "closed"] = ""
 
         cancel_at_period_end: bool = False

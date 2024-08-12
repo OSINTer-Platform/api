@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_403_FORBIDDEN
 
-from app.authorization import WebhookLimits, get_webhook_limits
+from app.authorization import UserAuthorizer, WebhookLimits, get_webhook_limits
 from app.common import EsIDList
 from app.dependencies import FastapiArticleSearchQuery
 from app.users import crud, models, schemas
@@ -27,6 +27,7 @@ from .utils import (
     update_last_article,
 )
 
+ArticleAuthorizer = UserAuthorizer(["articles"])
 
 router = APIRouter()
 router.include_router(webhooks.router, tags=["webhooks"], prefix="/webhook")
@@ -44,6 +45,7 @@ def delete_item(
 @router.get(
     "/{item_id}/articles",
     response_model_exclude_unset=True,
+    dependencies=[Depends(ArticleAuthorizer)],
 )
 def get_item_articles(
     search_query: FastapiArticleSearchQuery = Depends(get_query_from_item),
@@ -65,6 +67,7 @@ def get_item_contents(item_id: UUID) -> schemas.ItemBase:
 @router.get(
     "/{item_id}/export",
     response_model_exclude_unset=True,
+    dependencies=[Depends(ArticleAuthorizer)],
 )
 def export_item_articles(
     search_query: FastapiArticleSearchQuery = Depends(get_query_from_item),

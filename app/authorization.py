@@ -10,10 +10,18 @@ from app.users.schemas import User
 
 
 Area: TypeAlias = Literal[
-    "assistant", "cluster", "dashboard", "map", "similar", "summary", "cve", "webhook"
+    "articles",
+    "assistant",
+    "cluster",
+    "dashboard",
+    "map",
+    "similar",
+    "summary",
+    "cve",
+    "webhook",
 ]
 
-Level: TypeAlias = Literal["pro"]
+Level: TypeAlias = Literal["base", "pro"]
 
 levels = typing.get_args(Level)
 
@@ -24,10 +32,21 @@ class WebhookLimits(TypedDict):
 
 
 levels_access: dict[Level, list[Area]] = {
-    "pro": ["assistant", "cluster", "dashboard", "map", "similar", "summary", "cve"]
+    "base": ["articles"],
+    "pro": [
+        "articles",
+        "assistant",
+        "cluster",
+        "dashboard",
+        "map",
+        "similar",
+        "summary",
+        "cve",
+    ],
 }
 
 webhook_limits: dict[Level, WebhookLimits] = {
+    "base": {"max_count": 0, "max_feeds_per_hook": 0},
     "pro": {"max_count": 10, "max_feeds_per_hook": 3},
 }
 
