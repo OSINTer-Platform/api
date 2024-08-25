@@ -14,7 +14,6 @@ from app.users.auth import (
 )
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
-from app.authorization import Area, Level, levels_access
 
 from .. import config_options
 from ..common import DefaultResponse, DefaultResponseStatus, HTTPError
@@ -27,11 +26,6 @@ router = APIRouter()
 # Should also check whether mail server is active and available, once implemented
 async def check_mail_available() -> bool:
     return config_options.EMAIL_SERVER_AVAILABLE
-
-
-@router.get("/allowed-areas")
-def get_allowed_areas() -> dict[Level, list[Area]]:
-    return levels_access
 
 
 @router.get("/forgotten-password")
