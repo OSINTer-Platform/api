@@ -14,6 +14,7 @@ from .routers import user_items
 from .routers import user
 from .routers import payment
 from .routers import survey
+from .routers import frontpage
 
 app = FastAPI(
     root_path="",
@@ -46,6 +47,8 @@ async def custom_internal_error_handler(_: Any, __: Any) -> JSONResponse:
 
 
 app.include_router(root_router)
+
+app.include_router(frontpage.router, prefix="/frontpage", tags=["frontpage"])
 
 app.include_router(articles.router, prefix="/articles", tags=["articles"])
 

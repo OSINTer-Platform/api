@@ -44,7 +44,7 @@ class FrontpageData(TypedDict):
 CVEPathParam = Annotated[str, Path(pattern="^[Cc][Vv][Ee]-\\d{4}-\\d{4,7}$")]
 
 
-@router.get("/frontpage", response_model_by_alias=False)
+@router.get("", response_model_by_alias=False)
 def get_front_page_metrics() -> FrontpageData:
     first_date = datetime.now(UTC) - timedelta(days=30)
 
@@ -149,7 +149,7 @@ def get_front_page_metrics() -> FrontpageData:
     }
 
 
-@router.get("/frontpage/cve-articles/{cve_id}")
+@router.get("/cve-articles/{cve_id}")
 def get_fron_page_articles_for_cves(cve_id: CVEPathParam) -> list[BaseArticle]:
     first_date = datetime.now(UTC) - timedelta(days=30)
 
