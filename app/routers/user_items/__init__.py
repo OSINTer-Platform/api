@@ -7,6 +7,10 @@ from couchdb.client import ViewResults
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_403_FORBIDDEN
+from starlette.status import (
+    HTTP_403_FORBIDDEN,
+    HTTP_422_UNPROCESSABLE_ENTITY,
+)
 
 from app.authorization import UserAuthorizer, WebhookLimits, get_webhook_limits
 from app.common import EsIDList
@@ -99,8 +103,29 @@ def update_feed(
     feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     contents: schemas.FeedCreate,
 ) -> schemas.Feed:
+    specified_contents = contents.model_dump(exclude_unset=True)
 
-    for k, v in contents.model_dump(exclude_unset=True).items():
+    if (
+        len(feed.webhooks.hooks) > 0
+        and "sort_order" in specified_contents
+        and specified_contents["sort_order"] != "desc"
+    ):
+        raise HTTPException(
+            HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot change sort_order with webhook(s) attached",
+        )
+
+    if (
+        len(feed.webhooks.hooks) > 0
+        and "sort_by" in specified_contents
+        and specified_contents["sort_by"] != "publish_date"
+    ):
+        raise HTTPException(
+            HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Cannot change sort_by with webhook(s) attached",
+        )
+
+    for k, v in specified_contents.items():
         setattr(feed, k, v)
 
     if len(feed.webhooks.hooks) > 0:
