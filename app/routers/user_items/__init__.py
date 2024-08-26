@@ -134,7 +134,7 @@ def add_webhook_to_feed(
         )
 
     feed.webhooks.hooks.add(webhook.id)
-    webhook.attached_feeds = [feed.id for feed in webhook_feeds]
+    webhook.attached_feeds = {feed.id for feed in webhook_feeds}
 
     if len(feed.webhooks.hooks) == 1:
         feed = update_last_article(feed)
@@ -156,7 +156,7 @@ def remove_webhook_from_feed(
         return feed
 
     feed.webhooks.hooks.remove(webhook.id)
-    webhook.attached_feeds = [id for id in webhook.attached_feeds if id != feed.id]
+    webhook.attached_feeds = {id for id in webhook.attached_feeds if id != feed.id}
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
     config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(

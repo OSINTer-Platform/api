@@ -138,11 +138,9 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if action == "subscribe":
-        for id in ids:
-            if not id in source:
-                source.append(id)
+        source = source.union(ids)
     elif action == "unsubscribe":
-        source = [id for id in source if id not in ids]
+        source = source.difference(ids)
     else:
         raise NotImplementedError
 

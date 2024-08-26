@@ -169,8 +169,8 @@ class User(DBItemBase):
 
     active: bool = True
 
-    feed_ids: list[UUID] = []
-    collection_ids: list[UUID] = []
+    feed_ids: set[UUID] = set()
+    collection_ids: set[UUID] = set()
     read_articles: list[str] = []
 
     premium: UserPremium
@@ -182,9 +182,17 @@ class User(DBItemBase):
 
     type: Literal["user"] = "user"
 
-    @field_validator("feed_ids", "collection_ids", "read_articles", mode="before")
+    @field_validator("feed_ids", "collection_ids", mode="before")
     @classmethod
-    def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+    def convert_set_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
+
+    @field_validator("read_articles", mode="before")
+    @classmethod
+    def convert_list_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):
             return list(id_list)
 
@@ -225,9 +233,17 @@ class Webhook(DBItemBase):
     url: SecretStr
 
     hook_type: WebhookType
-    attached_feeds: list[UUID] = []
+    attached_feeds: set[UUID] = set()
 
     type: Literal["webhook"] = "webhook"
+
+    @field_validator("attached_feeds", mode="before")
+    @classmethod
+    def convert_proxies(cls, feeds: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(feeds, ListField.Proxy):
+            return set(feeds)
+
+        return feeds
 
     @field_serializer("url")
     def dump_secrets(self, v: SecretStr, info: FieldSerializationInfo) -> str:
