@@ -142,6 +142,12 @@ def add_webhook_to_feed(
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
     webhook_limits: Annotated[WebhookLimits, Depends(get_webhook_limits)],
 ) -> schemas.Feed:
+    if feed.sort_by != "publish_date" or feed.sort_order != "desc":
+        raise HTTPException(
+            HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Feed need to be sorted by publish date descending when attaching webhook",
+        )
+
     if webhook.id in feed.webhooks.hooks:
         return feed
 
