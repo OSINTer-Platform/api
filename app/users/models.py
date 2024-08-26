@@ -167,9 +167,7 @@ class Feed(ItemBase):
 
     sources = ListField(TextField())
 
-    webhooks = DictField(
-        Mapping.build(hooks=ListField(TextField()), last_article=TextField())
-    )
+    webhooks = DictField(Mapping.build(last_article=TextField()))
 
     type = TextField(default="feed")
 
@@ -259,6 +257,18 @@ class Webhook(BaseDocument):
         function(doc) {
             if(doc.type == "webhook") {
                 emit(doc.owner, doc)
+            }
+        }""",
+    )
+
+    by_feed = ViewField(
+        "webhooks",
+        """
+        function(doc) {
+            if(doc.type == "webhook") {
+                for (const id of doc.attached_feeds) {
+                    emit(id, doc)
+                }
             }
         }""",
     )

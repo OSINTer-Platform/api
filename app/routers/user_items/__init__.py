@@ -4,7 +4,6 @@ from typing import Annotated, cast
 from uuid import UUID
 
 import couchdb
-from couchdb.client import ViewResults
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from starlette.status import (
@@ -44,6 +43,27 @@ router.include_router(webhooks.router, tags=["webhooks"], prefix="/webhook")
 def delete_item(
     item_id: UUID, current_user: schemas.User = Depends(ensure_user_from_token)
 ) -> None:
+    def remove_webhook_attachments(feed: schemas.Feed) -> None:
+        webhooks = [
+            schemas.Webhook.model_validate(webhook)
+            for webhook in models.Webhook.by_feed(config_options.couch_conn)[
+                str(feed.id)
+            ]
+        ]
+
+        if len(webhooks) == 0:
+            return
+
+        for webhook in webhooks:
+            try:
+                webhook.attached_feeds.remove(feed.id)
+            except KeyError:
+                pass
+
+        config_options.couch_conn.update(
+            [webhook.db_serialize() for webhook in webhooks]
+        )
+
     item = crud.get_item(item_id)
     if isinstance(item, int):
         handle_crud_response(item)
@@ -59,20 +79,8 @@ def delete_item(
             HTTP_403_FORBIDDEN, detail="The requested item cannot be deleted"
         )
 
-    if isinstance(item, schemas.Feed) and len(item.webhooks.hooks) > 0:
-        webhook_view: ViewResults = models.Webhook.all(config_options.couch_conn)
-        webhook_view.options["keys"] = [str(id) for id in item.webhooks.hooks]
-        webhooks = [schemas.Webhook.model_validate(feed) for feed in webhook_view]
-
-        for webhook in webhooks:
-            try:
-                webhook.attached_feeds.remove(item.id)
-            except KeyError:
-                pass
-
-        config_options.couch_conn.update(
-            [webhook.db_serialize() for webhook in webhooks]
-        )
+    if isinstance(item, schemas.Feed):
+        remove_webhook_attachments(item)
 
     try:
         del config_options.couch_conn[str(item_id)]
@@ -139,8 +147,13 @@ def update_feed(
 ) -> schemas.Feed:
     specified_contents = contents.model_dump(exclude_unset=True)
 
+    webhooks = [
+        schemas.Webhook.model_validate(webhook)
+        for webhook in models.Webhook.by_feed(config_options.couch_conn)[str(feed.id)]
+    ]
+
     if (
-        len(feed.webhooks.hooks) > 0
+        len(webhooks) > 0
         and "sort_order" in specified_contents
         and specified_contents["sort_order"] != "desc"
     ):
@@ -150,7 +163,7 @@ def update_feed(
         )
 
     if (
-        len(feed.webhooks.hooks) > 0
+        len(webhooks) > 0
         and "sort_by" in specified_contents
         and specified_contents["sort_by"] != "publish_date"
     ):
@@ -162,7 +175,7 @@ def update_feed(
     for k, v in specified_contents.items():
         setattr(feed, k, v)
 
-    if len(feed.webhooks.hooks) > 0:
+    if len(webhooks) > 0:
         feed = update_last_article(feed)
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
@@ -182,12 +195,13 @@ def add_webhook_to_feed(
             detail="Feed need to be sorted by publish date descending when attaching webhook",
         )
 
-    if webhook.id in feed.webhooks.hooks:
+    if feed.id in webhook.attached_feeds:
         return feed
 
-    webhook_feeds_view: ViewResults = models.Feed.by_webhook(config_options.couch_conn)
-    webhook_feeds_view.options["key"] = str(webhook.id)
-    webhook_feeds = [schemas.Feed.model_validate(feed) for feed in webhook_feeds_view]
+    webhook_feeds = [
+        schemas.Feed.model_validate(feed)
+        for feed in models.Feed.by_webhook(config_options.couch_conn)[str(webhook.id)]
+    ]
 
     if (
         webhook_limits["max_feeds_per_hook"]
@@ -198,10 +212,9 @@ def add_webhook_to_feed(
             f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
         )
 
-    feed.webhooks.hooks.add(webhook.id)
     webhook.attached_feeds = {feed.id for feed in webhook_feeds}
 
-    if len(feed.webhooks.hooks) == 1:
+    if len(models.Webhook.by_feed(config_options.couch_conn)[str(feed.id)]) == 1:
         feed = update_last_article(feed)
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
@@ -217,10 +230,9 @@ def remove_webhook_from_feed(
     feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
 ) -> schemas.Feed:
-    if webhook.id not in feed.webhooks.hooks:
+    if feed.id in webhook.attached_feeds:
         return feed
 
-    feed.webhooks.hooks.remove(webhook.id)
     webhook.attached_feeds = {id for id in webhook.attached_feeds if id != feed.id}
 
     config_options.couch_conn[str(feed.id)] = feed.db_serialize()
