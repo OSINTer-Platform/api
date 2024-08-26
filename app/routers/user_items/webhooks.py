@@ -10,7 +10,7 @@ from app.connectors import WebhookType, connectors
 from app.users import schemas, models
 from app.users.auth import ensure_user_from_token
 
-from .utils import get_own_webhook, WebhookAuthorizer
+from .utils import WebhookAuthorizer
 
 
 router = APIRouter(dependencies=[Depends(WebhookAuthorizer)])
@@ -46,25 +46,6 @@ async def create_webhook(
     )
 
     return webhook
-
-
-@router.delete("/{webhook_id}")
-def delete_webhook(
-    webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)]
-) -> None:
-    feeds_view: ViewResults = models.Feed.by_webhook(config_options.couch_conn)
-    feeds_view.options["key"] = str(webhook.id)
-    feeds_with_webhook = [schemas.Feed.model_validate(feed) for feed in feeds_view]
-
-    if len(feeds_with_webhook) > 0:
-        for feed in feeds_with_webhook:
-            feed.webhooks.hooks.remove(webhook.id)
-
-        config_options.couch_conn.update(
-            [feed.db_serialize() for feed in feeds_with_webhook]
-        )
-
-    del config_options.couch_conn[str(webhook.id)]
 
 
 @router.get("/list")
