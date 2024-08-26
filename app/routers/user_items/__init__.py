@@ -3,12 +3,13 @@ from io import BytesIO
 from typing import Annotated, cast
 from uuid import UUID
 
+import couchdb
 from couchdb.client import ViewResults
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
-from starlette.status import HTTP_403_FORBIDDEN
 from starlette.status import (
     HTTP_403_FORBIDDEN,
+    HTTP_404_NOT_FOUND,
     HTTP_422_UNPROCESSABLE_ENTITY,
 )
 
@@ -43,7 +44,40 @@ router.include_router(webhooks.router, tags=["webhooks"], prefix="/webhook")
 def delete_item(
     item_id: UUID, current_user: schemas.User = Depends(ensure_user_from_token)
 ) -> None:
-    return handle_crud_response(crud.remove_item(current_user, item_id))
+    item = crud.get_item(item_id)
+    if isinstance(item, int):
+        handle_crud_response(item)
+
+    if item.owner != current_user.id:
+        raise HTTPException(
+            HTTP_403_FORBIDDEN,
+            detail="The requested item isn't owned by the authenticated user",
+        )
+
+    if isinstance(item, schemas.Feed | schemas.Collection) and not item.deleteable:
+        raise HTTPException(
+            HTTP_403_FORBIDDEN, detail="The requested item cannot be deleted"
+        )
+
+    if isinstance(item, schemas.Feed) and len(item.webhooks.hooks) > 0:
+        webhook_view: ViewResults = models.Webhook.all(config_options.couch_conn)
+        webhook_view.options["keys"] = [str(id) for id in item.webhooks.hooks]
+        webhooks = [schemas.Webhook.model_validate(feed) for feed in webhook_view]
+
+        for webhook in webhooks:
+            try:
+                webhook.attached_feeds.remove(item.id)
+            except KeyError:
+                pass
+
+        config_options.couch_conn.update(
+            [webhook.db_serialize() for webhook in webhooks]
+        )
+
+    try:
+        del config_options.couch_conn[str(item_id)]
+    except couchdb.http.ResourceNotFound:
+        raise HTTPException(HTTP_404_NOT_FOUND, "The requested item was not found")
 
 
 @router.get(

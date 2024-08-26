@@ -325,23 +325,3 @@ def change_item_name(
     config_options.couch_conn[str(id)] = item_schema.db_serialize()
 
     return item_schema
-
-
-# Has to verify the user owns the item before deletion
-def remove_item(
-    user: schemas.User,
-    id: UUID,
-) -> int | None:
-    item = get_item(id)
-
-    if isinstance(item, int):
-        return item
-
-    elif item.owner != str(user.id):
-        return 403
-    elif not getattr(item, "deleteable", True):
-        return 422
-
-    del config_options.couch_conn[str(id)]
-
-    return None
