@@ -61,7 +61,7 @@ class DBItemBase(ORMBase):
 
 class ItemBase(DBItemBase):
     name: str
-    owner: UUID | None = None
+    owner: UUID
     deleteable: bool | None = True
 
 

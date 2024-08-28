@@ -183,7 +183,7 @@ def create_feed(
 
 def create_collection(
     name: str,
-    owner: UUID | None = None,
+    owner: UUID,
     id: UUID | None = None,
     ids: set[str] | None = None,
     deleteable: bool = True,
