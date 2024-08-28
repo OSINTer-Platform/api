@@ -1,6 +1,6 @@
 from collections.abc import Sequence, Set
 from datetime import datetime
-from typing import Annotated, Any, Literal, TypeAlias, Union
+from typing import Annotated, Any, ClassVar, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
@@ -62,6 +62,9 @@ class DBItemBase(ORMBase):
 class ItemBase(DBItemBase):
     name: str
     owner: UUID
+
+
+class FeedItemBase(ItemBase):
     deleteable: bool | None = True
 
 
@@ -92,12 +95,12 @@ class FeedWebhooks(ORMBase):
     last_article: str = ""
 
 
-class Feed(ItemBase, FeedCreate):
+class Feed(FeedItemBase, FeedCreate):
     webhooks: FeedWebhooks = FeedWebhooks()
     type: Literal["feed"] = "feed"
 
 
-class Collection(ItemBase):
+class Collection(FeedItemBase):
     type: Literal["collection"] = "collection"
 
     ids: set[str] = set()
@@ -218,9 +221,7 @@ class Survey(DBItemBase):
     type: Literal["survey"] = "survey"
 
 
-class Webhook(DBItemBase):
-    name: str
-    owner: UUID
+class Webhook(ItemBase):
     url: SecretStr
 
     hook_type: WebhookType

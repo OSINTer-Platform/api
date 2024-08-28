@@ -150,10 +150,13 @@ class ItemBase(BaseDocument):
     name = TextField()
     owner = TextField()
     type = TextField()
+
+
+class FeedItemBase(ItemBase):
     deleteable = BooleanField(default=True)
 
 
-class Feed(ItemBase):
+class Feed(FeedItemBase):
     limit = IntegerField()
 
     sort_by = TextField()
@@ -205,7 +208,7 @@ class Feed(ItemBase):
     )
 
 
-class Collection(ItemBase):
+class Collection(FeedItemBase):
     ids = ListField(TextField())
 
     type = TextField(default="collection")
@@ -232,9 +235,7 @@ class Collection(ItemBase):
     )
 
 
-class Webhook(BaseDocument):
-    owner = TextField()
-    name = TextField()
+class Webhook(ItemBase):
     url = TextField()
     hook_type = TextField()
     attached_feeds = ListField(TextField())
