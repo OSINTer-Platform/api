@@ -22,7 +22,7 @@ from .utils import (
 router = APIRouter(dependencies=[Depends(WebhookAuthorizer)])
 
 
-@router.put("/create")
+@router.post("/create")
 async def create_webhook(
     webhook_name: Annotated[str, Body()],
     url: Annotated[str, Body()],
