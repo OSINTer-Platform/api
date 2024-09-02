@@ -54,6 +54,39 @@ async def create_webhook(
     return webhook
 
 
+@router.put("/{webhook_id}")
+async def update_webhook(
+    webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
+    webhook_name: Annotated[str | None, Body()] = None,
+    url: Annotated[str | None, Body()] = None,
+    webhook_type: Annotated[WebhookType | None, Body()] = None,
+) -> schemas.Webhook:
+    validation_required = False
+
+    if webhook_name:
+        webhook.name = webhook_name
+    if webhook_type:
+        if webhook_type != webhook.hook_type:
+            webhook.hook_type = webhook_type
+            validation_required = True
+    if url:
+        if url != webhook.url.get_secret_value():
+            webhook.url = SecretStr(url)
+            validation_required = True
+
+    if validation_required:
+        if not await connectors[webhook.hook_type]["validate"](
+            webhook.url.get_secret_value()
+        ):
+            raise HTTPException(HTTP_422_UNPROCESSABLE_ENTITY, "Webhook url is invalid")
+
+    config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(
+        context={"show_secrets": True}
+    )
+
+    return webhook
+
+
 @router.get("/list")
 def list_webhooks(
     user: Annotated[schemas.User, Depends(ensure_user_from_token)]
