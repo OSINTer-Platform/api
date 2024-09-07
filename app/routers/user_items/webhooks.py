@@ -30,7 +30,7 @@ async def create_webhook(
     user: Annotated[schemas.User, Depends(ensure_user_from_token)],
     webhook_limits: Annotated[WebhookLimits, Depends(get_webhook_limits)],
 ) -> schemas.Webhook:
-    if webhook_limits["max_count"]:
+    if webhook_limits["max_count"] > 0:
         webhook_view: ViewResults = models.Webhook.by_owner(config_options.couch_conn)
         webhook_view.options["key"] = str(user.id)
 
@@ -39,6 +39,8 @@ async def create_webhook(
                 HTTP_403_FORBIDDEN,
                 f"User is only allowed {webhook_limits['max_count']} webhooks",
             )
+    else:
+        raise HTTPException(HTTP_403_FORBIDDEN, "User is not allowed any webhooks")
 
     if not await connectors[webhook_type]["validate"](url):
         raise HTTPException(HTTP_422_UNPROCESSABLE_ENTITY, "Webhook url is invalid")
@@ -112,10 +114,7 @@ def attach_webhook_to_feed(
     if feed.id in webhook.attached_feeds:
         return webhook
 
-    if (
-        webhook_limits["max_feeds_per_hook"]
-        and len(webhook_feeds) + 1 >= webhook_limits["max_feeds_per_hook"]
-    ):
+    if len(webhook.attached_feeds) >= webhook_limits["max_feeds_per_hook"]:
         raise HTTPException(
             HTTP_403_FORBIDDEN,
             f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
