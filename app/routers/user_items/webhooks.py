@@ -123,10 +123,10 @@ def attach_webhook_to_feed(
 
     webhook.attached_feeds.add(feed.id)
 
-    if len(models.Webhook.by_feed(config_options.couch_conn)[str(feed.id)]) == 1:
+    if len(models.Webhook.by_feed(config_options.couch_conn)[str(feed.id)]) == 0:
         feed = update_last_article(feed)
+        config_options.couch_conn[str(feed.id)] = feed.db_serialize()
 
-    config_options.couch_conn[str(feed.id)] = feed.db_serialize()
     config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(
         context={"show_secrets": True}
     )
