@@ -102,7 +102,7 @@ def attach_webhook_to_feed(
     feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
     webhook_limits: Annotated[WebhookLimits, Depends(get_webhook_limits)],
-) -> schemas.Feed:
+) -> schemas.Webhook:
     if feed.sort_by != "publish_date" or feed.sort_order != "desc":
         raise HTTPException(
             HTTP_422_UNPROCESSABLE_ENTITY,
@@ -110,7 +110,7 @@ def attach_webhook_to_feed(
         )
 
     if feed.id in webhook.attached_feeds:
-        return feed
+        return webhook
 
     if (
         webhook_limits["max_feeds_per_hook"]
@@ -131,22 +131,21 @@ def attach_webhook_to_feed(
         context={"show_secrets": True}
     )
 
-    return feed
+    return webhook
 
 
 @router.delete("/{webhook_id}/feed", responses=responses, tags=["webhooks"])
 def detach_webhook_from_feed(
     feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
-) -> schemas.Feed:
-    if feed.id in webhook.attached_feeds:
-        return feed
+) -> schemas.Webhook:
+    if feed.id not in webhook.attached_feeds:
+        return webhook
 
     webhook.attached_feeds = {id for id in webhook.attached_feeds if id != feed.id}
 
-    config_options.couch_conn[str(feed.id)] = feed.db_serialize()
     config_options.couch_conn[str(webhook.id)] = webhook.db_serialize(
         context={"show_secrets": True}
     )
 
-    return feed
+    return webhook
