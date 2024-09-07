@@ -289,4 +289,5 @@ views: list[ViewDefinition] = [
     Collection.all,
     Webhook.all,
     Webhook.by_owner,
+    Webhook.by_feed,
 ]
