@@ -97,7 +97,7 @@ def list_webhooks(
     return [schemas.Webhook.model_validate(doc) for doc in webhook_view]
 
 
-@router.put("/webhook/{webhook_id}/feed", responses=responses, tags=["webhooks"])
+@router.put("/{webhook_id}/feed", responses=responses, tags=["webhooks"])
 def attach_webhook_to_feed(
     feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
@@ -134,7 +134,7 @@ def attach_webhook_to_feed(
     return feed
 
 
-@router.delete("/webhook/{webhook_id}/feed", responses=responses, tags=["webhooks"])
+@router.delete("/{webhook_id}/feed", responses=responses, tags=["webhooks"])
 def detach_webhook_from_feed(
     feed: Annotated[schemas.Feed, Depends(get_own_feed)],
     webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)],
