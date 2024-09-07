@@ -185,18 +185,6 @@ class Feed(FeedItemBase):
         }""",
     )
 
-    by_webhook = ViewField(
-        "feeds",
-        """
-        function(doc) {
-            if(doc.type == "feed") {
-                for (const hook of doc.webhooks.hooks) {
-                    emit(doc._id, doc);
-                }
-            }
-        }""",
-    )
-
     get_minimal_info = ViewField(
         "feeds",
         """
@@ -285,7 +273,6 @@ views: list[ViewDefinition] = [
     Survey.by_user_id,
     Feed.all,
     Feed.get_minimal_info,
-    Feed.by_webhook,
     Collection.all,
     Webhook.all,
     Webhook.by_owner,

@@ -112,11 +112,6 @@ def attach_webhook_to_feed(
     if feed.id in webhook.attached_feeds:
         return feed
 
-    webhook_feeds = [
-        schemas.Feed.model_validate(feed)
-        for feed in models.Feed.by_webhook(config_options.couch_conn)[str(webhook.id)]
-    ]
-
     if (
         webhook_limits["max_feeds_per_hook"]
         and len(webhook_feeds) + 1 >= webhook_limits["max_feeds_per_hook"]
@@ -126,7 +121,7 @@ def attach_webhook_to_feed(
             f"User is only allowed {webhook_limits['max_feeds_per_hook']} feeds on every webhook",
         )
 
-    webhook.attached_feeds = {feed.id for feed in webhook_feeds}
+    webhook.attached_feeds.add(feed.id)
 
     if len(models.Webhook.by_feed(config_options.couch_conn)[str(feed.id)]) == 1:
         feed = update_last_article(feed)
