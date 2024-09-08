@@ -121,7 +121,7 @@ async def main() -> None:
         f"Found {len(webhooks)} webhooks. Querying related feeds. Expecting {len(feeds_ids)}"
     )
     feeds_view: ViewResults = models.Feed.all(config_options.couch_conn)
-    feeds_view.options["keys"] = list(feeds_ids)
+    feeds_view.options["keys"] = [str(id) for id in feeds_ids]
     feeds = [schemas.Feed.model_validate(feed) for feed in feeds_view]
     found_ids = [feed.id for feed in feeds]
 
