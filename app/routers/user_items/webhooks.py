@@ -148,3 +148,13 @@ def detach_webhook_from_feed(
     )
 
     return webhook
+
+
+@router.get("/{webhook_id}/feeds", tags=["webhooks"])
+def get_webhook_feeds(
+    webhook: Annotated[schemas.Webhook, Depends(get_own_webhook)]
+) -> list[schemas.Feed]:
+    feeds_view: ViewResults = models.Feed.all(config_options.couch_conn)
+    feeds_view.options["keys"] = [str(id) for id in webhook.attached_feeds]
+
+    return [schemas.Feed.model_validate(feed) for feed in feeds_view]
