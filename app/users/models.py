@@ -16,6 +16,7 @@ from couchdb.mapping import (
 class BaseDocument(Document):  # type: ignore[misc]
     _id = TextField()
     _rev = TextField()
+    creation_time = TextField()
 
 
 class User(BaseDocument):

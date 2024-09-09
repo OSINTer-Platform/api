@@ -1,10 +1,11 @@
 from collections.abc import Sequence, Set
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Annotated, Any, ClassVar, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
 from pydantic import (
+    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -25,6 +26,7 @@ class ORMBase(BaseModel):
 class DBItemBase(ORMBase):
     id: UUID = Field(alias="_id", default_factory=uuid4)
     rev: str | None = Field(alias="_rev", default=None)
+    creation_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def db_serialize(
         self,
