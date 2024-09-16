@@ -94,7 +94,7 @@ async def send_messages(urls: list[str], message_batches: list[list[BlockMsg]]) 
 
 
 async def validate(url: str) -> bool:
-    if url_pattern.search(url) is None:
+    if url_pattern.fullmatch(url) is None:
         return False
 
     webhook = AsyncWebhookClient(url)

@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, NoReturn, overload
 from typing_extensions import Any, TypeVar
 from uuid import UUID
 
@@ -38,6 +38,12 @@ responses: dict[int | str, dict[str, Any]] = {
 R = TypeVar("R")
 
 WebhookAuthorizer = UserAuthorizer(["webhook"])
+
+
+@overload
+def handle_crud_response(response: int) -> NoReturn: ...
+@overload
+def handle_crud_response(response: R | int) -> R: ...
 
 
 def handle_crud_response(response: R | int) -> R:

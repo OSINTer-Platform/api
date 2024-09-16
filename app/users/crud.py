@@ -138,11 +138,9 @@ def modify_user_subscription(
         raise NotImplementedError
 
     if action == "subscribe":
-        for id in ids:
-            if not id in source:
-                source.append(id)
+        source = source.union(ids)
     elif action == "unsubscribe":
-        source = [id for id in source if id not in ids]
+        source = source.difference(ids)
     else:
         raise NotImplementedError
 
@@ -161,7 +159,7 @@ def modify_user_subscription(
 def create_feed(
     feed_params: schemas.FeedCreate,
     name: str,
-    owner: UUID | None = None,
+    owner: UUID,
     id: UUID | None = None,
     deleteable: bool = True,
 ) -> schemas.Feed:
@@ -172,11 +170,9 @@ def create_feed(
         name=name,
         _id=id,
         deleteable=deleteable,
+        owner=owner,
         **feed_params.model_dump(),
     )
-
-    if owner:
-        feed.owner = owner
 
     config_options.couch_conn[str(id)] = feed.db_serialize()
 
@@ -185,7 +181,7 @@ def create_feed(
 
 def create_collection(
     name: str,
-    owner: UUID | None = None,
+    owner: UUID,
     id: UUID | None = None,
     ids: set[str] | None = None,
     deleteable: bool = True,
@@ -200,8 +196,6 @@ def create_collection(
         deleteable=deleteable,
     )
 
-    if owner:
-        collection.owner = owner
     if ids:
         collection.ids = ids
 
@@ -327,23 +321,3 @@ def change_item_name(
     config_options.couch_conn[str(id)] = item_schema.db_serialize()
 
     return item_schema
-
-
-# Has to verify the user owns the item before deletion
-def remove_item(
-    user: schemas.User,
-    id: UUID,
-) -> int | None:
-    item = get_item(id)
-
-    if isinstance(item, int):
-        return item
-
-    elif item.owner != str(user.id):
-        return 403
-    elif not getattr(item, "deleteable", True):
-        return 422
-
-    del config_options.couch_conn[str(id)]
-
-    return None

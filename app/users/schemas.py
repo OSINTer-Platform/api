@@ -1,10 +1,11 @@
 from collections.abc import Sequence, Set
-from datetime import datetime
-from typing import Annotated, Any, Literal, TypeAlias, Union
+from datetime import datetime, timezone
+from typing import Annotated, Any, ClassVar, Literal, TypeAlias, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
 from pydantic import (
+    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -25,6 +26,7 @@ class ORMBase(BaseModel):
 class DBItemBase(ORMBase):
     id: UUID = Field(alias="_id", default_factory=uuid4)
     rev: str | None = Field(alias="_rev", default=None)
+    creation_time: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def db_serialize(
         self,
@@ -61,7 +63,10 @@ class DBItemBase(ORMBase):
 
 class ItemBase(DBItemBase):
     name: str
-    owner: UUID | None = None
+    owner: UUID
+
+
+class FeedItemBase(ItemBase):
     deleteable: bool | None = True
 
 
@@ -89,24 +94,15 @@ class FeedCreate(BaseModel):
 
 
 class FeedWebhooks(ORMBase):
-    hooks: set[UUID] = set()
     last_article: str = ""
 
-    @field_validator("hooks", mode="before")
-    @classmethod
-    def convert_proxies(cls, hooks_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
-        if isinstance(hooks_list, ListField.Proxy):
-            return set(hooks_list)
 
-        return hooks_list
-
-
-class Feed(ItemBase, FeedCreate):
+class Feed(FeedItemBase, FeedCreate):
     webhooks: FeedWebhooks = FeedWebhooks()
     type: Literal["feed"] = "feed"
 
 
-class Collection(ItemBase):
+class Collection(FeedItemBase):
     type: Literal["collection"] = "collection"
 
     ids: set[str] = set()
@@ -169,8 +165,8 @@ class User(DBItemBase):
 
     active: bool = True
 
-    feed_ids: list[UUID] = []
-    collection_ids: list[UUID] = []
+    feed_ids: set[UUID] = set()
+    collection_ids: set[UUID] = set()
     read_articles: list[str] = []
 
     premium: UserPremium
@@ -182,9 +178,17 @@ class User(DBItemBase):
 
     type: Literal["user"] = "user"
 
-    @field_validator("feed_ids", "collection_ids", "read_articles", mode="before")
+    @field_validator("feed_ids", "collection_ids", mode="before")
     @classmethod
-    def convert_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+    def convert_set_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(id_list, ListField.Proxy):
+            return set(id_list)
+
+        return id_list
+
+    @field_validator("read_articles", mode="before")
+    @classmethod
+    def convert_list_proxies(cls, id_list: Sequence[Any]) -> Set[Any] | Sequence[Any]:
         if isinstance(id_list, ListField.Proxy):
             return list(id_list)
 
@@ -219,15 +223,21 @@ class Survey(DBItemBase):
     type: Literal["survey"] = "survey"
 
 
-class Webhook(DBItemBase):
-    name: str
-    owner: UUID
+class Webhook(ItemBase):
     url: SecretStr
 
     hook_type: WebhookType
-    attached_feeds: list[UUID] = []
+    attached_feeds: set[UUID] = set()
 
     type: Literal["webhook"] = "webhook"
+
+    @field_validator("attached_feeds", mode="before")
+    @classmethod
+    def convert_proxies(cls, feeds: Sequence[Any]) -> Set[Any] | Sequence[Any]:
+        if isinstance(feeds, ListField.Proxy):
+            return set(feeds)
+
+        return feeds
 
     @field_serializer("url")
     def dump_secrets(self, v: SecretStr, info: FieldSerializationInfo) -> str:

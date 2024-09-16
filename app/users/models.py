@@ -16,6 +16,7 @@ from couchdb.mapping import (
 class BaseDocument(Document):  # type: ignore[misc]
     _id = TextField()
     _rev = TextField()
+    creation_time = TextField()
 
 
 class User(BaseDocument):
@@ -150,10 +151,13 @@ class ItemBase(BaseDocument):
     name = TextField()
     owner = TextField()
     type = TextField()
+
+
+class FeedItemBase(ItemBase):
     deleteable = BooleanField(default=True)
 
 
-class Feed(ItemBase):
+class Feed(FeedItemBase):
     limit = IntegerField()
 
     sort_by = TextField()
@@ -167,9 +171,7 @@ class Feed(ItemBase):
 
     sources = ListField(TextField())
 
-    webhooks = DictField(
-        Mapping.build(hooks=ListField(TextField()), last_article=TextField())
-    )
+    webhooks = DictField(Mapping.build(last_article=TextField()))
 
     type = TextField(default="feed")
 
@@ -180,18 +182,6 @@ class Feed(ItemBase):
         function(doc) {
             if(doc.type == "feed") {
                 emit(doc._id, doc);
-            }
-        }""",
-    )
-
-    by_webhook = ViewField(
-        "feeds",
-        """
-        function(doc) {
-            if(doc.type == "feed") {
-                for (const hook of doc.webhooks.hooks) {
-                    emit(doc._id, doc);
-                }
             }
         }""",
     )
@@ -207,7 +197,7 @@ class Feed(ItemBase):
     )
 
 
-class Collection(ItemBase):
+class Collection(FeedItemBase):
     ids = ListField(TextField())
 
     type = TextField(default="collection")
@@ -234,9 +224,7 @@ class Collection(ItemBase):
     )
 
 
-class Webhook(BaseDocument):
-    owner = TextField()
-    name = TextField()
+class Webhook(ItemBase):
     url = TextField()
     hook_type = TextField()
     attached_feeds = ListField(TextField())
@@ -263,6 +251,18 @@ class Webhook(BaseDocument):
         }""",
     )
 
+    by_feed = ViewField(
+        "webhooks",
+        """
+        function(doc) {
+            if(doc.type == "webhook") {
+                for (const id of doc.attached_feeds) {
+                    emit(id, doc)
+                }
+            }
+        }""",
+    )
+
 
 DBModels = TypeVar("DBModels", Feed, Collection, User)
 
@@ -274,8 +274,8 @@ views: list[ViewDefinition] = [
     Survey.by_user_id,
     Feed.all,
     Feed.get_minimal_info,
-    Feed.by_webhook,
     Collection.all,
     Webhook.all,
     Webhook.by_owner,
+    Webhook.by_feed,
 ]

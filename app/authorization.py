@@ -27,8 +27,8 @@ levels = typing.get_args(Level)
 
 
 class WebhookLimits(TypedDict):
-    max_count: int | None
-    max_feeds_per_hook: int | None
+    max_count: int
+    max_feeds_per_hook: int
 
 
 levels_access: dict[Level, list[Area]] = {
@@ -45,9 +45,10 @@ levels_access: dict[Level, list[Area]] = {
     ],
 }
 
-webhook_limits: dict[Level, WebhookLimits] = {
+webhook_limits: dict[Literal[Level, "premium"], WebhookLimits] = {
     "base": {"max_count": 0, "max_feeds_per_hook": 0},
     "pro": {"max_count": 10, "max_feeds_per_hook": 3},
+    "premium": {"max_count": 10, "max_feeds_per_hook": 3},
 }
 
 areas: set[Area] = {area for areas in levels_access.values() for area in areas}
@@ -80,7 +81,7 @@ def get_webhook_limits(
     user: Annotated[User, Depends(ensure_user_from_token)]
 ) -> WebhookLimits:
     if user.premium.status:
-        return {"max_count": None, "max_feeds_per_hook": None}
+        return webhook_limits["premium"]
     elif is_level(user.payment.subscription.level):
         return webhook_limits[user.payment.subscription.level]
     else:
