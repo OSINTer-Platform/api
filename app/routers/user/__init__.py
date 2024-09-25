@@ -1,14 +1,13 @@
 from datetime import UTC, datetime
-from typing import Annotated, Literal, cast
+from typing import Annotated, Literal
 from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException
-from pydantic import SecretStr
 from starlette.status import (
-    HTTP_401_UNAUTHORIZED,
     HTTP_409_CONFLICT,
     HTTP_422_UNPROCESSABLE_ENTITY,
 )
-from app.secrets import hash_value
+from app.authorization import UserAuthorizer
+from app.secrets import generate_api_key, hash_value
 from app.users import schemas
 
 from app.users.auth import (
@@ -24,6 +23,8 @@ from .payment import router as payment_router
 
 router = APIRouter()
 router.include_router(payment_router, tags=["payment"])
+
+ApiAuthorizer = UserAuthorizer(["api"])
 
 
 @router.get("/")
@@ -120,3 +121,10 @@ def update_read_articles(
     user.read_articles = article_ids
     update_user(user)
     return user
+
+
+@router.post("/api-key")
+def regenerate_api_key(user: Annotated[schemas.User, Depends(ApiAuthorizer)]) -> str:
+    user.api_key = generate_api_key()
+    update_user(user)
+    return user.api_key.get_secret_value()

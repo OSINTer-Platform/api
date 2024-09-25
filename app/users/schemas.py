@@ -174,6 +174,8 @@ class User(DBItemBase):
     payment: UserPayment
     settings: UserSettings
 
+    api_key: SecretStr | None = None
+
     hashed_password: SecretStr
     hashed_email: SecretStr | None
 
@@ -195,7 +197,7 @@ class User(DBItemBase):
 
         return id_list
 
-    @field_serializer("hashed_password", "hashed_email")
+    @field_serializer("hashed_password", "hashed_email", "api_key")
     def dump_secrets(
         self, v: SecretStr | None, info: FieldSerializationInfo
     ) -> str | None:

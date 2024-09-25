@@ -71,6 +71,8 @@ class User(BaseDocument):
         )
     )
 
+    api_key = TextField()
+
     hashed_password = TextField()
     hashed_email = TextField()
 
@@ -93,6 +95,16 @@ class User(BaseDocument):
         function(doc) {
             if(doc.type == "user") {
                 emit(doc.username, doc)
+            }
+        }""",
+    )
+
+    by_api_key = ViewField(
+        "users",
+        """
+        function(doc) {
+            if(doc.type == "user" && doc.api_key) {
+                emit(doc.api_key, doc)
             }
         }""",
     )
@@ -271,6 +283,7 @@ DBModels = TypeVar("DBModels", Feed, Collection, User)
 views: list[ViewDefinition] = [
     User.all,
     User.by_username,
+    User.by_api_key,
     User.by_stripe_id,
     Survey.all,
     Survey.by_user_id,
