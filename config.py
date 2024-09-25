@@ -3,7 +3,6 @@ import os
 import secrets
 
 from couchdb import Server
-from argon2 import PasswordHasher
 
 from modules.config import BaseConfig
 
@@ -80,9 +79,6 @@ class FrontendConfig(BaseConfig):
                 self.SIGNUP_CODES[code] = diff
             except:
                 raise Exception(f"Error when parsing following signup code-string: {code_pair}")
-
-
-        self.hasher = PasswordHasher()
 
     @staticmethod
     def get_env_bool(key: str) -> bool:

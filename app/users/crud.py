@@ -1,7 +1,6 @@
 from typing import Literal, TypeAlias, overload
 from uuid import UUID, uuid4
 
-from argon2.exceptions import VerifyMismatchError
 from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
 from fastapi.encoders import jsonable_encoder
@@ -9,6 +8,7 @@ from pydantic import SecretStr
 
 from app import config_options
 from app.authorization import expire_premium
+from app.secrets import hash_value, verify_hash
 from app.users import models, schemas
 
 
@@ -29,14 +29,6 @@ def verify_user(
     email: str | None = None,
 ) -> Literal[False] | schemas.User:
     # TODO: Implement rehashing
-    def verify_hash(raw_value: str, hashed_value: str) -> bool:
-        try:
-            config_options.hasher.verify(hashed_value, raw_value)
-        except VerifyMismatchError:
-            return False
-
-        return True
-
     if not user:
         user_query = get_item(id, "user")
 
@@ -73,21 +65,21 @@ def create_user(
         return False
 
     if email:
-        email_hash = config_options.hasher.hash(email)
+        email_hash = hash_value(email)
     else:
         email_hash = None
 
     if not id:
         id = uuid4()
 
-    password_hash = config_options.hasher.hash(password)
+    password_hash = hash_value(password)
 
     user_schema = schemas.User(
         _id=id,
         username=username,
         active=True,
-        hashed_password=SecretStr(password_hash),
-        hashed_email=SecretStr(email_hash) if email_hash else None,
+        hashed_password=password_hash,
+        hashed_email=email_hash if email_hash else None,
         settings=schemas.UserSettings(),
         payment=schemas.UserPayment(),
         premium=premium if premium else schemas.UserPremium(),

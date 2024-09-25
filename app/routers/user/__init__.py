@@ -8,6 +8,7 @@ from starlette.status import (
     HTTP_409_CONFLICT,
     HTTP_422_UNPROCESSABLE_ENTITY,
 )
+from app.secrets import hash_value
 from app.users import schemas
 
 from app.users.auth import (
@@ -57,11 +58,9 @@ def change_credentials(
         user_schema.username = new_username
 
     if new_password:
-        user_schema.hashed_password = SecretStr(
-            config_options.hasher.hash(new_password)
-        )
+        user_schema.hashed_password = hash_value(new_password)
     if new_email:
-        user_schema.hashed_email = SecretStr(config_options.hasher.hash(new_email))
+        user_schema.hashed_email = hash_value(new_email)
 
     update_user(user_schema)
 
