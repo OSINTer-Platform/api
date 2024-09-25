@@ -35,6 +35,8 @@ class User(BaseDocument):
         )
     )
 
+    enterprise = BooleanField(default=False)
+
     premium = DictField(
         Mapping.build(
             status=BooleanField(default=False),

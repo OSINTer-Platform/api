@@ -169,6 +169,7 @@ class User(DBItemBase):
     collection_ids: set[UUID] = set()
     read_articles: list[str] = []
 
+    enterprise: bool = False
     premium: UserPremium
     payment: UserPayment
     settings: UserSettings

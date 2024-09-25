@@ -10,6 +10,7 @@ from app.users.schemas import User
 
 
 Area: TypeAlias = Literal[
+    "api",
     "articles",
     "assistant",
     "cluster",
@@ -21,7 +22,8 @@ Area: TypeAlias = Literal[
     "webhook",
 ]
 
-Level: TypeAlias = Literal["base", "pro"]
+SubscriptionLevel: TypeAlias = Literal["base", "pro"]
+Level: TypeAlias = Literal[SubscriptionLevel, "premium", "enterprise"]
 
 levels = typing.get_args(Level)
 
@@ -43,12 +45,35 @@ levels_access: dict[Level, list[Area]] = {
         "summary",
         "cve",
     ],
+    "premium": [
+        "articles",
+        "assistant",
+        "cluster",
+        "dashboard",
+        "map",
+        "similar",
+        "summary",
+        "cve",
+    ],
+    "enterprise": [
+        "api",
+        "articles",
+        "assistant",
+        "cluster",
+        "dashboard",
+        "map",
+        "similar",
+        "summary",
+        "cve",
+        "webhook",
+    ],
 }
 
-webhook_limits: dict[Literal[Level, "premium"], WebhookLimits] = {
+webhook_limits: dict[Level, WebhookLimits] = {
     "base": {"max_count": 0, "max_feeds_per_hook": 0},
+    "premium": {"max_count": 0, "max_feeds_per_hook": 0},
     "pro": {"max_count": 10, "max_feeds_per_hook": 3},
-    "premium": {"max_count": 10, "max_feeds_per_hook": 3},
+    "enterprise": {"max_count": 10, "max_feeds_per_hook": 3},
 }
 
 areas: set[Area] = {area for areas in levels_access.values() for area in areas}
@@ -68,24 +93,47 @@ def get_allowed_areas(
     if not user:
         return []
 
-    if user.premium.status:
-        return list(areas)
+    allowed_areas = set()
+
+    if user.premium:
+        allowed_areas.update(levels_access["premium"])
+    if user.enterprise:
+        allowed_areas.update(levels_access["enterprise"])
 
     if is_level(user.payment.subscription.level):
-        return levels_access[user.payment.subscription.level]
+        allowed_areas.update(levels_access[user.payment.subscription.level])
 
-    return []
+    return list(allowed_areas)
 
 
 def get_webhook_limits(
     user: Annotated[User, Depends(ensure_user_from_token)]
 ) -> WebhookLimits:
+    def add_limits(l1: WebhookLimits, l2: WebhookLimits) -> WebhookLimits:
+        return {
+            "max_count": max(l1["max_count"], l2["max_count"]),
+            "max_feeds_per_hook": max(
+                l1["max_feeds_per_hook"], l2["max_feeds_per_hook"]
+            ),
+        }
+
+    limits: WebhookLimits = {"max_count": 0, "max_feeds_per_hook": 0}
+    allowed = False
+
+    if user.enterprise:
+        limits = add_limits(limits, webhook_limits["enterprise"])
+        allowed = True
     if user.premium.status:
-        return webhook_limits["premium"]
-    elif is_level(user.payment.subscription.level):
-        return webhook_limits[user.payment.subscription.level]
-    else:
+        limits = add_limits(limits, webhook_limits["premium"])
+        allowed = True
+    if is_level(user.payment.subscription.level):
+        limits = add_limits(limits, webhook_limits[user.payment.subscription.level])
+        allowed = True
+
+    if not allowed:
         raise authorization_exception
+
+    return limits
 
 
 def get_source_exclusions(
@@ -120,11 +168,9 @@ class UserAuthorizer:
         self.areas: list[Area] = areas
 
     def __call__(self, user: Annotated[User, Depends(ensure_user_from_token)]) -> User:
-        if user.premium.status:
-            return user
-
+        allowed_areas = get_allowed_areas(user)
         for area in self.areas:
-            if authorize(user.payment.subscription.level, area):
-                return user
+            if not area in allowed_areas:
+                raise authorization_exception
 
-        raise authorization_exception
+        return user

@@ -16,7 +16,7 @@ class MLStats(TypedDict):
 
 class AuthStats(TypedDict):
     allowed_areas: dict[Level, list[Area]]
-    webhook_limits: dict[Literal[Level, "premium"], WebhookLimits]
+    webhook_limits: dict[Literal[Level], WebhookLimits]
 
 
 class Stats(TypedDict):
