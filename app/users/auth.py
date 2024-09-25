@@ -86,16 +86,3 @@ def ensure_user_from_token(
         return user
     else:
         raise authentication_exception
-
-
-def ensure_auth_user_from_token(
-    request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
-) -> User:
-    if not id:
-        raise authentication_exception
-
-    user: User | None = request.state.user_cache.get_user(id)
-
-    if not user:
-        raise authentication_exception
-    return user
