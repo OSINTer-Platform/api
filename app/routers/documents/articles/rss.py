@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.templating import Jinja2Templates
 
 from app import config_options
-from app.users.auth.authorization import UserAuthorizer
+from app.users.auth.dependencies import UserAuthorizer
 from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
 from app.utils.rss import generate_rss_feed
 

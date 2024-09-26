@@ -8,8 +8,8 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from app import config_options
-from app.users.auth.authorization import UserAuthorizer
-from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
+from app.users.auth.dependencies import UserAuthorizer
+from app.dependencies import FastapiArticleSearchQuery
 from modules.objects import BaseArticle
 
 AssistantAuthorizer = UserAuthorizer(["assistant"])

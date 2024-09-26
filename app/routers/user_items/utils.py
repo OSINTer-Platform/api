@@ -6,10 +6,10 @@ from fastapi import Depends, HTTPException, status
 
 from app.common import HTTPError
 from app.dependencies import FastapiArticleSearchQuery
-from app.users.auth.authorization import get_source_exclusions
 from app.users import crud, schemas
+
 from app.users.auth import ensure_user_from_request
-from app.users.auth.authorization import UserAuthorizer
+from app.users.auth.dependencies import get_source_exclusions, UserAuthorizer
 
 from ... import config_options
 

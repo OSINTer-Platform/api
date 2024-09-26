@@ -1,25 +1,11 @@
-from fastapi import HTTPException
-from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
-
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import Depends, Query, Request
 
+from .common import authentication_exception
 from .token import get_id_from_token
 from app.users.schemas import User
-
-
-authentication_exception = HTTPException(
-    HTTP_401_UNAUTHORIZED,
-    detail="User is not authorized",
-    headers={"WWW-Authenticate": "Bearer"},
-)
-
-authorization_exception = HTTPException(
-    HTTP_403_FORBIDDEN,
-    detail="User doesn't have necessary permissions",
-)
 
 
 def get_user_from_request(

@@ -12,7 +12,7 @@ from starlette.status import (
     HTTP_422_UNPROCESSABLE_ENTITY,
 )
 
-from app.users.auth.authorization import UserAuthorizer
+from app.users.auth.dependencies import UserAuthorizer
 from app.common import EsIDList
 from app.dependencies import FastapiArticleSearchQuery
 from app.users import crud, models, schemas

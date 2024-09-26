@@ -5,10 +5,12 @@ from pydantic import SecretStr
 from starlette.status import HTTP_403_FORBIDDEN, HTTP_422_UNPROCESSABLE_ENTITY
 
 from app import config_options
-from app.users.auth.authorization import WebhookLimits, get_webhook_limits
 from app.connectors import WebhookType, connectors
 from app.users import schemas, models
+
 from app.users.auth import ensure_user_from_request
+from app.users.auth.common import WebhookLimits
+from app.users.auth.dependencies import get_webhook_limits
 
 from .utils import (
     WebhookAuthorizer,

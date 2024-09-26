@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from starlette.status import HTTP_404_NOT_FOUND
 
 from app import config_options
-from app.users.auth.authorization import UserAuthorizer, get_source_exclusions
+from app.users.auth.dependencies import UserAuthorizer, get_source_exclusions
 from app.common import HTTPError
 from app.dependencies import FastapiArticleSearchQuery, FastapiCVESearchQuery
 from app.utils.documents import convert_article_query_to_zip, send_file

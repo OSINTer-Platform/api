@@ -2,7 +2,7 @@ from typing import Literal, TypedDict
 from fastapi import APIRouter
 
 from app import config_options
-from app.users.auth.authorization import (
+from app.users.auth.common import (
     Area,
     Level,
     WebhookLimits,

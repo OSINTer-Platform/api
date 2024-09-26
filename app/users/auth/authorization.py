@@ -1,95 +1,24 @@
 from datetime import UTC, datetime
-from typing import Annotated, Literal, TypeAlias, TypeGuard, TypeVar, TypedDict
-import typing
+from typing import TypeGuard, TypeVar
 
-from fastapi import Depends
+from .common import (
+    Area,
+    Level,
+    WebhookLimits,
+    authorization_exception,
+    levels,
+    levels_access,
+    webhook_limits,
+)
 
-from app.users.auth import ensure_user_from_request
-from app.users.auth import get_user_from_request, authorization_exception
 from app.users.schemas import User
-
-
-Area: TypeAlias = Literal[
-    "api",
-    "articles",
-    "assistant",
-    "cluster",
-    "dashboard",
-    "map",
-    "similar",
-    "summary",
-    "cve",
-    "webhook",
-]
-
-SubscriptionLevel: TypeAlias = Literal["base", "pro"]
-Level: TypeAlias = Literal[SubscriptionLevel, "premium", "enterprise"]
-
-levels = typing.get_args(Level)
-
-
-class WebhookLimits(TypedDict):
-    max_count: int
-    max_feeds_per_hook: int
-
-
-levels_access: dict[Level, list[Area]] = {
-    "base": ["articles"],
-    "pro": [
-        "articles",
-        "assistant",
-        "cluster",
-        "dashboard",
-        "map",
-        "similar",
-        "summary",
-        "cve",
-    ],
-    "premium": [
-        "articles",
-        "assistant",
-        "cluster",
-        "dashboard",
-        "map",
-        "similar",
-        "summary",
-        "cve",
-    ],
-    "enterprise": [
-        "api",
-        "articles",
-        "assistant",
-        "cluster",
-        "dashboard",
-        "map",
-        "similar",
-        "summary",
-        "cve",
-        "webhook",
-    ],
-}
-
-webhook_limits: dict[Level, WebhookLimits] = {
-    "base": {"max_count": 0, "max_feeds_per_hook": 0},
-    "premium": {"max_count": 0, "max_feeds_per_hook": 0},
-    "pro": {"max_count": 10, "max_feeds_per_hook": 3},
-    "enterprise": {"max_count": 10, "max_feeds_per_hook": 3},
-}
-
-areas: set[Area] = {area for areas in levels_access.values() for area in areas}
 
 
 def is_level(level: str) -> TypeGuard[Level]:
     return level in levels
 
 
-def authorize(level: str, area: Area) -> bool:
-    return is_level(level) and area in levels_access[level]
-
-
-def get_allowed_areas(
-    user: Annotated[User | None, Depends(get_user_from_request)]
-) -> list[Area]:
+def calc_allowed_areas(user: User | None) -> list[Area]:
     if not user:
         return []
 
@@ -106,9 +35,7 @@ def get_allowed_areas(
     return list(allowed_areas)
 
 
-def get_webhook_limits(
-    user: Annotated[User, Depends(ensure_user_from_request)]
-) -> WebhookLimits:
+def calc_webhook_limits(user: User) -> WebhookLimits:
     def add_limits(l1: WebhookLimits, l2: WebhookLimits) -> WebhookLimits:
         return {
             "max_count": max(l1["max_count"], l2["max_count"]),
@@ -136,9 +63,7 @@ def get_webhook_limits(
     return limits
 
 
-def get_source_exclusions(
-    allowed_areas: Annotated[list[Area], Depends(get_allowed_areas)]
-) -> list[str]:
+def calc_source_exclusions(allowed_areas: list[Area]) -> list[str]:
     areas_to_fields: dict[Area, str] = {
         "map": "ml.coordinates",
         "cluster": "ml.cluster",
@@ -147,6 +72,16 @@ def get_source_exclusions(
     }
 
     return [v for k, v in areas_to_fields.items() if not k in allowed_areas]
+
+
+def authorize_user(user: User, areas: list[Area]) -> bool:
+    allowed_areas = calc_allowed_areas(user)
+
+    for area in areas:
+        if area not in allowed_areas:
+            return False
+
+    return True
 
 
 UserType = TypeVar("UserType", bound=User)
@@ -161,18 +96,3 @@ def expire_premium(user: UserType) -> UserType:
         user.premium.expire_time = 0
 
     return user
-
-
-class UserAuthorizer:
-    def __init__(self, areas: list[Area]):
-        self.areas: list[Area] = areas
-
-    def __call__(
-        self, user: Annotated[User, Depends(ensure_user_from_request)]
-    ) -> User:
-        allowed_areas = get_allowed_areas(user)
-        for area in self.areas:
-            if not area in allowed_areas:
-                raise authorization_exception
-
-        return user

@@ -3,7 +3,8 @@ from uuid import UUID
 from fastapi import Body, Depends, Query
 from datetime import datetime
 
-from app.users.auth.authorization import expire_premium, get_source_exclusions
+from app.users.auth.authorization import expire_premium
+from app.users.auth.dependencies import get_source_exclusions
 from app.users import models
 from app.users.crud import get_item
 from app.users.schemas import Collection, FeedCreate, User
