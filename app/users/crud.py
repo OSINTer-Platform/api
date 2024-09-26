@@ -40,13 +40,13 @@ def verify_user(
     if username and user.username != username:
         return False
 
-    if password and not verify_hash(password, user.hashed_password.get_secret_value()):
+    if password and not verify_hash(user.hashed_password.get_secret_value(), password):
         return False
 
     if (
         email
         and user.hashed_email
-        and not verify_hash(email, user.hashed_email.get_secret_value())
+        and not verify_hash(user.hashed_email.get_secret_value(), email)
     ):
         return False
 
