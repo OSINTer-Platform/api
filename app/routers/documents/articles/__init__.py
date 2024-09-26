@@ -6,7 +6,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, s
 from fastapi.responses import StreamingResponse
 from pathvalidate import sanitize_filename
 
-from app.authorization import UserAuthorizer, get_allowed_areas
+from app.users.auth.authorization import UserAuthorizer, get_allowed_areas
 from app.users.auth import (
     get_user_from_request,
 )
@@ -23,7 +23,7 @@ from ....dependencies import (
     FastapiArticleSearchQuery,
     SourceExclusions,
 )
-from app.authorization import get_source_exclusions
+from app.users.auth.authorization import get_source_exclusions
 from ....utils.documents import convert_article_query_to_zip, send_file
 from .rss import router as rss_router
 

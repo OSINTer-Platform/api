@@ -8,10 +8,9 @@ from fastapi.security import OAuth2PasswordRequestForm
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_422_UNPROCESSABLE_ENTITY
 from app.users import schemas
 
-from app.users.auth import (
-    create_access_token,
-    ensure_user_from_request,
-)
+from app.users.auth.token import create_access_token
+
+from app.users.auth import ensure_user_from_request
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
 

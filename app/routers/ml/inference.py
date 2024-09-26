@@ -8,7 +8,7 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from app import config_options
-from app.authorization import UserAuthorizer
+from app.users.auth.authorization import UserAuthorizer
 from app.dependencies import FastapiArticleSearchQuery, SourceExclusions
 from modules.objects import BaseArticle
 

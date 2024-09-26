@@ -14,7 +14,7 @@ from modules.objects import (
 from ... import config_options
 
 from app.dependencies import FastapiArticleSearchQuery
-from app.authorization import UserAuthorizer
+from app.users.auth.authorization import UserAuthorizer
 
 MapAuthorizer = UserAuthorizer(["map"])
 

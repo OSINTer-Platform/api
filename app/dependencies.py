@@ -1,16 +1,15 @@
 from typing import Annotated, Literal, Self, Set, TypeAlias
 from uuid import UUID
-from fastapi import Body, Depends, HTTPException, Query, status
+from fastapi import Body, Depends, Query
 from datetime import datetime
 
-from app.authorization import expire_premium, get_source_exclusions
+from app.users.auth.authorization import expire_premium, get_source_exclusions
 from app.users import models
 from app.users.crud import get_item
 from app.users.schemas import Collection, FeedCreate, User
 
 from modules.elastic import ArticleSearchQuery, CVESearchQuery, ClusterSearchQuery
 
-from app import config_options
 from app.common import CVESortBy, ClusterSortBy, EsIDList, ArticleSortBy
 
 SourceExclusions: TypeAlias = Annotated[list[str], Depends(get_source_exclusions)]

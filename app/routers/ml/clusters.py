@@ -5,7 +5,7 @@ from typing import Annotated, TypeAlias, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 
-from app.authorization import UserAuthorizer
+from app.users.auth.authorization import UserAuthorizer
 from modules.elastic import ClusterSearchQuery
 from modules.objects import (
     BaseArticle,
@@ -18,7 +18,7 @@ from ... import config_options
 from ...common import EsID, HTTPError
 from ...utils.documents import convert_article_query_to_zip, send_file
 from app.dependencies import FastapiArticleSearchQuery, FastapiClusterSearchQuery
-from app.authorization import get_source_exclusions
+from app.users.auth.authorization import get_source_exclusions
 
 ClusterAuthorizer = UserAuthorizer(["cluster"])
 router = APIRouter(dependencies=[Depends(ClusterAuthorizer)])

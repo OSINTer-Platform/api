@@ -2,7 +2,13 @@ from typing import Literal, TypedDict
 from fastapi import APIRouter
 
 from app import config_options
-from app.authorization import Area, Level, WebhookLimits, levels_access, webhook_limits
+from app.users.auth.authorization import (
+    Area,
+    Level,
+    WebhookLimits,
+    levels_access,
+    webhook_limits,
+)
 
 router = APIRouter()
 

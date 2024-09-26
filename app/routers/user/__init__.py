@@ -6,15 +6,12 @@ from starlette.status import (
     HTTP_409_CONFLICT,
     HTTP_422_UNPROCESSABLE_ENTITY,
 )
-from app.authorization import UserAuthorizer
+from app.users.auth.authorization import UserAuthorizer
 from app.secrets import generate_api_key, hash_value
 from app.users import schemas
 
-from app.users.auth import (
-    get_id_from_token,
-    ensure_user_from_request,
-    ensure_user_from_request,
-)
+from app.users.auth.token import get_id_from_token
+from app.users.auth import ensure_user_from_request
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
 from app.users.auth import authentication_exception

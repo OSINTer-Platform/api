@@ -7,7 +7,7 @@ from couchdb.mapping import ViewDefinition
 from fastapi.encoders import jsonable_encoder
 
 from app import config_options
-from app.authorization import expire_premium
+from app.users.auth.authorization import expire_premium
 from app.secrets import hash_value, verify_hash
 from app.users import models, schemas
 
@@ -218,6 +218,7 @@ def get_collections(user: schemas.User) -> dict[str, schemas.Collection]:
 ItemType: TypeAlias = Literal["feed", "collection", "webhook", "user"]
 
 
+@overload
 @overload
 def get_item(
     id: UUID | str, item_type: Literal["user"], view: ViewDefinition | None = ...
