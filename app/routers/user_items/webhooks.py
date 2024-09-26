@@ -8,7 +8,7 @@ from app import config_options
 from app.authorization import WebhookLimits, get_webhook_limits
 from app.connectors import WebhookType, connectors
 from app.users import schemas, models
-from app.users.auth import ensure_user_from_token
+from app.users.auth import ensure_user_from_request
 
 from .utils import (
     WebhookAuthorizer,
@@ -27,7 +27,7 @@ async def create_webhook(
     webhook_name: Annotated[str, Body()],
     url: Annotated[str, Body()],
     webhook_type: Annotated[WebhookType, Body()],
-    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    user: Annotated[schemas.User, Depends(ensure_user_from_request)],
     webhook_limits: Annotated[WebhookLimits, Depends(get_webhook_limits)],
 ) -> schemas.Webhook:
     if webhook_limits["max_count"] > 0:
@@ -91,7 +91,7 @@ async def update_webhook(
 
 @router.get("/list")
 def list_webhooks(
-    user: Annotated[schemas.User, Depends(ensure_user_from_token)]
+    user: Annotated[schemas.User, Depends(ensure_user_from_request)]
 ) -> list[schemas.Webhook]:
     webhook_view: ViewResults = models.Webhook.by_owner(config_options.couch_conn)
     webhook_view.options["key"] = str(user.id)

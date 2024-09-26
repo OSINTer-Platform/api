@@ -10,7 +10,7 @@ from app.users import schemas
 
 from app.users.auth import (
     create_access_token,
-    ensure_user_from_token,
+    ensure_user_from_request,
 )
 from app.users.crud import check_username, create_user, verify_user
 from app.users.schemas import User
@@ -82,7 +82,7 @@ async def send_password_recovery_mail(
 
 @router.get("/status")
 async def get_auth_status(
-    current_user: User = Depends(ensure_user_from_token),
+    current_user: User = Depends(ensure_user_from_request),
 ) -> User:
     return current_user
 
@@ -90,7 +90,7 @@ async def get_auth_status(
 @router.post("/logout")
 async def logout(
     response: Response,
-    _: User = Depends(ensure_user_from_token),
+    _: User = Depends(ensure_user_from_request),
 ) -> None:
     response.delete_cookie(key="access_token")
     return

@@ -8,7 +8,7 @@ from pathvalidate import sanitize_filename
 
 from app.authorization import UserAuthorizer, get_allowed_areas
 from app.users.auth import (
-    get_user_from_token,
+    get_user_from_request,
 )
 from app.users.crud import modify_collection, update_user
 from app.users.schemas import User
@@ -129,7 +129,7 @@ def mark_as_read(article: FullArticle, user: User | None) -> None:
 async def get_article_content(
     background_tasks: BackgroundTasks,
     id: EsID,
-    user: User | None = Depends(get_user_from_token),
+    user: User | None = Depends(get_user_from_request),
 ) -> FullArticle:
     source_exclusions = get_source_exclusions(get_allowed_areas(user))
     article = get_single_article(id, source_exclusions)

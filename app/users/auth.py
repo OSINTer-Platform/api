@@ -63,19 +63,19 @@ async def get_id_from_token(request: Request) -> UUID | None:
         return None
 
 
-def get_user_from_token(
+def get_user_from_request(
     request: Request, id: Annotated[None | UUID, Depends(get_id_from_token)]
 ) -> User | None:
     if not id:
         return None
 
     try:
-        return ensure_user_from_token(request, id)
+        return ensure_user_from_request(request, id)
     except:
         return None
 
 
-def ensure_user_from_token(
+def ensure_user_from_request(
     request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
 ) -> User:
     if not id:

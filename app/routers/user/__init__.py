@@ -12,8 +12,8 @@ from app.users import schemas
 
 from app.users.auth import (
     get_id_from_token,
-    ensure_user_from_token,
-    ensure_user_from_token,
+    ensure_user_from_request,
+    ensure_user_from_request,
 )
 from app.users.crud import check_username, update_user, verify_user
 from app import config_options
@@ -29,7 +29,7 @@ ApiAuthorizer = UserAuthorizer(["api"])
 
 @router.get("/")
 async def get_auth_status(
-    current_user: schemas.User = Depends(ensure_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_request),
 ) -> schemas.User:
     return current_user
 
@@ -71,7 +71,7 @@ def change_credentials(
 @router.post("/settings")
 def change_settings(
     settings: schemas.PartialUserSettings,
-    user: schemas.User = Depends(ensure_user_from_token),
+    user: schemas.User = Depends(ensure_user_from_request),
 ) -> schemas.User:
     user.settings = user.settings.model_copy(
         update=settings.model_dump(exclude_unset=True)
@@ -83,7 +83,7 @@ def change_settings(
 @router.post("/signup-code")
 def submit_signup_code(
     code: dict[Literal["code"], str] = Body(),
-    user: schemas.User = Depends(ensure_user_from_token),
+    user: schemas.User = Depends(ensure_user_from_request),
 ) -> schemas.User:
     if user.premium.status:
         return user
@@ -104,7 +104,7 @@ def submit_signup_code(
 
 @router.post("/acknowledge-premium")
 def acknowledge_premium(
-    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    user: Annotated[schemas.User, Depends(ensure_user_from_request)],
     field: Annotated[str, Body()],
     status: Annotated[bool, Body()],
 ) -> schemas.User:
@@ -115,7 +115,7 @@ def acknowledge_premium(
 
 @router.put("/read-articles")
 def update_read_articles(
-    user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    user: Annotated[schemas.User, Depends(ensure_user_from_request)],
     article_ids: Annotated[list[str], Body()],
 ) -> schemas.User:
     user.read_articles = article_ids

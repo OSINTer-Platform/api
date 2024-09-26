@@ -4,8 +4,8 @@ import typing
 
 from fastapi import Depends
 
-from app.users.auth import ensure_user_from_token
-from app.users.auth import get_user_from_token, authorization_exception
+from app.users.auth import ensure_user_from_request
+from app.users.auth import get_user_from_request, authorization_exception
 from app.users.schemas import User
 
 
@@ -88,7 +88,7 @@ def authorize(level: str, area: Area) -> bool:
 
 
 def get_allowed_areas(
-    user: Annotated[User | None, Depends(get_user_from_token)]
+    user: Annotated[User | None, Depends(get_user_from_request)]
 ) -> list[Area]:
     if not user:
         return []
@@ -107,7 +107,7 @@ def get_allowed_areas(
 
 
 def get_webhook_limits(
-    user: Annotated[User, Depends(ensure_user_from_token)]
+    user: Annotated[User, Depends(ensure_user_from_request)]
 ) -> WebhookLimits:
     def add_limits(l1: WebhookLimits, l2: WebhookLimits) -> WebhookLimits:
         return {
@@ -167,7 +167,9 @@ class UserAuthorizer:
     def __init__(self, areas: list[Area]):
         self.areas: list[Area] = areas
 
-    def __call__(self, user: Annotated[User, Depends(ensure_user_from_token)]) -> User:
+    def __call__(
+        self, user: Annotated[User, Depends(ensure_user_from_request)]
+    ) -> User:
         allowed_areas = get_allowed_areas(user)
         for area in self.areas:
             if not area in allowed_areas:

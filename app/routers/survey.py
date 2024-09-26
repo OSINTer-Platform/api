@@ -4,7 +4,7 @@ from fastapi import APIRouter, Body, Depends, Query
 
 from app import config_options
 from app.users import models, schemas
-from app.users.auth import ensure_user_from_token
+from app.users.auth import ensure_user_from_request
 
 
 router = APIRouter()
@@ -13,7 +13,7 @@ router = APIRouter()
 @router.post("/submit")
 def submit_survey(
     contents: Annotated[list[schemas.SurveySection], Body()],
-    current_user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    current_user: Annotated[schemas.User, Depends(ensure_user_from_request)],
     version: Annotated[int, Body()],
 ) -> None:
     survey = schemas.Survey(
@@ -30,7 +30,7 @@ def submit_survey(
 @router.get("/", response_model=list[schemas.Survey])
 def get_submittet_surveys(
     version: Annotated[int, Query()],
-    current_user: Annotated[schemas.User, Depends(ensure_user_from_token)],
+    current_user: Annotated[schemas.User, Depends(ensure_user_from_request)],
 ) -> list[models.Survey]:
     user_surveys = cast(
         Iterable[models.Survey],

@@ -4,7 +4,7 @@ from starlette.status import HTTP_404_NOT_FOUND, HTTP_500_INTERNAL_SERVER_ERROR
 import stripe
 
 from app import config_options
-from app.users.auth import ensure_user_from_token
+from app.users.auth import ensure_user_from_request
 from app.users.schemas import User
 from .subscriptions import router as subscription_router
 
@@ -16,7 +16,7 @@ router.include_router(subscription_router, tags=["payment"])
 
 @router.get("/action/payment-intent")
 def get_action_payment_intent(
-    user: User = Depends(ensure_user_from_token),
+    user: User = Depends(ensure_user_from_request),
 ) -> dict[str, str]:
     if not user.payment.invoice.payment_intent:
         raise HTTPException(

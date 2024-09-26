@@ -16,7 +16,7 @@ from app.authorization import UserAuthorizer
 from app.common import EsIDList
 from app.dependencies import FastapiArticleSearchQuery
 from app.users import crud, models, schemas
-from app.users.auth import ensure_user_from_token
+from app.users.auth import ensure_user_from_request
 from app.utils.documents import convert_article_query_to_zip, send_file
 from modules.objects import BaseArticle, FullArticle
 
@@ -40,7 +40,7 @@ router.include_router(webhooks.router, tags=["webhooks"], prefix="/webhook")
     "/{item_id}", status_code=status.HTTP_204_NO_CONTENT, responses=responses
 )
 def delete_item(
-    item_id: UUID, current_user: schemas.User = Depends(ensure_user_from_token)
+    item_id: UUID, current_user: schemas.User = Depends(ensure_user_from_request)
 ) -> None:
     def remove_webhook_attachments(feed: schemas.Feed) -> None:
         webhooks = [
@@ -130,7 +130,7 @@ def export_item_articles(
 def update_item_name(
     item_id: UUID,
     new_name: str,
-    current_user: schemas.User = Depends(ensure_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_request),
 ) -> schemas.Feed | schemas.Collection:
     item: int | schemas.Feed | schemas.Collection = crud.change_item_name(
         item_id, new_name, current_user
@@ -189,7 +189,7 @@ def update_feed(
 def update_collection(
     collection_id: UUID,
     contents: EsIDList,
-    current_user: schemas.User = Depends(ensure_user_from_token),
+    current_user: schemas.User = Depends(ensure_user_from_request),
 ) -> schemas.Collection:
     return handle_crud_response(
         crud.modify_collection(id=collection_id, contents=contents, user=current_user)

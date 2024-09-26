@@ -11,7 +11,7 @@ from starlette.status import (
 import stripe
 
 from app.users.auth import (
-    ensure_user_from_token,
+    ensure_user_from_request,
 )
 from app.users.crud import update_user
 from app.users.schemas import User
@@ -31,7 +31,7 @@ class SubscriptionCreation(TypedDict):
 
 @router.post("/subscription")
 def create_subscription(
-    user: User = Depends(ensure_user_from_token),
+    user: User = Depends(ensure_user_from_request),
     email: str | None = Body(None),
     price_id: str = Body(...),
 ) -> SubscriptionCreation:
@@ -78,7 +78,7 @@ def create_subscription(
 
 @router.post("/subscription/change")
 def change_subscription(
-    user: Annotated[User, Depends(ensure_user_from_token)],
+    user: Annotated[User, Depends(ensure_user_from_request)],
     price_id: Annotated[str, Body()],
 ) -> None:
     try:
@@ -97,7 +97,7 @@ def change_subscription(
 @router.delete("/subscription")
 def cancel_subscription(
     immediate: Annotated[bool, Query()] = False,
-    user: User = Depends(ensure_user_from_token),
+    user: User = Depends(ensure_user_from_request),
 ) -> None:
     if user.payment.subscription.state in ["active", "past_due"]:
         if immediate:
@@ -114,7 +114,9 @@ def cancel_subscription(
 
 
 @router.post("/subscription/uncancel")
-def resume_subscription(user: Annotated[User, Depends(ensure_user_from_token)]) -> None:
+def resume_subscription(
+    user: Annotated[User, Depends(ensure_user_from_request)]
+) -> None:
     if user.payment.subscription.state not in ["active", "past_due"]:
         raise HTTPException(
             HTTP_404_NOT_FOUND, "User doesn't have any active subscriptions"
@@ -129,7 +131,7 @@ def resume_subscription(user: Annotated[User, Depends(ensure_user_from_token)]) 
 
 @router.post("/subscription/acknowledge-close")
 def acknowledge_subscription_closing(
-    user: User = Depends(ensure_user_from_token),
+    user: User = Depends(ensure_user_from_request),
 ) -> None:
     if (
         user.payment.subscription.state != "closed"

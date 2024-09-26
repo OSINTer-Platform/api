@@ -8,7 +8,7 @@ from app.common import HTTPError
 from app.dependencies import FastapiArticleSearchQuery
 from app.authorization import get_source_exclusions
 from app.users import crud, schemas
-from app.users.auth import ensure_user_from_token
+from app.users.auth import ensure_user_from_request
 from app.authorization import UserAuthorizer
 
 from ... import config_options
@@ -71,7 +71,7 @@ def get_query_from_item(
 
 
 def get_own_feed(
-    feed_id: UUID, user: Annotated[schemas.User, Depends(ensure_user_from_token)]
+    feed_id: UUID, user: Annotated[schemas.User, Depends(ensure_user_from_request)]
 ) -> schemas.Feed:
     item = handle_crud_response(crud.get_item(feed_id, "feed"))
 
@@ -82,7 +82,7 @@ def get_own_feed(
 
 
 def get_own_webhook(
-    webhook_id: UUID, user: Annotated[schemas.User, Depends(ensure_user_from_token)]
+    webhook_id: UUID, user: Annotated[schemas.User, Depends(ensure_user_from_request)]
 ) -> schemas.Webhook:
     WebhookAuthorizer(user)
     item = handle_crud_response(crud.get_item(webhook_id, "webhook"))
