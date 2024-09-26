@@ -259,7 +259,7 @@ def get_item(
             item: Document = list(view(config_options.couch_conn)[str(id)])[0]
         else:
             item = config_options.couch_conn[str(id)]
-    except ResourceNotFound:
+    except (ResourceNotFound, IndexError):
         return 404
 
     if item_type:
