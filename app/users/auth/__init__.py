@@ -18,9 +18,6 @@ def get_user_from_request(
 ) -> User | None:
     user: User | None
 
-    if not id:
-        return None
-
     if api_key:
         user = request.state.user_cache.get_user_from_api_key(api_key)
 
@@ -33,6 +30,9 @@ def get_user_from_request(
             )
 
         return user
+
+    if not id:
+        return None
 
     user = request.state.user_cache.get_user_from_id(id)
 
