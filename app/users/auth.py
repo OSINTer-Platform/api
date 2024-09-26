@@ -2,7 +2,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Annotated, Any, cast
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import Depends, HTTPException, Query, Request
 from jose import JWTError, jwt
 from starlette.status import HTTP_401_UNAUTHORIZED, HTTP_403_FORBIDDEN
 
@@ -64,25 +64,25 @@ async def get_id_from_token(request: Request) -> UUID | None:
 
 
 def get_user_from_request(
-    request: Request, id: Annotated[None | UUID, Depends(get_id_from_token)]
+    request: Request,
+    id: Annotated[None | UUID, Depends(get_id_from_token)],
+    api_key: Annotated[str | None, Query()] = None,
 ) -> User | None:
     if not id:
         return None
 
-    try:
-        return ensure_user_from_request(request, id)
-    except:
-        return None
+    user: User | None = request.state.user_cache.get_user_from_api_key(api_key)
+
+    if not user:
+        user = request.state.user_cache.get_user_from_id(id)
+
+    return user
 
 
 def ensure_user_from_request(
-    request: Request, id: Annotated[UUID | None, Depends(get_id_from_token)]
+    user: Annotated[User | None, Depends(get_user_from_request)]
 ) -> User:
-    if not id:
+    if not user:
         raise authentication_exception
 
-    user = cast(User | None, request.state.user_cache.get_user(id))
-    if user:
-        return user
-    else:
-        raise authentication_exception
+    return user

@@ -4,6 +4,7 @@ from fastapi import Body, Depends, HTTPException, Query, status
 from datetime import datetime
 
 from app.authorization import expire_premium, get_source_exclusions
+from app.users import models
 from app.users.crud import get_item
 from app.users.schemas import Collection, FeedCreate, User
 
@@ -180,7 +181,7 @@ class UserCache:
     def __init__(self) -> None:
         self.user: None | User = None
 
-    def get_user(self: Self, id: UUID) -> User | None:
+    def get_user_from_id(self: Self, id: UUID) -> User | None:
         if isinstance(self.user, User):
             return self.user
 
@@ -192,3 +193,16 @@ class UserCache:
 
         self.user = user
         return user
+
+    def get_user_from_api_key(self: Self, key: str) -> User | None:
+        if self.user:
+            return self.user
+
+        user = get_item(key, "user", models.User.by_api_key)
+        if isinstance(user, int):
+            return None
+
+        user = expire_premium(user)
+
+        self.user = user
+        return self.user
