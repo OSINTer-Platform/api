@@ -3,8 +3,8 @@ from uuid import UUID, uuid4
 
 from couchdb import Document, ResourceNotFound
 from couchdb.client import ViewResults
+from couchdb.mapping import ViewDefinition
 from fastapi.encoders import jsonable_encoder
-from pydantic import SecretStr
 
 from app import config_options
 from app.authorization import expire_premium
@@ -219,31 +219,45 @@ ItemType: TypeAlias = Literal["feed", "collection", "webhook", "user"]
 
 
 @overload
-def get_item(id: UUID, item_type: Literal["user"]) -> schemas.User | int: ...
-@overload
-@overload
-def get_item(id: UUID, item_type: Literal["feed"]) -> schemas.Feed | int: ...
+def get_item(
+    id: UUID | str, item_type: Literal["user"], view: ViewDefinition | None = ...
+) -> schemas.User | int: ...
 @overload
 def get_item(
-    id: UUID, item_type: Literal["collection"]
+    id: UUID | str, item_type: Literal["feed"], view: ViewDefinition | None = ...
+) -> schemas.Feed | int: ...
+@overload
+def get_item(
+    id: UUID | str, item_type: Literal["collection"], view: ViewDefinition | None = ...
 ) -> schemas.Collection | int: ...
 @overload
-def get_item(id: UUID, item_type: Literal["webhook"]) -> schemas.Webhook | int: ...
+def get_item(
+    id: UUID | str, item_type: Literal["webhook"], view: ViewDefinition | None = ...
+) -> schemas.Webhook | int: ...
 @overload
 def get_item(
-    id: UUID, item_type: tuple[Literal["feed"], Literal["collection"]]
+    id: UUID | str,
+    item_type: tuple[Literal["feed"], Literal["collection"]],
+    view: ViewDefinition | None = ...,
 ) -> schemas.Feed | schemas.Collection | int: ...
 @overload
 def get_item(
-    id: UUID, item_type: None | tuple[ItemType, ItemType] = ...
+    id: UUID | str,
+    item_type: None | tuple[ItemType, ItemType] = ...,
+    view: ViewDefinition | None = ...,
 ) -> schemas.Feed | schemas.Collection | schemas.Webhook | int: ...
 
 
 def get_item(
-    id: UUID, item_type: ItemType | tuple[ItemType, ItemType] | None = None
+    id: UUID | str,
+    item_type: ItemType | tuple[ItemType, ItemType] | None = None,
+    view: ViewDefinition | None = None,
 ) -> schemas.Feed | schemas.Collection | schemas.Webhook | schemas.User | int:
     try:
-        item: Document = config_options.couch_conn[str(id)]
+        if view:
+            item: Document = list(view(config_options.couch_conn)[str(id)])[0]
+        else:
+            item = config_options.couch_conn[str(id)]
     except ResourceNotFound:
         return 404
 
