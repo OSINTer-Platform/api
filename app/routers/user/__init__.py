@@ -126,3 +126,7 @@ def regenerate_api_key(user: Annotated[schemas.User, Depends(ApiAuthorizer)]) ->
     user.api_key = generate_api_key()
     update_user(user)
     return user.api_key.get_secret_value()
+
+@router.get("/api-key")
+def get_api_key(user: Annotated[schemas.User, Depends(ApiAuthorizer)]) -> str | None:
+    return user.api_key.get_secret_value() if user.api_key else None
