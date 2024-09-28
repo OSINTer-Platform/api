@@ -41,7 +41,7 @@ class WebhookLimits(TypedDict):
 
 
 levels_access: dict[Level, list[Area]] = {
-    "base": ["articles"],
+    "base": ["articles", "webhook"],
     "pro": [
         "articles",
         "assistant",
@@ -51,6 +51,7 @@ levels_access: dict[Level, list[Area]] = {
         "similar",
         "summary",
         "cve",
+        "webhook",
     ],
     "premium": [
         "articles",
@@ -61,6 +62,7 @@ levels_access: dict[Level, list[Area]] = {
         "similar",
         "summary",
         "cve",
+        "webhook",
     ],
     "enterprise": [
         "api",
@@ -77,8 +79,8 @@ levels_access: dict[Level, list[Area]] = {
 }
 
 webhook_limits: dict[Level, WebhookLimits] = {
-    "base": {"max_count": 0, "max_feeds_per_hook": 0},
-    "premium": {"max_count": 0, "max_feeds_per_hook": 0},
+    "base": {"max_count": 3, "max_feeds_per_hook": 3},
+    "premium": {"max_count": 3, "max_feeds_per_hook": 3},
     "pro": {"max_count": 10, "max_feeds_per_hook": 3},
     "enterprise": {"max_count": 10, "max_feeds_per_hook": 3},
 }
