@@ -80,14 +80,14 @@ def generate_answer_to_question(
     visible: bool = Query(True),
     id: UUID = Query(default_factory=uuid4),
 ) -> ChatList:
-    q = FastapiArticleSearchQuery([], limit=3, search_term=question)
+    q = FastapiArticleSearchQuery([], limit=10, search_term=question)
     articles = config_options.es_article_client.query_documents(q, True)[0]
 
-    # Truncates at 3200 characthers as each 4'th characther ~ 1 token
-    # and using the 4k token window with 3 articles, this leaves ~ 1700
+    # Truncates at 4000 characthers as each 4'th characther ~ 1 token
+    # and using the 16k token window with 12 articles, this leaves ~ 3500
     # tokens for the chat
 
-    truncated_contents = [article.content[:3200] for article in articles]
+    truncated_contents = [article.content[:5000] for article in articles]
 
     model_instruct = """
         Use the provided articles delimited by triple quotes to answer questions.
