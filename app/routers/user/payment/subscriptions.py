@@ -5,11 +5,11 @@ from starlette.status import (
     HTTP_400_BAD_REQUEST,
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
-    HTTP_422_UNPROCESSABLE_ENTITY,
 )
 
 import stripe
 
+from app.users.stripe import get_or_create_customer
 from app.users.auth import (
     ensure_user_from_request,
 )
@@ -20,10 +20,6 @@ from app.users.schemas import User
 router = APIRouter()
 
 
-def create_customer(name: str, email: str, id: str) -> stripe.Customer:
-    return stripe.Customer.create(name=name, email=email, metadata={"user_id": id})
-
-
 class SubscriptionCreation(TypedDict):
     type: Literal["setup", "payment"]
     client_secret: str
@@ -31,27 +27,25 @@ class SubscriptionCreation(TypedDict):
 
 @router.post("/subscription")
 def create_subscription(
-    user: User = Depends(ensure_user_from_request),
-    email: str | None = Body(None),
-    price_id: str = Body(...),
+    user_and_customer: Annotated[
+        tuple[User, stripe.Customer], Depends(get_or_create_customer)
+    ],
+    price_id: Annotated[str, Body()],
+    email: Annotated[str, Body()],
 ) -> SubscriptionCreation:
-    if not user.payment.stripe_id:
-        if not email:
-            raise HTTPException(
-                status_code=HTTP_422_UNPROCESSABLE_ENTITY, detail="Missing email"
-            )
+    user, customer = user_and_customer
 
-        customer = create_customer(user.username, email, str(user.id))
-        user.payment.stripe_id = customer.id
-        update_user(user)
-    elif user.payment.subscription.state not in ["", "closed"]:
+    if email != customer.email:
+        customer.modify(customer.id, email=email)
+
+    if user.payment.subscription.state not in ["", "closed"]:
         raise HTTPException(
             status_code=HTTP_409_CONFLICT, detail="User is already subscribed"
         )
 
     try:
         subscription = stripe.Subscription.create(
-            customer=user.payment.stripe_id,
+            customer=customer.id,
             items=[
                 {
                     "price": price_id,
