@@ -68,6 +68,17 @@ class User(BaseDocument):
                     current_period_end=IntegerField(default=0),
                 )
             ),
+            address=DictField(
+                Mapping.build(
+                    city=TextField(),
+                    country=TextField(),
+                    customer_name=TextField(),
+                    line1=TextField(),
+                    line2=TextField(),
+                    postal_code=TextField(),
+                    state=TextField(),
+                )
+            ),
         )
     )
 

@@ -1,11 +1,10 @@
 from collections.abc import Sequence, Set
 from datetime import datetime, timezone
-from typing import Annotated, Any, ClassVar, Literal, TypeAlias, Union
+from typing import Annotated, Any, Literal, TypeAlias, TypedDict, Union
 from uuid import UUID, uuid4
 from couchdb.mapping import ListField
 
 from pydantic import (
-    AwareDatetime,
     BaseModel,
     ConfigDict,
     Field,
@@ -137,6 +136,16 @@ class PartialUserSettings(ORMBase):
     list_render_mode: Literal["large"] | Literal["title"] | None = None
 
 
+class UserAddress(ORMBase):
+    city: str
+    country: str
+    customer_name: str
+    line1: str
+    line2: str | None = None
+    postal_code: str
+    state: str
+
+
 class UserPayment(ORMBase):
     class Invoice(ORMBase):
         last_updated: int = 0
@@ -158,6 +167,14 @@ class UserPayment(ORMBase):
     stripe_id: str = ""
     invoice: Invoice = Invoice()
     subscription: Subscription = Subscription()
+    address: UserAddress | None = None
+
+    @field_validator("address", mode="before")
+    @classmethod
+    def ignore_empty_dict(cls, address: dict | None) -> dict | None:
+        if address == {}:
+            return None
+        return address
 
 
 class User(DBItemBase):
