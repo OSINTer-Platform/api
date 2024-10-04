@@ -45,6 +45,7 @@ def create_subscription(
 
     try:
         subscription = stripe.Subscription.create(
+            automatic_tax={"enabled": True},
             customer=customer.id,
             items=[
                 {
