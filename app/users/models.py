@@ -66,6 +66,7 @@ class User(BaseDocument):
                     level=TextField(default=""),
                     cancel_at_period_end=BooleanField(default=False),
                     current_period_end=IntegerField(default=0),
+                    automatic_tax=BooleanField(default=False),
                 )
             ),
             address=DictField(

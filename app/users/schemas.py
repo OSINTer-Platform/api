@@ -164,6 +164,8 @@ class UserPayment(ORMBase):
         cancel_at_period_end: bool = False
         current_period_end: int = 0
 
+        automatic_tax: bool = False
+
     stripe_id: str = ""
     invoice: Invoice = Invoice()
     subscription: Subscription = Subscription()

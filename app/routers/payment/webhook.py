@@ -84,6 +84,7 @@ def handle_subscription_change(e: stripe.Event) -> None:
         user.payment.subscription.last_updated = data["created"]
         user.payment.subscription.cancel_at_period_end = data["cancel_at_period_end"]
         user.payment.subscription.current_period_end = data["current_period_end"]
+        user.payment.subscription.automatic_tax = data["automatic_tax"]["enabled"]
 
     elif e.type.startswith("invoice"):
         user.payment.invoice.invoice_url = data["hosted_invoice_url"]
