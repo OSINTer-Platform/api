@@ -12,7 +12,7 @@ from app import config_options
 from app.users.auth import ensure_user_from_request
 from app.users.crud import update_user
 from app.users.schemas import User, UserAddress
-from app.users.stripe import get_or_create_customer
+from app.users.stripe import get_or_create_customer, get_stripe_address
 from .subscriptions import router as subscription_router
 
 stripe.api_key = config_options.STRIPE_API_KEY
@@ -47,13 +47,7 @@ def update_customer_address(
 ) -> User:
     user, customer = user_and_customer
 
-    stripeAddress: stripe.Customer.ModifyParamsAddress = {
-        "city": address.city,
-        "country": address.country,
-        "line1": address.line1,
-        "state": address.state,
-        "postal_code": address.postal_code,
-    }
+    stripeAddress = get_stripe_address(address)
 
     try:
         customer.modify(
