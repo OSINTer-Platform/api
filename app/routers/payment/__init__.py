@@ -1,4 +1,4 @@
-from typing import Annotated, Literal, TypeAlias, TypedDict
+from typing import Annotated
 from fastapi import APIRouter, Depends, Request
 
 import stripe
@@ -6,32 +6,19 @@ import stripe
 from app import config_options
 from app.users import schemas
 from app.users.auth import get_user_from_request
-from app.users.stripe import get_stripe_address
+from .webhook import router as webhook_router
+from .common import (
+    prices_by_id,
+    products_by_id,
+    prices_by_key,
+    PriceLookupKey,
+    PriceCalculation,
+)
 
 stripe.api_key = config_options.STRIPE_API_KEY
 
 router = APIRouter()
-
-PriceLookupKey: TypeAlias = Literal["base-month", "pro-month"]
-
-product = stripe.Product.list().data
-products_by_id: dict[str, stripe.Product] = {obj["id"]: obj for obj in product}
-
-prices = stripe.Price.list().data
-prices_by_id: dict[str, stripe.Price] = {obj["id"]: obj for obj in prices}
-prices_by_key: dict[PriceLookupKey, stripe.Price] = {
-    price["lookup_key"]: price for price in prices
-}
-
-
-class PriceCalculation(TypedDict):
-    currency: str
-    estimate: bool
-    lookup_key: str
-    price_id: str
-    tax_amount: int
-    total_unit_amount: int
-    total_without_tax: int
+router.include_router(webhook_router)
 
 
 @router.get("/prices", response_model=None)

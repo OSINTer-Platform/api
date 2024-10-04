@@ -6,7 +6,8 @@ import stripe
 from app import config_options
 from app.users import models, schemas
 from app.users.crud import update_user
-from . import products_by_id
+
+from .common import products_by_id
 
 router = APIRouter()
 
