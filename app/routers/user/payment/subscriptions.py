@@ -3,6 +3,7 @@ from typing_extensions import TypedDict
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from starlette.status import (
     HTTP_400_BAD_REQUEST,
+    HTTP_403_FORBIDDEN,
     HTTP_404_NOT_FOUND,
     HTTP_409_CONFLICT,
 )
@@ -136,3 +137,21 @@ def acknowledge_subscription_closing(
 
     user.payment.subscription.state = ""
     update_user(user)
+
+@router.post("/subscription/enable-tax")
+def enable_tax(
+    user: Annotated[User, Depends(ensure_user_from_request)]
+):
+    if not user.payment.stripe_id:
+        raise HTTPException(HTTP_403_FORBIDDEN, detail="User isn't a customer")
+
+    sub_id = user.payment.subscription.stripe_subscription_id
+
+    if not sub_id:
+        raise HTTPException(HTTP_403_FORBIDDEN, detail="User doesn't have any relevant subscription")
+
+    if not user.payment.address:
+        raise HTTPException(HTTP_403_FORBIDDEN, detail="User haven't specified an address")
+
+
+    stripe.Subscription.modify(sub_id, automatic_tax={"enabled": True})
