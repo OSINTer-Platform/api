@@ -106,9 +106,11 @@ def remove_user(username: str) -> bool:
 def update_user(user: schemas.User) -> None:
     user = expire_premium(user)
 
-    config_options.couch_conn[str(user.id)] = user.db_serialize(
-        context={"show_secrets": True}
+    _, rev = config_options.couch_conn.save(
+        user.db_serialize(context={"show_secrets": True})
     )
+
+    user.rev = rev
 
 
 def modify_user_subscription(
