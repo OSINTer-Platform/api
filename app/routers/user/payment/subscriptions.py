@@ -36,6 +36,9 @@ def create_subscription(
 ) -> SubscriptionCreation:
     user, customer = user_and_customer
 
+    if not customer.address:
+        raise HTTPException(HTTP_403_FORBIDDEN, detail="Missing customer address")
+
     if email != customer.email:
         customer.modify(customer.id, email=email)
 
