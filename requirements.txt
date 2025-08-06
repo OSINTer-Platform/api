@@ -6,7 +6,7 @@ pydantic
 uvicorn[standard]
 gunicorn  # Used as process manager for uvicorn processes
 
-elasticsearch
+elasticsearch==8.*
 argon2-cffi
 requests
 
